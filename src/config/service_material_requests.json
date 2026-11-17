@@ -1,0 +1,54 @@
+[
+  {
+    "material_request_id": 4,
+    "request_number": "MR-2026-89705",
+    "service_request_id": 22,
+    "technician_id": 4,
+    "technician_name": "Brian Kipchumba (Technician)",
+    "items": [
+      {
+        "issued_qty": 1,
+        "product_id": 27,
+        "item_status": "issued",
+        "approved_qty": 1,
+        "product_name": "100W Solar Street & Compound Floodlight with Remote",
+        "category_name": "Lighting",
+        "current_stock": 10,
+        "requested_qty": 1
+      }
+    ],
+    "notes": "",
+    "status": "issued",
+    "reviewed_by": "Grace Kerubo (Inventory Manager)",
+    "review_notes": "fully approved",
+    "reviewed_at": "2026-11-16T07:15:50.912+00:00",
+    "issued_by": "Grace Kerubo (Inventory Manager)",
+    "issued_at": "2026-11-16T07:16:00.724+00:00",
+    "created_at": "2026-11-16T07:14:48.63992+00:00"
+  },
+  {
+    "material_request_id": 3,
+    "request_number": "MR-2026-53764",
+    "service_request_id": 10,
+    "technician_id": 4,
+    "technician_name": "Brian Kipchumba (Technician)",
+    "items": [
+      {
+        "issued_qty": 0,
+        "product_id": 9,
+        "item_status": "pending",
+        "approved_qty": 0,
+        "product_name": "Electric Cordless Kettle 1.8L",
+        "requested_qty": 1
+      }
+    ],
+    "notes": "",
+    "status": "pending",
+    "reviewed_by": null,
+    "review_notes": null,
+    "reviewed_at": null,
+    "issued_by": null,
+    "issued_at": null,
+    "created_at": "2026-11-16T06:39:12.657515+00:00"
+  }
+]

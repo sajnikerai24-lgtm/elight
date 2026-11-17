@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Help &amp; User Guides - Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="/images/elight-favicon.svg?v=7">
+</head>
+
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo"
+        style="width:60px;height:60px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Your one-stop destination for quality electrical fittings, lighting &amp; appliances</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="storefront-layout">
+    <!-- Left Vertical Navigation Sidebar -->
+    <nav>
+      <div class="nav-links">
+        <a href="/">🏠 Home</a>
+        <a href="/products">📦 Product Catalog</a>
+        <a href="/cart">
+          🛒 Cart <span class="cart-pill" id="cart-count">0</span>
+        </a>
+        <a href="/booking">📅 Book</a>
+        <a href="/contact">📞 Contact Us</a>
+        <a href="/help" class="active">❓ Help</a>
+        <a href="/feedback">💬 Feedback</a>
+        <a href="/about">ℹ️ About Us</a>
+      </div>
+      <div class="nav-auth-box">
+        <a href="/login" class="admin-link-btn" id="navAuthLink">🔐 Login</a>
+      </div>
+    </nav>
+
+    <div class="storefront-content">
+
+      <div class="module-page-wrap">
+        <div class="module-hero-banner">
+          <div>
+            <h2>❓ Elight Help Center &amp; User Guides</h2>
+            <p>Search step-by-step shopping guides, installation booking instructions, staff workflows, and quick answers to common questions.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="/contact" class="btn-hero-primary" style="padding:10px 18px; font-size:0.9rem;">📞 Contact Support</a>
+            <a href="/booking" class="btn-hero-outline" style="padding:10px 18px; font-size:0.9rem;">📅 Book Service</a>
+          </div>
+        </div>
+
+        <!-- Search & Audience Filter Toolbar -->
+        <div class="module-card" style="padding:16px 20px; margin-bottom:24px;">
+          <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
+            <input type="text" id="helpSearchInput" oninput="debouncedLoadHelp()"
+              placeholder="🔍 Search guides or FAQs (e.g., M-Pesa, Booking, Warranty, Stock, Delivery)..."
+              style="flex:1; min-width:250px; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.94rem;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <button type="button" class="btn-sm btn-primary help-audience-btn" data-audience="all"
+                onclick="setHelpAudience('all', this)">All Topics</button>
+              <button type="button" class="btn-sm help-audience-btn" data-audience="customer"
+                style="background:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1;"
+                onclick="setHelpAudience('customer', this)">🛍️ Customer Guides</button>
+              <button type="button" class="btn-sm help-audience-btn" data-audience="attendant"
+                style="background:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1;"
+                onclick="setHelpAudience('attendant', this)">🧑‍💼 Staff &amp; Attendant</button>
+              <span id="helpCountBadge" style="font-size:0.8rem; font-weight:700; color:#475569; margin-left:6px;"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="module-two-col">
+          <!-- Left: Step-by-Step User Guides -->
+          <div>
+            <div class="module-card">
+              <h3>📖 Step-by-Step Guides</h3>
+              <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:16px;">Follow these clear walkthroughs for shopping, booking electricians, or managing operations.</p>
+              <div id="helpGuidesList">
+                <p style="color:var(--text-muted);">Loading guides...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Interactive FAQs -->
+          <div>
+            <div class="module-card">
+              <h3>💡 Frequently Asked Questions (FAQs)</h3>
+              <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:16px;">Click any question below to expand the detailed answer.</p>
+              <div id="helpFaqsList">
+                <p style="color:var(--text-muted);">Loading FAQs...</p>
+              </div>
+            </div>
+
+            <div class="module-card" style="background:linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border:1px solid #bfdbfe;">
+              <h3>💬 Still Need Direct Assistance?</h3>
+              <p style="font-size:0.9rem; color:#334155; line-height:1.6; margin:0 0 14px 0;">
+                Speak with our Meru Town showroom desk or submit a direct technical inquiry and we will respond promptly.
+              </p>
+              <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                <a href="/contact" class="btn-sm btn-primary" style="text-decoration:none; padding:9px 16px;">📞 Send Inquiry</a>
+                <a href="/feedback" class="btn-sm" style="text-decoration:none; padding:9px 16px; background:#fff; color:#1e3a8a; border:1px solid #93c5fd;">💬 Leave Feedback</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <p><strong>Elight Electrical Shop</strong> &copy; 2026. All rights reserved.</p>
+        <p>Location: Meru, Meru County, Kenya | Call / WhatsApp: +254 700 123 456 | Email: elightelectrical@ke.com</p>
+      </footer>
+    </div>
+  </div>
+
+  <script src="js/site_nav.js"></script>
+  <script>
+    let currentHelpAudience = 'all';
+    let helpSearchTimer = null;
+
+    function escapeHTML(str) {
+      return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    function setHelpAudience(audience, btnEl) {
+      currentHelpAudience = audience;
+      document.querySelectorAll('.help-audience-btn').forEach(btn => {
+        if (btn === btnEl) {
+          btn.classList.add('btn-primary');
+          btn.style.background = '';
+          btn.style.color = '';
+          btn.style.border = '';
+        } else {
+          btn.classList.remove('btn-primary');
+          btn.style.background = '#f1f5f9';
+          btn.style.color = '#1e293b';
+          btn.style.border = '1px solid #cbd5e1';
+        }
+      });
+      loadHelpContent();
+    }
+
+    function debouncedLoadHelp() {
+      clearTimeout(helpSearchTimer);
+      helpSearchTimer = setTimeout(loadHelpContent, 180);
+    }
+
+    function toggleFaqItem(btn) {
+      const item = btn.closest('.faq-item');
+      if (!item) return;
+      item.classList.toggle('open');
+      const icon = btn.querySelector('.faq-toggle-icon');
+      if (icon) icon.textContent = item.classList.contains('open') ? '−' : '+';
+    }
+
+    async function loadHelpContent() {
+      const q = (document.getElementById('helpSearchInput')?.value || '').trim();
+      const params = new URLSearchParams();
+      if (currentHelpAudience && currentHelpAudience !== 'all') params.set('audience', currentHelpAudience);
+      if (q) params.set('q', q);
+
+      const guidesEl = document.getElementById('helpGuidesList');
+      const faqsEl = document.getElementById('helpFaqsList');
+
+      try {
+        const res = await fetch('/api/help?' + params.toString());
+        const data = await res.json();
+        if (!data.success) throw new Error('Failed to load help topics');
+
+        const guides = data.guides || [];
+        const faqs = data.faqs || [];
+
+        const badgeEl = document.getElementById('helpCountBadge');
+        if (badgeEl) {
+          badgeEl.textContent = `${guides.length} Guide${guides.length === 1 ? '' : 's'} · ${faqs.length} FAQ${faqs.length === 1 ? '' : 's'}`;
+        }
+
+        if (guides.length === 0) {
+          guidesEl.innerHTML = '<p style="color:var(--text-muted); padding:10px 0;">No guides matched your search filter.</p>';
+        } else {
+          guidesEl.innerHTML = guides.map(g => {
+            const badge = g.audience === 'attendant'
+              ? '<span style="background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:999px; font-size:0.72rem; font-weight:700;">Staff</span>'
+              : '<span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:999px; font-size:0.72rem; font-weight:700;">Customer</span>';
+            return `
+              <div style="border:1px solid #e2e8f0; border-radius:10px; padding:16px; margin-bottom:14px; background:#f8fafc;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">
+                  <strong style="color:var(--primary); font-size:0.98rem;">${escapeHTML(g.icon || '📘')} ${escapeHTML(g.title)}</strong>
+                  ${badge}
+                </div>
+                <ol class="guide-step-list">
+                  ${(g.steps || []).map(step => `<li style="margin-bottom:5px; font-size:0.89rem; line-height:1.5;">${escapeHTML(step)}</li>`).join('')}
+                </ol>
+              </div>
+            `;
+          }).join('');
+        }
+
+        if (faqs.length === 0) {
+          faqsEl.innerHTML = '<p style="color:var(--text-muted); padding:10px 0;">No FAQs matched your search filter.</p>';
+        } else {
+          faqsEl.innerHTML = faqs.map((f, idx) => `
+            <div class="faq-item ${idx === 0 ? 'open' : ''}">
+              <button type="button" class="faq-question" onclick="toggleFaqItem(this)">
+                <span>
+                  <span style="display:block; font-size:0.72rem; text-transform:uppercase; color:#64748b; margin-bottom:2px;">${escapeHTML(f.category || 'General')}</span>
+                  ${escapeHTML(f.question)}
+                </span>
+                <span class="faq-toggle-icon" style="font-size:1.2rem; font-weight:800; flex-shrink:0;">${idx === 0 ? '−' : '+'}</span>
+              </button>
+              <div class="faq-answer">${escapeHTML(f.answer)}</div>
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        guidesEl.innerHTML = `<p style="color:#b91c1c;">${escapeHTML(err.message)}</p>`;
+        faqsEl.innerHTML = '';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadHelpContent);
+  </script>
+</body>
+
+</html>
+

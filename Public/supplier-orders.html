@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Approved Deliveries &amp; Invoices | Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/supplier-portal.css">
+</head>
+<body>
+
+  <!-- Exact Frontpage Header Design with Logo & Title -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo" style="width:68px;height:68px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Supplier Procurement Portal • Meru Town, Meru County, Kenya</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="storefront-layout">
+    <!-- Dedicated Supplier Left-Aligned Navigation Sidebar -->
+    <nav>
+      <div class="nav-links">
+        <a href="/supplier-portal" data-tab="dashboard">
+          📊 Dashboard Overview
+        </a>
+        <a href="/supplier-tenders" data-tab="tenders">
+          📦 Restock Tenders
+        </a>
+        <a href="/supplier-orders" data-tab="orders">
+          🚚 Deliveries &amp; Invoices
+          <span class="cart-pill" id="navOrdersBadge" style="display:none; background:#10b981; color:#ffffff;">0</span>
+        </a>
+        <a href="/supplier-payments" data-tab="payments">
+          💰 Payments Received
+          <span class="cart-pill" id="navPaymentsBadge" style="display:none; background:#f59e0b; color:#0f172a;">0</span>
+        </a>
+      </div>
+      <div class="nav-auth-box">
+        <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px 12px; text-align:center;">
+          <div id="headerSupplierName" style="font-size:0.86rem; font-weight:700; color:#ffd54a; word-break:break-word;">🏢 Supplier (Loading...)</div>
+        </div>
+        <button type="button" onclick="logoutSupplier()" style="width:100%; background:#ef4444; color:#ffffff; border:none; border-radius:6px; padding:10px 14px; font-size:0.85rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; margin-top:8px;">
+          🚪 Sign Out
+        </button>
+      </div>
+    </nav>
+
+    <div class="storefront-content">
+      <main class="portal-shell">
+
+    <!-- Page Header Banner -->
+    <div class="page-header-banner" style="background:linear-gradient(135deg, #064e3b 0%, #087443 100%);">
+      <div>
+        <h2><span>🚚</span> Approved Tenders (Supply Order Stock)</h2>
+        <p>The Inventory Manager has <strong>approved your tender</strong>! Please supply/dispatch the restock goods to Elight Electrical Shop and mark them as supplied or upload the invoice.</p>
+      </div>
+      <div>
+        <span id="approvedOrdersCountBadge" class="badge badge-success" style="font-size:0.88rem; padding:6px 14px; display:none;">0 approved</span>
+      </div>
+    </div>
+
+    <!-- Approved Orders Section -->
+    <section class="portal-card">
+      <div class="portal-card-header header-green">
+        <span>Restock Orders Approved for Supply</span>
+        <span style="font-size:0.85rem; color:var(--sys-text-muted); font-weight:normal;">Invoice automatically registers stock and notifies Finance</span>
+      </div>
+      <div class="divider-line divider-green"></div>
+
+      <div id="approvedTendersContainer">
+        <div class="empty-state-text">Loading approved orders...</div>
+      </div>
+    </section>
+
+  </main>
+    </div> <!-- /.storefront-content -->
+  </div> <!-- /.storefront-layout -->
+
+  <!-- MODAL: MARK AS SUPPLIED / DISPATCH -->
+  <div class="modal-overlay" id="dispatchModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🚚 Confirm Dispatch / Goods Supplied</h3>
+        <button type="button" class="modal-close-btn" onclick="closeModal('dispatchModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="dispatch_po_id">
+        <p style="font-size:0.88rem; color:#475569;">
+          Confirming dispatch notifies Elight Electrical Shop's Inventory Manager that goods are in transit or delivered to the store.
+        </p>
+        <div class="form-group">
+          <label>Delivery Method / Courier</label>
+          <input type="text" id="dispatch_courier" class="form-control" placeholder="e.g. Direct Van Delivery / Rider / Fargo Courier">
+        </div>
+        <div class="form-group">
+          <label>Waybill / Tracking / Delivery Note #</label>
+          <input type="text" id="dispatch_waybill" class="form-control" placeholder="e.g. DN-2026-9041">
+        </div>
+        <div class="form-group">
+          <label>Expected / Actual Delivery Date</label>
+          <input type="date" id="dispatch_date" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-navy" style="background:#64748b;" onclick="closeModal('dispatchModal')">Cancel</button>
+        <button type="button" class="btn-green" onclick="submitDispatch()">Confirm Supplied</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SUPPLY APPROVED QUOTATION STOCK -->
+  <div class="modal-overlay" id="supplyModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📦 Supply Approved Order Stock</h3>
+        <button type="button" class="modal-close-btn" onclick="closeModal('supplyModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="supply_po_id">
+        <div id="supply_po_summary" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:10px 12px; font-size:0.86rem; color:#1e3a8a; margin-bottom:12px; font-weight:600;"></div>
+        <div class="form-group">
+          <label>Items &amp; Quantities to Supply</label>
+          <div id="supply_items_list" style="display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto; padding:8px; border:1px solid #e2e8f0; border-radius:6px; background:#f8fafc;"></div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="form-group">
+            <label>Supply Status</label>
+            <select id="supply_status" class="form-control">
+              <option value="dispatched">Dispatched for Delivery</option>
+              <option value="in_transit">In Transit to Shop</option>
+              <option value="arrived_at_shop">Arrived at Shop</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Supply / Delivery Date</label>
+            <input type="date" id="supply_date" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Delivery Note / Waybill Ref #</label>
+          <input type="text" id="supply_ref" class="form-control" placeholder="e.g. SUP-DN-2026-101">
+        </div>
+        <div class="form-group">
+          <label>Supply Notes</label>
+          <input type="text" id="supply_notes" class="form-control" placeholder="e.g. Dispatched approved tender items per quotation">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-navy" style="background:#64748b;" onclick="closeModal('supplyModal')">Cancel</button>
+        <button type="button" class="btn-gold" onclick="submitSupply()">📦 Confirm Supply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: UPLOAD / SUBMIT INVOICE -->
+  <div class="modal-overlay" id="invoiceModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🧾 Submit Invoice to Inventory Manager</h3>
+        <button type="button" class="modal-close-btn" onclick="closeModal('invoiceModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="invoice_po_id">
+        <p style="font-size:0.88rem; color:#475569;">
+          Submitting this invoice automatically confirms delivery, adds the restock items into store inventory, and forwards the invoice to the Finance Manager for payout disbursement.
+        </p>
+        <div class="form-group">
+          <label>Invoice Number</label>
+          <input type="text" id="inv_number" class="form-control" placeholder="e.g. INV-MET-2026-081" required>
+        </div>
+        <div class="form-group">
+          <label>Total Invoice Amount (KSh)</label>
+          <input type="number" step="0.01" id="inv_total_amount" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Payment Due Date</label>
+          <input type="date" id="inv_due_date" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Supplier Invoice Notes</label>
+          <input type="text" id="inv_notes" class="form-control" placeholder="e.g. Standard 30 days payment terms as agreed">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-navy" style="background:#64748b;" onclick="closeModal('invoiceModal')">Cancel</button>
+        <button type="button" class="btn-gold" onclick="submitInvoice()">Submit Invoice</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-msg"></div>
+
+  <script src="js/supplier_common.js"></script>
+  <script>
+    let loadedApprovedPOs = [];
+
+    async function loadOrdersPage() {
+      await initSupplierHeader('orders');
+
+      // Default modal dates
+      document.getElementById('dispatch_date').value = new Date().toISOString().slice(0, 10);
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 14);
+      document.getElementById('inv_due_date').value = dueDate.toISOString().slice(0, 10);
+
+      try {
+        const res = await authFetch('/api/supplier/purchase-orders');
+        if (!res || !res.ok) return;
+
+        const data = await res.json();
+        const pos = data.purchase_orders || [];
+
+        const approvedPOs = pos.filter(p => {
+          const s = String(p.status || '').toLowerCase();
+          return s === 'approved' || s === 'approved_awaiting_delivery' || s === 'partially_delivered' || s === 'delivered';
+        });
+        loadedApprovedPOs = approvedPOs;
+
+        const box = document.getElementById('approvedTendersContainer');
+        const badge = document.getElementById('approvedOrdersCountBadge');
+        const navBadge = document.getElementById('navOrdersBadge');
+
+        if (approvedPOs.length > 0) {
+          badge.textContent = `${approvedPOs.length} approved`;
+          badge.style.display = 'inline-block';
+          if (navBadge) {
+            navBadge.textContent = approvedPOs.length;
+            navBadge.style.display = 'inline-block';
+          }
+
+          box.innerHTML = approvedPOs.map(po => {
+            const itemsSummary = (po.items || []).map(i => `${i.ordered_qty || 1}x ${i.product_name}`).join(', ') || 'Electrical items';
+            const totalAmt = Number(po.total_amount || 0);
+            const delStatus = String(po.delivery_status || 'pending');
+            const isDelivered = delStatus === 'delivered' || delStatus === 'received';
+            return `
+              <div class="order-card">
+                <div>
+                  <div class="order-meta-title">Approved Order #${po.po_number || po.po_id} • ${formatKES(totalAmt)}</div>
+                  <div class="order-meta-sub">Items: <strong>${escapeHtml(itemsSummary)}</strong></div>
+                  <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
+                    <span class="badge ${isDelivered ? 'badge-success' : 'badge-amber'}">Delivery: ${delStatus.toUpperCase()}</span>
+                    ${po.expected_date ? `<span style="font-size:0.8rem; color:var(--sys-text-muted);">Expected: ${po.expected_date}</span>` : ''}
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button type="button" class="btn-green" onclick="openDispatchModal(${po.po_id})">
+                    🚚 Mark as Supplied
+                  </button>
+                  <button type="button" class="btn-gold" onclick="openSupplyModal(${po.po_id})">
+                    📦 Supply
+                  </button>
+                  <button type="button" class="btn-navy" onclick="openInvoiceModal(${po.po_id}, ${totalAmt})">
+                    🧾 Upload Invoice
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        } else {
+          badge.style.display = 'none';
+          if (navBadge) navBadge.style.display = 'none';
+          box.innerHTML = '<div class="empty-state-text">No approved orders awaiting stock supply right now.</div>';
+        }
+      } catch (err) {
+        console.error('loadOrdersPage error:', err);
+      }
+    }
+
+    function openDispatchModal(poId) {
+      document.getElementById('dispatch_po_id').value = poId;
+      openModal('dispatchModal');
+    }
+
+    function openSupplyModal(poId) {
+      const po = loadedApprovedPOs.find(p => Number(p.po_id) === Number(poId));
+      document.getElementById('supply_po_id').value = poId;
+      document.getElementById('supply_date').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('supply_ref').value = `SUP-PO-${poId}-${Math.floor(1000 + Math.random() * 9000)}`;
+      document.getElementById('supply_status').value = 'dispatched';
+      document.getElementById('supply_notes').value = '';
+
+      const summaryEl = document.getElementById('supply_po_summary');
+      const itemsEl = document.getElementById('supply_items_list');
+      if (po) {
+        summaryEl.textContent = `Confirmed Order #${po.po_number || po.po_id} • Approved Value: ${formatKES(po.total_amount || 0)}`;
+        const items = Array.isArray(po.items) ? po.items : [];
+        if (items.length > 0) {
+          itemsEl.innerHTML = items.map((item, idx) => {
+            const defaultQty = Math.max(1, Number(item.outstanding_qty ?? item.ordered_qty ?? 1));
+            return `
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:#fff; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px;">
+                <div style="font-size:0.84rem; color:#0f172a;">
+                  <strong>${escapeHtml(item.product_name || 'Item')}</strong><br>
+                  <small style="color:#64748b;">Ordered: ${Number(item.ordered_qty || 1)} units • Unit: ${formatKES(item.unit_cost || 0)}</small>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <label for="supply_qty_${idx}" style="font-size:0.78rem; color:#475569; margin:0;">Qty:</label>
+                  <input type="number" id="supply_qty_${idx}" class="form-control supply-qty-input" data-idx="${idx}" min="1" value="${defaultQty}" style="width:80px; padding:5px 8px;">
+                </div>
+              </div>
+            `;
+          }).join('');
+        } else {
+          itemsEl.innerHTML = '<div style="font-size:0.84rem; color:#475569;">Ready to supply all approved quotation items.</div>';
+        }
+      } else {
+        summaryEl.textContent = `Confirmed Order #PO-${poId}`;
+        itemsEl.innerHTML = '<div style="font-size:0.84rem; color:#475569;">Ready to supply approved order stock.</div>';
+      }
+
+      openModal('supplyModal');
+    }
+
+    async function submitSupply() {
+      const poId = Number(document.getElementById('supply_po_id').value);
+      const po = loadedApprovedPOs.find(p => Number(p.po_id) === poId);
+      const deliveryStatus = document.getElementById('supply_status').value || 'dispatched';
+      const deliveryDate = document.getElementById('supply_date').value;
+      const deliveryRef = document.getElementById('supply_ref').value.trim();
+      const notes = document.getElementById('supply_notes').value.trim();
+
+      const poItems = Array.isArray(po?.items) ? po.items : [];
+      const itemsDispatched = [];
+      let totalQty = 0;
+
+      if (poItems.length > 0) {
+        const inputs = document.querySelectorAll('#supply_items_list .supply-qty-input');
+        for (const inp of inputs) {
+          const item = poItems[Number(inp.dataset.idx)];
+          const qty = Math.max(0, parseInt(inp.value, 10) || 0);
+          if (qty <= 0) {
+            showToast('Supplied quantity must be greater than 0.');
+            return;
+          }
+          totalQty += qty;
+          if (item) {
+            itemsDispatched.push({
+              product_id: item.product_id || null,
+              product_name: item.product_name,
+              dispatched_qty: qty,
+              unit_cost: Number(item.unit_cost || 0)
+            });
+          }
+        }
+      } else {
+        totalQty = 1;
+      }
+
+      try {
+        const res = await authFetch('/api/supplier/deliveries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            po_id: poId,
+            dispatched_qty: totalQty,
+            items_dispatched: itemsDispatched,
+            delivery_status: deliveryStatus,
+            delivery_note_ref: deliveryRef,
+            expected_delivery_date: deliveryDate,
+            supplier_notes: notes || 'Supply initiated from confirmed quotation'
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Supply submission failed');
+        closeModal('supplyModal');
+        showToast('Supply recorded! Inventory Manager notified for goods receipt.');
+        await loadOrdersPage();
+      } catch (err) {
+        showToast(err.message || 'Supply submission failed.');
+      }
+    }
+
+    async function submitDispatch() {
+      const poId = Number(document.getElementById('dispatch_po_id').value);
+      const po = loadedApprovedPOs.find(p => Number(p.po_id) === poId);
+      const courier = document.getElementById('dispatch_courier').value.trim();
+      const waybill = document.getElementById('dispatch_waybill').value.trim();
+      const date = document.getElementById('dispatch_date').value;
+      const poItems = Array.isArray(po?.items) ? po.items : [];
+      const totalQty = poItems.reduce((sum, i) => sum + Math.max(1, Number(i.ordered_qty || 1)), 0) || 1;
+      const itemsDispatched = poItems.map(i => ({
+        product_id: i.product_id || null,
+        product_name: i.product_name,
+        dispatched_qty: Math.max(1, Number(i.ordered_qty || 1)),
+        unit_cost: Number(i.unit_cost || 0)
+      }));
+
+      try {
+        const res = await authFetch('/api/supplier/deliveries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            po_id: poId,
+            dispatched_qty: totalQty,
+            items_dispatched: itemsDispatched,
+            delivery_status: 'arrived_at_shop',
+            delivery_note_ref: waybill,
+            expected_delivery_date: date,
+            supplier_notes: [courier ? `Carrier: ${courier}` : '', 'Goods supplied to Elight Electrical Shop'].filter(Boolean).join(' • ')
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Dispatch update failed');
+        closeModal('dispatchModal');
+        showToast('Restock order marked as supplied! Inventory Manager notified.');
+        await loadOrdersPage();
+      } catch (err) {
+        showToast(err.message || 'Dispatch submission failed.');
+      }
+    }
+
+    function openInvoiceModal(poId, totalAmt) {
+      document.getElementById('invoice_po_id').value = poId;
+      document.getElementById('inv_number').value = `INV-PO-${poId}-${Math.floor(1000 + Math.random() * 9000)}`;
+      document.getElementById('inv_total_amount').value = totalAmt || '';
+      openModal('invoiceModal');
+    }
+
+    async function submitInvoice() {
+      const poId = document.getElementById('invoice_po_id').value;
+      const invoiceNumber = document.getElementById('inv_number').value.trim();
+      const totalAmount = parseFloat(document.getElementById('inv_total_amount').value);
+      const dueDate = document.getElementById('inv_due_date').value;
+      const supplierNotes = document.getElementById('inv_notes').value.trim();
+
+      if (!invoiceNumber || !totalAmount) {
+        showToast('Please enter invoice number and total amount.');
+        return;
+      }
+
+      try {
+        const res = await authFetch('/api/supplier/invoices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            po_id: poId,
+            invoice_number: invoiceNumber,
+            total_amount: totalAmount,
+            due_date: dueDate,
+            supplier_notes: supplierNotes
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Invoice upload failed');
+        closeModal('invoiceModal');
+        showToast('Invoice received by Inventory Manager! Stock automatically added to inventory and forwarded to Finance.');
+        await loadOrdersPage();
+      } catch (err) {
+        showToast(err.message || 'Invoice submission failed.');
+      }
+    }
+
+    loadOrdersPage();
+  </script>
+</body>
+</html>
+

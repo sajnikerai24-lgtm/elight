@@ -1,0 +1,3002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css?v=2">
+  <link rel="icon" type="image/svg+xml" href="/images/elight-favicon.svg?v=7">
+</head>
+<body style="background:#f1f5f9; visibility:hidden;" id="adminPortalBody">
+
+  <!-- Header -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo" style="width:60px;height:60px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Your one-stop destination for quality electrical fittings, lighting &amp; appliances</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- ERP Main Container -->
+  <div class="erp-container">
+    <!-- Mobile Sidebar Backdrop -->
+    <div class="erp-sidebar-backdrop" id="erpSidebarBackdrop" onclick="toggleMobileSidebar(false)"></div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="erp-sidebar" id="erpSidebar">
+      <div class="erp-sidebar-header">
+        <div class="erp-sidebar-brand">
+          <h3>⚡ <span class="sidebar-label">Elight ERP</span></h3>
+          <p class="sidebar-label">System Modules</p>
+        </div>
+        <button type="button" class="erp-collapse-btn" id="sidebarCollapseBtn" onclick="toggleSidebarCollapse()" title="Collapse / Expand Sidebar">◀</button>
+      </div>
+
+      <!-- User Profile Card in Sidebar -->
+      <div class="erp-user-card" style="margin: 12px 12px 10px 12px; background:#1e293b; border:1px solid #334155; border-radius:10px; padding:11px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.3rem;" id="sidebarUserIcon">👑</span>
+          <div class="sidebar-label" style="overflow:hidden;">
+            <div style="color:#f8fafc; font-weight:700; font-size:0.85rem; white-space:nowrap; text-overflow:ellipsis;" id="sidebarUserName">Mercy Wanjiku</div>
+            <div style="color:#38bdf8; font-size:0.72rem; text-transform:capitalize;" id="sidebarUserRole">Administrator</div>
+          </div>
+        </div>
+        <div class="sidebar-label" style="display:flex; gap:6px; margin-top:10px;">
+          <a href="/" style="flex:1; text-align:center; text-decoration:none; background:#334155; color:#f8fafc; font-size:0.74rem; font-weight:700; padding:6px 8px; border-radius:6px;">🏠 Home</a>
+          <button onclick="handleLogout()" style="flex:1; background:#ef4444; color:#fff; border:none; font-size:0.74rem; font-weight:700; padding:6px 8px; border-radius:6px; cursor:pointer;">Logout</button>
+        </div>
+      </div>
+
+      <ul class="erp-nav-list">
+        <!-- Top-level Dashboard (always accessible at the top) -->
+        <li class="erp-nav-top-item">
+          <button class="erp-nav-btn active" title="Dashboard" onclick="switchModule('overview')">
+            <span class="nav-ico">📊</span> <span class="sidebar-label">Dashboard</span>
+          </button>
+        </li>
+
+        <!-- 1. Administration -->
+        <li class="erp-nav-group">
+          <button type="button" class="erp-group-toggle" title="Administration" onclick="toggleSidebarGroup(this)">
+            <span class="nav-ico">🛡️</span>
+            <span class="sidebar-label group-title">Administration</span>
+            <span class="sidebar-label group-chevron">▾</span>
+          </button>
+          <ul class="erp-submenu">
+            <li><button class="erp-nav-btn" onclick="switchModule('admin')"><span class="nav-ico">👥</span> <span>User Accounts</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('suppliers')"><span class="nav-ico">🏢</span> <span>Supplier Accounts</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('settings')"><span class="nav-ico">⚙️</span> <span>Settings &amp; Permissions</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('reports')"><span class="nav-ico">📈</span> <span>Reports</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('activity')"><span class="nav-ico">📡</span> <span>System Activities</span></button></li>
+          </ul>
+        </li>
+
+        <!-- 2. Inventory & Procurement -->
+        <li class="erp-nav-group">
+          <button type="button" class="erp-group-toggle" title="Inventory & Procurement" onclick="toggleSidebarGroup(this)">
+            <span class="nav-ico">📦</span>
+            <span class="sidebar-label group-title">Inventory &amp; Procurement</span>
+            <span class="sidebar-label group-chevron">▾</span>
+          </button>
+          <ul class="erp-submenu">
+            <li><button class="erp-nav-btn" onclick="switchModule('inventory')"><span class="nav-ico">📦</span> <span>Inventory Stock</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('inventory_materials')"><span class="nav-ico">🧱</span> <span>Material Requests</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('inventory_movements')"><span class="nav-ico">🔄</span> <span>Stock Movements</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('inventory_pos')"><span class="nav-ico">📄</span> <span>Purchase Orders</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('inventory_quotations')"><span class="nav-ico">💰</span> <span>Supplier Quotations</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('inventory_deliveries')"><span class="nav-ico">🚚</span> <span>Incoming Deliveries</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('inventory_invoices')"><span class="nav-ico">🧾</span> <span>Supplier Invoices</span></button></li>
+          </ul>
+        </li>
+
+        <!-- 3. Finance & Accounting -->
+        <li class="erp-nav-group">
+          <button type="button" class="erp-group-toggle" title="Finance & Accounting" onclick="toggleSidebarGroup(this)">
+            <span class="nav-ico">💵</span>
+            <span class="sidebar-label group-title">Finance &amp; Accounting</span>
+            <span class="sidebar-label group-chevron">▾</span>
+          </button>
+          <ul class="erp-submenu">
+            <li><button class="erp-nav-btn" onclick="switchModule('finance')"><span class="nav-ico">💵</span> <span>Finance Treasury &amp; P&amp;L</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('finance_releases')"><span class="nav-ico">🛡️</span> <span>Order Releases &amp; Credit</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('finance_services')"><span class="nav-ico">🛠️</span> <span>Service Fee Payments</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('finance_ledger')"><span class="nav-ico">📒</span> <span>Financial Ledger</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('finance_invoices')"><span class="nav-ico">🧾</span> <span>Supplier Invoices</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('finance_payments')"><span class="nav-ico">💳</span> <span>Supplier Payments</span></button></li>
+          </ul>
+        </li>
+
+        <!-- 4. Sales & Customers -->
+        <li class="erp-nav-group">
+          <button type="button" class="erp-group-toggle" title="Sales & Customers" onclick="toggleSidebarGroup(this)">
+            <span class="nav-ico">🛒</span>
+            <span class="sidebar-label group-title">Sales &amp; Customers</span>
+            <span class="sidebar-label group-chevron">▾</span>
+          </button>
+          <ul class="erp-submenu">
+            <li><button class="erp-nav-btn" onclick="switchModule('cashier')"><span class="nav-ico">🧾</span> <span>Cashier Module</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('new_sale')"><span class="nav-ico">🛒</span> <span>New Sale</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('customers')"><span class="nav-ico">👥</span> <span>Customer &amp; Warranty</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('customer_care')"><span class="nav-ico">📞</span> <span>Customer Care Follow-Up</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('bookings')"><span class="nav-ico">📅</span> <span>Booking Module</span></button></li>
+          </ul>
+        </li>
+
+        <!-- 5. Services & Dispatch -->
+        <li class="erp-nav-group">
+          <button type="button" class="erp-group-toggle" title="Services & Dispatch" onclick="toggleSidebarGroup(this)">
+            <span class="nav-ico">🛠️</span>
+            <span class="sidebar-label group-title">Services &amp; Dispatch</span>
+            <span class="sidebar-label group-chevron">▾</span>
+          </button>
+          <ul class="erp-submenu">
+            <li><button class="erp-nav-btn" onclick="switchModule('services')"><span class="nav-ico">📋</span> <span>Service Manager</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('technicians')"><span class="nav-ico">🧰</span> <span>Technician Portal</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('dispatch')"><span class="nav-ico">🚚</span> <span>Dispatch Manager</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('driver')"><span class="nav-ico">🚗</span> <span>Driver Deliveries</span></button></li>
+          </ul>
+        </li>
+
+        <!-- 6. Support & Content -->
+        <li class="erp-nav-group">
+          <button type="button" class="erp-group-toggle" title="Support & Content" onclick="toggleSidebarGroup(this)">
+            <span class="nav-ico">🌐</span>
+            <span class="sidebar-label group-title">Support &amp; Content</span>
+            <span class="sidebar-label group-chevron">▾</span>
+          </button>
+          <ul class="erp-submenu">
+            <li><button class="erp-nav-btn" onclick="switchModule('help')"><span class="nav-ico">❓</span> <span>Help Module</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('about')"><span class="nav-ico">ℹ️</span> <span>About Us Module</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('feedback')"><span class="nav-ico">💬</span> <span>Feedback Module</span></button></li>
+            <li><button class="erp-nav-btn" onclick="switchModule('contact')"><span class="nav-ico">📞</span> <span>Contact Us Module</span></button></li>
+          </ul>
+        </li>
+      </ul>
+
+      <div class="sidebar-label" style="padding:14px 16px; border-top:1px solid #1e293b; font-size:0.75rem; color:#64748b;">
+        Logged in as: <strong id="footerUserRoleLabel" style="color:#cbd5e1;">Shop Administrator</strong>
+      </div>
+    </aside>
+
+    <!-- Main Dynamic Module Content Area -->
+    <main class="erp-main-view">
+      <div class="erp-mobile-topbar">
+        <button type="button" class="erp-mobile-menu-btn" onclick="toggleMobileSidebar(true)">☰ Menu</button>
+        <span style="font-weight:700; color:var(--primary); font-size:0.92rem;">⚡ Elight ERP</span>
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 0: ADMIN CONTROL DASHBOARD -->
+      <!-- ======================================================== -->
+      <section id="module-overview" class="erp-module-section active">
+        <div class="module-header-row">
+          <div>
+            <h2>📊 Dashboard</h2>
+            <p>System governance, role &amp; permission control, departmental reports, and live system activity monitoring.</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-sm btn-primary" onclick="switchModule('admin'); openModal('user-modal')">+ Create User</button>
+            <button class="btn-sm" style="background:#1e40af; color:#fff; font-weight:700;" onclick="switchModule('settings')">⚙️ Permissions</button>
+            <button class="btn-sm" style="background:#087443; color:#fff; font-weight:700;" onclick="switchModule('reports')">📈 Reports</button>
+            <button class="btn-sm" style="background:#0f172a; color:#fff; font-weight:700;" onclick="switchModule('activity')">📡 System Activities</button>
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Dashboard')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <div class="admin-metrics">
+          <div class="metric-card">
+            <h4>Total Revenue (Sales)</h4>
+            <div class="value" id="kpi-revenue" style="color:var(--success);">KES 0.00</div>
+          </div>
+          <div class="metric-card">
+            <h4>Active User Accounts</h4>
+            <div class="value" id="kpi-users-count" style="color:var(--primary);">0</div>
+          </div>
+          <div class="metric-card">
+            <h4>Low Stock Alerts</h4>
+            <div class="value" id="kpi-lowstock" style="color:var(--danger);">0</div>
+          </div>
+          <div class="metric-card">
+            <h4>Monitored System Events</h4>
+            <div class="value" id="kpi-activities-count" style="color:#b45309;">0</div>
+          </div>
+        </div>
+
+        <!-- Executive Treasury & Real-Time Account Balances (Admin & Finance) -->
+        <div style="margin-top:22px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <h3 style="margin:0; font-size:1.05rem; color:var(--primary); display:flex; align-items:center; gap:8px;">
+              <span>🏛️</span> Executive Treasury &amp; Account Balances
+            </h3>
+            <div style="display:flex; gap:8px;">
+              <button class="btn-sm" style="background:#087443; color:#fff; font-weight:700;" onclick="switchModule('finance')">View Finance Ledger →</button>
+              <button class="btn-sm" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#0f172a; font-weight:600;" onclick="openAdjustBalancesModal()">⚙️ Adjust Opening Floats</button>
+            </div>
+          </div>
+          <div class="admin-metrics" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+            <div class="metric-card" style="border-left:4px solid #16a34a;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <h4>💵 Cash in Hand</h4>
+                <span style="font-size:0.75rem; background:#dcfce7; color:#15803d; font-weight:700; padding:2px 6px; border-radius:4px;">Counter Float</span>
+              </div>
+              <div class="value" id="dash-balance-cash" style="color:#16a34a;">KES 0.00</div>
+              <small style="color:var(--text-muted);" id="dash-balance-cash-sub">Showroom Cash Drawer</small>
+            </div>
+            <div class="metric-card" style="border-left:4px solid #087443;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <h4>📱 M-Pesa Balance</h4>
+                <span style="font-size:0.75rem; background:#dcfce7; color:#087443; font-weight:700; padding:2px 6px; border-radius:4px;">Till 5894210</span>
+              </div>
+              <div class="value" id="dash-balance-mpesa" style="color:#087443;">KES 0.00</div>
+              <small style="color:var(--text-muted);" id="dash-balance-mpesa-sub">Safaricom Business Buy Goods</small>
+            </div>
+            <div class="metric-card" style="border-left:4px solid #1d4ed8;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <h4>🏦 Bank Balance</h4>
+                <span style="font-size:0.75rem; background:#dbeafe; color:#1d4ed8; font-weight:700; padding:2px 6px; border-radius:4px;">Equity Meru</span>
+              </div>
+              <div class="value" id="dash-balance-bank" style="color:#1d4ed8;">KES 0.00</div>
+              <small style="color:var(--text-muted);" id="dash-balance-bank-sub">Current Operating Account</small>
+            </div>
+            <div class="metric-card" style="border-left:4px solid #7c3aed;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <h4>💼 Total Liquid Treasury</h4>
+                <span style="font-size:0.75rem; background:#ede9fe; color:#6d28d9; font-weight:700; padding:2px 6px; border-radius:4px;">All Accounts</span>
+              </div>
+              <div class="value" id="dash-balance-total" style="color:#7c3aed;">KES 0.00</div>
+              <small style="color:var(--text-muted);" id="dash-balance-total-sub">Net Liquid Working Capital</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connected Departments & Access Governance Table -->
+        <div style="margin-top:22px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+            <h3 style="margin:0; font-size:1.02rem; color:var(--primary);">🏛️ Connected Departments &amp; Role Access Control</h3>
+            <button class="btn-sm" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#0f172a; font-weight:600;" onclick="switchModule('settings')">Configure Role Permissions →</button>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Department</th>
+                  <th>Assigned Role(s)</th>
+                  <th>Active Accounts</th>
+                  <th>Permitted Operational Modules</th>
+                  <th>Admin Oversight</th>
+                </tr>
+              </thead>
+              <tbody id="overview-dept-governance-body">
+                <tr><td colspan="5" style="text-align:center; padding:16px;">Loading department access matrix...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recent System Activity Stream Preview -->
+        <div style="margin-top:24px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+            <h3 style="margin:0; font-size:1.02rem; color:var(--primary);">📡 Recent Cross-Department System Activities</h3>
+            <button class="btn-sm" style="background:#0f172a; color:#fff;" onclick="switchModule('activity')">View All System Activities →</button>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Department</th>
+                  <th>Actor</th>
+                  <th>Event</th>
+                  <th>Summary</th>
+                </tr>
+              </thead>
+              <tbody id="overview-activity-preview">
+                <tr><td colspan="5" style="text-align:center; padding:16px;">Loading live system events...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 1: USER ACCOUNTS & ROLE MANAGEMENT -->
+      <!-- ======================================================== -->
+      <section id="module-admin" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>👥 User Accounts &amp; Role Management</h2>
+            <p>Create staff &amp; system user accounts, assign roles (Cashier, Technician, Inventory Manager, etc.), and control account status.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-sm btn-primary" onclick="openModal('user-modal')">+ Create User Account</button>
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('User Governance')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <div class="panel-card" style="margin-bottom:16px; padding:12px 16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+          <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; flex:1;">
+            <input type="text" id="users-search-input" oninput="renderUsersTable()" placeholder="Search name, username, email, or phone..." style="min-width:240px; flex:1; max-width:360px; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+            <select id="users-role-filter" onchange="renderUsersTable()" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem; background:#fff;">
+              <option value="all">All Roles</option>
+              <option value="admin">Administrator</option>
+              <option value="cashier">Cashier</option>
+              <option value="technician">Technician</option>
+              <option value="inventory_manager">Inventory Manager</option>
+              <option value="service_manager">Service Manager</option>
+              <option value="finance_manager">Finance Manager</option>
+              <option value="dispatch_manager">Dispatch Manager</option>
+              <option value="driver">Driver</option>
+              <option value="customer">Customer</option>
+            </select>
+          </div>
+          <div id="users-summary-badge" style="font-size:0.82rem; font-weight:700; color:#334155;"></div>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Full Name &amp; Username</th>
+                <th>Contact (Email / Phone)</th>
+                <th>Assigned Role</th>
+                <th>Status</th>
+                <th>Assign Role &amp; Account Controls</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body">
+              <tr><td colspan="6" style="text-align:center; padding:20px;">Loading user accounts...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 1B: SUPPLIER ACCOUNTS (SUPABASE AUTH) -->
+      <!-- ======================================================== -->
+      <section id="module-suppliers" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>🏢 Supplier Portal Accounts</h2>
+            <p>Register suppliers, provision individual Supabase Authentication accounts, activate/deactivate access, and trigger secure password resets.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="/supplier-login" target="_blank" class="btn-sm" style="background:#f8fafc; border:1px solid #cbd5e1; color:#0f172a; text-decoration:none;">↗ Open Supplier Login Page</a>
+            <button class="btn-sm btn-primary" onclick="openRegisterSupplierModal()">+ Register Supplier Account</button>
+          </div>
+        </div>
+        <div id="erp-admin-suppliers-container"></div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 2: CUSTOMER MODULE -->
+      <!-- ======================================================== -->
+      <section id="module-customers" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>👥 Customer & Warranty Module</h2>
+            <p>Customer profiles, purchase histories, and appliance warranty certificates for after-sales support.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-sm btn-primary" onclick="openModal('customer-modal')">+ Register Customer</button>
+            <button class="btn-sm" style="background:var(--primary-light); color:white;" onclick="openModal('warranty-modal')">+ Issue Warranty</button>
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Customer CRM')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <!-- Customer Profiles Table -->
+        <h3 style="margin-bottom:12px; color:var(--primary); font-size:1.05rem;">Customer Profiles Directory</h3>
+        <div class="table-responsive" style="margin-bottom:28px;">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Customer Name</th>
+                <th>Phone Number</th>
+                <th>Email</th>
+                <th>Location / Address</th>
+                <th>Customer Notes</th>
+              </tr>
+            </thead>
+            <tbody id="customers-table-body">
+              <tr><td colspan="6" style="text-align:center; padding:20px;">Loading customer records...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Warranty Records Table -->
+        <h3 style="margin-bottom:12px; color:var(--primary); font-size:1.05rem;">Product Warranty Certificates</h3>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Cert #</th>
+                <th>Customer</th>
+                <th>Product Protected</th>
+                <th>Serial Number</th>
+                <th>Start Date</th>
+                <th>Expiry Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="warranties-table-body">
+              <tr><td colspan="7" style="text-align:center; padding:20px;">Loading warranties...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE: CUSTOMER CARE & POST-FULFILLMENT FOLLOW-UP -->
+      <!-- ======================================================== -->
+      <section id="module-customer_care" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>📞 Customer Care &amp; Follow-Up Desk</h2>
+            <p>Conduct post-fulfillment follow-ups for delivered orders and completed installations: verify product condition, measure delivery &amp; installation satisfaction, and resolve customer complaints.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn-sm" style="background:#0f172a; color:#fff;" onclick="loadCustomerCareDesk()">🔄 Refresh Follow-Ups</button>
+            <button type="button" class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Customer Care')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="admin-metrics" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom:16px;">
+          <div class="metric-card" style="border-left:4px solid #f59e0b; cursor:pointer;" onclick="filterCustomerCareTasks('pending')">
+            <h4>⏳ Pending Follow-Up Calls</h4>
+            <div class="value" id="cc-kpi-pending" style="color:#b45309;">0</div>
+            <small style="color:var(--text-muted);">Delivered / Installed Orders</small>
+          </div>
+          <div class="metric-card" style="border-left:4px solid #16a34a; cursor:pointer;" onclick="filterCustomerCareTasks('completed')">
+            <h4>✅ Completed Follow-Ups</h4>
+            <div class="value" id="cc-kpi-completed" style="color:#16a34a;">0</div>
+            <small style="color:var(--text-muted);">Customer Feedback Logged</small>
+          </div>
+          <div class="metric-card" style="border-left:4px solid #dc2626; cursor:pointer;" onclick="filterCustomerCareTasks('complaints')">
+            <h4>⚠️ Complaints &amp; Issues</h4>
+            <div class="value" id="cc-kpi-complaints" style="color:#dc2626;">0</div>
+            <small style="color:var(--text-muted);">Defects / Delivery Issues</small>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="panel-card" style="margin-bottom:16px; padding:12px 16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+          <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; flex:1;">
+            <select id="cc-filter-status" onchange="renderCustomerCareTable()" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem; background:#fff; font-weight:600;">
+              <option value="all">All Follow-Up Tasks</option>
+              <option value="pending" selected>⏳ Pending Customer Contact</option>
+              <option value="completed">✅ Follow-Up Completed</option>
+              <option value="complaints">⚠️ Logged Complaints Only</option>
+            </select>
+            <input type="text" id="cc-search-input" oninput="renderCustomerCareTable()" placeholder="Search Order #, Customer, Phone, or Location..." style="min-width:240px; flex:1; max-width:400px; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+          </div>
+          <div id="cc-tasks-badge" style="font-size:0.82rem; font-weight:700; color:#334155;"></div>
+        </div>
+
+        <!-- Follow-Up Table -->
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Task &amp; Order #</th>
+                <th>Customer &amp; Location</th>
+                <th>Fulfillment &amp; Crew</th>
+                <th>Product Condition</th>
+                <th>Satisfaction Ratings</th>
+                <th>Customer Care Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cc-tasks-tbody">
+              <tr><td colspan="6" style="text-align:center; padding:24px;">Loading Customer Care queue...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 3: SERVICE MANAGER MODULE -->
+      <!-- ======================================================== -->
+      <section id="module-services" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>📋 Service Manager Module</h2>
+            <p>Oversee service requests, plan electrical installations, and assign tasks to qualified technicians.</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-sm btn-primary" onclick="openModal('service-modal')">+ New Service Request</button>
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Services')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Req #</th>
+                <th>Customer</th>
+                <th>Location</th>
+                <th>Service Type</th>
+                <th>Date &amp; Assigned Time</th>
+                <th>Assigned Technician</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="services-table-body">
+              <tr><td colspan="8" style="text-align:center; padding:20px;">Loading service requests...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 4: TECHNICIAN MODULE -->
+      <!-- ======================================================== -->
+      <section id="module-technicians" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>🧰 Technician Module</h2>
+            <p>Field technician job view: Inspect assigned installations, update job status, and record materials used.</p>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <span style="font-size:0.85rem; color:var(--text-muted);">Active Field Jobs</span>
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Technicians')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <div id="technician-jobs-list" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:18px;">
+          <!-- Dynamically populated technician cards -->
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE: CASHIER MODULE (Sales, Payments, Receipts & Handoff) -->
+      <!-- ======================================================== -->
+      <section id="module-cashier" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>🧾 Cashier Module</h2>
+            <p>View customer orders, confirm payments, generate official receipts, and send paid orders for Meru delivery or shop collection.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn-sm" style="background:#0f172a; color:#fff;" onclick="loadCashierDesk()">🔄 Refresh Orders</button>
+            <button type="button" class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Cashier Desk')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="panel-card" style="margin-bottom:16px; padding:12px 16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+          <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; flex:1;">
+            <select id="cashier-filter-status" onchange="renderCashierOrdersTable()" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem; background:#fff; font-weight:600;">
+              <option value="all">All Customer Orders &amp; Sales</option>
+              <option value="pending_payment">⏳ Pending Payment Confirmation</option>
+              <option value="awaiting_handoff">✅ Paid — Send for Delivery / Collection</option>
+              <option value="dispatched_or_collected">🚚 Sent to Dispatch / 🛍️ Collected</option>
+            </select>
+            <input type="text" id="cashier-search-input" oninput="renderCashierOrdersTable()" placeholder="Search Order #, Receipt #, Customer, Phone, or Item..." style="min-width:250px; flex:1; max-width:400px; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+          </div>
+          <div id="cashier-orders-badge" style="font-size:0.82rem; font-weight:700; color:#334155;"></div>
+        </div>
+
+        <!-- Customer Orders & Sales Table -->
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Order / Receipt #</th>
+                <th>Customer &amp; Destination</th>
+                <th>Items Ordered</th>
+                <th>Total &amp; Payment</th>
+                <th>Delivery / Collection Status</th>
+                <th>Cashier Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cashier-orders-tbody">
+              <tr><td colspan="6" style="text-align:center; padding:20px;">Loading customer orders &amp; sales...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE: NEW SALE (Cashier Counter POS) -->
+      <!-- ======================================================== -->
+      <section id="module-new_sale" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>🛒 New Sale</h2>
+            <p>Select products from live inventory, record customer payment, generate an official receipt, and release for collection or Meru delivery.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn-sm" style="background:#0f172a; color:#fff;" onclick="switchModule('cashier')">🧾 View Customer Orders</button>
+            <button type="button" class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('New Sale')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <div class="metric-card" style="max-width:860px;">
+          <form onsubmit="handleRecordCashierSale(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Quick-Fill Registered Customer (Optional)</label>
+                <select id="pos_existing_customer" onchange="fillPOSCustomerFromSelect(this.value)">
+                  <option value="">-- Walk-In / New Customer --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Customer Name *</label>
+                <input type="text" id="pos_customer_name" required value="Walk-In Customer" placeholder="Customer Full Name">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Customer Phone</label>
+                <input type="tel" id="pos_customer_phone" placeholder="07...">
+              </div>
+              <div class="form-group">
+                <label>Location / Address (Meru County)</label>
+                <input type="text" id="pos_customer_location" value="Meru Town Showroom" placeholder="e.g. Makutano / Nkubu, Meru">
+              </div>
+            </div>
+
+            <!-- Product Line-Item Picker (Connected to Inventory Manager) -->
+            <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:14px; margin-bottom:16px;">
+              <label style="display:block; font-size:0.86rem; font-weight:700; color:#1e3a8a; margin-bottom:8px;">📦 Add Items from Live Shop Inventory</label>
+              <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                <select id="pos_product_select" style="flex:1; min-width:240px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;"></select>
+                <input type="number" id="pos_product_qty" min="1" value="1" style="width:90px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;" placeholder="Qty">
+                <button type="button" class="btn-sm btn-primary" onclick="addPOSCartItem()">+ Add Item</button>
+              </div>
+              <div class="table-responsive" style="margin-top:12px;">
+                <table style="font-size:0.85rem;">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Qty</th>
+                      <th>Unit Price</th>
+                      <th>Line Total</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="pos-cart-tbody">
+                    <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:12px;">No items added yet. Select a product above.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Fulfillment Pipeline & Payment Terms -->
+            <div class="form-row">
+              <div class="form-group" style="flex:2;">
+                <label>Fulfillment Workflow &amp; Dispatch Pipeline *</label>
+                <select id="pos_fulfillment_type" onchange="recalculatePOSTotals()" style="font-weight:600;">
+                  <option value="product_delivery">🚚 Product only: Cashier → Finance → Delivery (+KES 300 / +KES 500)</option>
+                  <option value="product_delivery_install">🚚🔧 Product + installation: Cashier → Finance → Delivery → Installation (+KES 300 / +KES 500)</option>
+                  <option value="product_collection">🏬 Product collected from shop: Cashier → Finance → Collection (Free Pickup)</option>
+                  <option value="product_install_later">🚚📅 Product + installation booked later: Cashier → Finance → Delivery → Scheduled installation (+KES 300 / +KES 500)</option>
+                </select>
+                <input type="hidden" id="pos_fulfillment_mode" value="delivery">
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label>Payment Terms *</label>
+                <select id="pos_payment_terms" onchange="togglePOSPaymentTerms()" style="font-weight:600;">
+                  <option value="full">✅ Full Settlement (Full Payment)</option>
+                  <option value="partial">⚠️ Partial Payment / Credit (Unpaid Balance)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Dynamic Unpaid Balance Alert (Rule 5 Enforced) -->
+            <div id="pos_unpaid_balance_alert" style="display:none; background:#fffbeb; border:1.5px solid #f59e0b; border-radius:8px; padding:12px 16px; margin-bottom:16px;">
+              <div style="font-weight:800; color:#b45309; font-size:0.92rem; display:flex; align-items:center; gap:6px;">
+                <span>⚠️</span> Product with Unpaid Balance: <span id="pos_balance_due_display">KES 0.00</span> Due
+              </div>
+              <p style="margin:4px 0 0 0; font-size:0.82rem; color:#92400e;">
+                <strong>Rule 5 Enforced:</strong> Finance checks credit/payment policy before release. This order will enter Finance review and requires Finance credit authorization prior to delivery dispatch or counter collection.
+              </p>
+              <div class="form-row" style="margin-top:10px; margin-bottom:0;">
+                <div class="form-group" style="margin-bottom:0; flex:1;">
+                  <label style="font-size:0.8rem; color:#78350f;"><strong>Amount Paid Now by Customer (KES) *</strong></label>
+                  <input type="number" id="pos_custom_amount_paid" min="1" step="1" oninput="recalculatePOSTotals()" placeholder="e.g. 1000">
+                </div>
+                <div class="form-group" style="margin-bottom:0; flex:2;">
+                  <label style="font-size:0.8rem; color:#78350f;">Customer Credit / Policy Justification</label>
+                  <input type="text" id="pos_credit_notes" placeholder="e.g. 50% deposit paid; 14-day trade credit terms requested..." style="font-size:0.85rem;">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Payment Method *</label>
+                <select id="pos_payment_method" onchange="togglePOSCashFields()">
+                  <option value="M-Pesa">M-Pesa</option>
+                  <option value="Cash">Cash at Counter</option>
+                  <option value="Split">⚖️ Split Payment (Cash + M-Pesa)</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                </select>
+              </div>
+              <div class="form-group" id="pos_delivery_zone_group">
+                <label>Delivery Area Zone (for Delivery orders)</label>
+                <select id="pos_delivery_zone" onchange="recalculatePOSTotals()">
+                  <option value="town">Meru Town &amp; Makutano (+KES 300)</option>
+                  <option value="subcounty">Meru Sub-Counties (+KES 500)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Standard Single-Method Payment Fields (M-Pesa / Cash / Bank) -->
+            <div id="pos_standard_payment_fields">
+              <div class="form-row">
+                <div class="form-group" id="pos_mpesa_phone_group">
+                  <label>Customer M-Pesa Phone Number *</label>
+                  <input type="tel" id="pos_mpesa_phone" placeholder="e.g. 0712 345 678">
+                </div>
+                <div class="form-group" id="pos_standard_ref_group">
+                  <label id="pos_ref_label">M-Pesa Transaction / Reference Code</label>
+                  <input type="text" id="pos_payment_ref" placeholder="e.g. SLK884290Q">
+                </div>
+                <div class="form-group" id="pos_cash_tendered_group" style="display:none;">
+                  <label>Cash Tendered by Customer (KES)</label>
+                  <input type="number" id="pos_cash_tendered" min="0" step="1" oninput="recalculatePOSTotals()" placeholder="Amount received">
+                </div>
+              </div>
+            </div>
+
+            <!-- Split Payment Panel (Cash + M-Pesa) -->
+            <div id="pos_split_payment_panel" style="display:none; background:#f8fafc; border:1.5px solid #93c5fd; border-radius:10px; padding:16px 18px; margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+                <div style="font-weight:800; color:#1e40af; font-size:0.95rem; display:flex; align-items:center; gap:6px;">
+                  <span>⚖️</span> Split Payment (Cash + M-Pesa)
+                </div>
+                <div id="pos_split_status_badge" style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; font-weight:700; padding:4px 10px; border-radius:6px; font-size:0.8rem;">
+                  Enter split amounts below
+                </div>
+              </div>
+
+              <!-- Cash Portion Card -->
+              <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:14px; margin-bottom:12px;">
+                <div style="font-weight:700; font-size:0.88rem; color:#0f172a; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                  <span>💵</span> Cash Portion
+                </div>
+                <div class="form-row">
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label>Cash Amount to Pay (KES) *</label>
+                    <input type="number" id="pos_split_cash_amount" min="0" step="1" oninput="handleSplitCashAmountChange()" placeholder="e.g. 1000">
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label>Cash Tendered by Customer (KES)</label>
+                    <input type="number" id="pos_split_cash_tendered" min="0" step="1" oninput="recalculatePOSTotals()" placeholder="Amount handed over">
+                  </div>
+                </div>
+                <div id="pos_split_cash_change_lbl" style="font-size:0.84rem; font-weight:700; color:#087443; margin-top:6px; display:none;"></div>
+              </div>
+
+              <!-- M-Pesa Portion Card -->
+              <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:14px;">
+                <div style="font-weight:700; font-size:0.88rem; color:#15803d; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                  <span>📲</span> M-Pesa Portion
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>M-Pesa Amount to Pay (KES) *</label>
+                    <input type="number" id="pos_split_mpesa_amount" min="0" step="1" oninput="handleSplitMpesaAmountChange()" placeholder="e.g. 1500">
+                  </div>
+                  <div class="form-group">
+                    <label>Customer M-Pesa Phone *</label>
+                    <input type="tel" id="pos_split_mpesa_phone" placeholder="e.g. 0712 345 678">
+                  </div>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label>M-Pesa Transaction / Reference Code *</label>
+                  <input type="text" id="pos_split_payment_ref" placeholder="e.g. SLK884290Q">
+                </div>
+              </div>
+            </div>
+
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:14px 18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <div>
+                <div style="font-size:0.84rem; color:#475569;">Items Subtotal: <strong id="pos_subtotal_lbl">KES 0.00</strong> | Delivery: <strong id="pos_delivery_lbl">KES 0.00</strong> | Order Total: <strong id="pos_order_total_lbl">KES 0.00</strong></div>
+                <div id="pos_change_lbl" style="font-size:0.86rem; font-weight:700; color:#087443; display:none; margin-top:4px;">Change Due: KES 0.00</div>
+                <div id="pos_balance_badge_lbl" style="font-size:0.86rem; font-weight:700; color:#b45309; display:none; margin-top:4px;">⚠️ Balance Due: KES 0.00 (Subject to Finance Credit Review)</div>
+              </div>
+              <div style="font-size:1.25rem; font-weight:800; color:#1e3a8a;">
+                Amount Paid: <span id="pos_grand_total_lbl">KES 0.00</span>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px;">
+              <button type="button" class="btn-sm" onclick="loadNewSaleModule()">Reset Form</button>
+              <button type="submit" class="btn-sm" style="background:#087443; color:#fff; font-weight:700; padding:10px 18px;">✅ Complete Sale &amp; Issue Receipt</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 5: FINANCE TREASURY & P&L -->
+      <!-- ======================================================== -->
+      <section id="module-finance" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>💵 Finance Treasury &amp; Profit / Loss</h2>
+            <p>Track live Cash, M-Pesa, and Bank channel balances, shop revenues, operational expenses, and net profit/loss.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-sm btn-primary" onclick="openModal('finance-modal')">+ Record Expense / Disbursement</button>
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Finance')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <!-- Real-Time Treasury & Channel Balances (Cash in Hand, M-Pesa, Bank) -->
+        <div style="margin-bottom:18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+            <h3 style="margin:0; font-size:1.02rem; color:var(--primary); display:flex; align-items:center; gap:8px;">
+              <span>🏛️</span> Real-Time Channel &amp; Treasury Balances
+            </h3>
+            <button class="btn-sm" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#0f172a; font-weight:600;" onclick="openAdjustBalancesModal()">⚙️ Set Account Opening Floats</button>
+          </div>
+          <div class="admin-metrics" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+            <div class="metric-card" style="border-left:4px solid #16a34a; cursor:pointer;" onclick="filterFinanceByAccount('Cash'); switchModule('finance_ledger');">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <h4>💵 Cash in Hand</h4>
+                <span style="font-size:0.75rem; background:#dcfce7; color:#15803d; font-weight:700; padding:2px 6px; border-radius:4px;">Counter Float</span>
+              </div>
+              <div class="value" id="fin-balance-cash" style="color:#16a34a;">KES 0.00</div>
+              <small style="color:var(--text-muted);" id="fin-balance-cash-sub">Showroom Cash Drawer</small>
+            </div>
+            <div class="metric-card" style="border-left:4px solid #087443; cursor:pointer;" onclick="filterFinanceByAccount('M-Pesa'); switchModule('finance_ledger');">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <h4>📱 M-Pesa Balance</h4>
+                <span style="font-size:0.75rem; background:#dcfce7; color:#087443; font-weight:700; padding:2px 6px; border-radius:4px;">Till 5894210</span>
+              </div>
+              <div class="value" id="fin-balance-mpesa" style="color:#087443;">KES 0.00</div>
+              <small style="color:var(--text-muted);" id="fin-balance-mpesa-sub">Safaricom Business Buy Goods</small>
+            </div>
+            <div class="metric-card" style="border-left:4px solid #1d4ed8; cursor:pointer;" onclick="filterFinanceByAccount('Bank'); switchModule('finance_ledger');">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <h4>🏦 Bank Balance</h4>
+                <span style="font-size:0.75rem; background:#dbeafe; color:#1d4ed8; font-weight:700; padding:2px 6px; border-radius:4px;">Equity Meru</span>
+              </div>
+              <div class="value" id="fin-balance-bank" style="color:#1d4ed8;">KES 0.00</div>
+              <small style="color:var(--text-muted);" id="fin-balance-bank-sub">Current Operating Account</small>
+            </div>
+            <div class="metric-card" style="border-left:4px solid #7c3aed; cursor:pointer;" onclick="filterFinanceByAccount('all'); switchModule('finance_ledger');">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <h4>💼 Total Liquid Treasury</h4>
+                <span style="font-size:0.75rem; background:#ede9fe; color:#6d28d9; font-weight:700; padding:2px 6px; border-radius:4px;">All Accounts</span>
+              </div>
+              <div class="value" id="fin-balance-total" style="color:#7c3aed;">KES 0.00</div>
+              <small style="color:var(--text-muted);" id="fin-balance-total-sub">Net Liquid Working Capital</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Releases & Credit Policy Gate (5 Fulfillment Pipelines) -->
+        <div style="background:linear-gradient(135deg, #1e3a8a, #0f172a); color:#fff; border-radius:10px; padding:18px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+          <div>
+            <div style="display:flex; align-items:center; gap:8px; font-size:1.05rem; font-weight:800; color:#fbbf24;">
+              <span>🛡️</span> Order Releases &amp; Credit Verification Desk
+            </div>
+            <p style="margin:4px 0 0 0; font-size:0.86rem; color:#cbd5e1; max-width:620px;">
+              Enforce official fulfillment pipelines. All customer orders require Finance verification and credit policy checks before release for Delivery or Counter Collection.
+            </p>
+            <div style="display:flex; gap:16px; margin-top:8px; font-size:0.84rem; flex-wrap:wrap;">
+              <div>⏳ Pending Release: <strong id="fin-dash-pending-full-count" style="color:#93c5fd;">0</strong></div>
+              <div>🛡️ Pending Credit Review: <strong id="fin-dash-pending-credit-count" style="color:#fcd34d;">0</strong></div>
+              <div>💳 Outstanding Receivables: <strong id="fin-dash-receivables-amount" style="color:#fca5a5;">KES 0.00</strong></div>
+            </div>
+          </div>
+          <div>
+            <button class="btn-sm" style="background:#fbbf24; color:#0f172a; font-weight:800; padding:10px 16px; border:none; cursor:pointer;" onclick="switchModule('finance_releases')">
+              Open Order Releases Desk →
+            </button>
+            <button class="btn-sm" style="background:#10b981; color:#fff; font-weight:800; padding:10px 16px; border:none; cursor:pointer; margin-left:8px;" onclick="switchModule('finance_services')">
+              🛠️ Service Fee Confirmations →
+            </button>
+          </div>
+        </div>
+
+        <!-- Profit and Loss Overview Cards -->
+        <div class="admin-metrics">
+          <div class="metric-card">
+            <h4>Total Recorded Sales</h4>
+            <div class="value" id="fin-total-sales" style="color:var(--success);">KES 0.00</div>
+          </div>
+          <div class="metric-card">
+            <h4>Total Expenses</h4>
+            <div class="value" id="fin-total-expenses" style="color:var(--danger);">KES 0.00</div>
+          </div>
+          <div class="metric-card">
+            <h4>Net Profit / Loss</h4>
+            <div class="value" id="fin-net-profit" style="color:var(--primary);">KES 0.00</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE: FINANCE ORDER RELEASES & CREDIT REVIEW DESK -->
+      <!-- ======================================================== -->
+      <section id="module-finance_releases" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>🛡️ Order Releases &amp; Credit Policy Review Desk</h2>
+            <p>Verify customer payments and enforce credit policy checks before orders are released for delivery dispatch or shop collection.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-sm" style="background:#0f172a; color:#fff;" onclick="loadFinanceReleases()">🔄 Refresh Desk</button>
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Finance Releases')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <!-- Summary KPI Cards -->
+        <div class="admin-metrics" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom:16px;">
+          <div class="metric-card" style="border-left:4px solid #f59e0b; cursor:pointer;" onclick="filterFinanceReleases('pending_credit')">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <h4>🛡️ Pending Credit Review</h4>
+              <span style="font-size:0.75rem; background:#fef3c7; color:#b45309; font-weight:700; padding:2px 6px; border-radius:4px;">Rule 5 Enforced</span>
+            </div>
+            <div class="value" id="fin-releases-kpi-credit" style="color:#b45309;">0</div>
+            <small style="color:var(--text-muted);">Orders with Unpaid Balance</small>
+          </div>
+
+          <div class="metric-card" style="border-left:4px solid #3b82f6; cursor:pointer;" onclick="filterFinanceReleases('pending_full')">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <h4>⏳ Pending Full Release</h4>
+              <span style="font-size:0.75rem; background:#dbeafe; color:#1d4ed8; font-weight:700; padding:2px 6px; border-radius:4px;">Fully Paid</span>
+            </div>
+            <div class="value" id="fin-releases-kpi-full" style="color:#1d4ed8;">0</div>
+            <small style="color:var(--text-muted);">Awaiting Payment Verification</small>
+          </div>
+
+          <div class="metric-card" style="border-left:4px solid #dc2626;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <h4>💳 Total Balance Due</h4>
+              <span style="font-size:0.75rem; background:#fee2e2; color:#b91c1c; font-weight:700; padding:2px 6px; border-radius:4px;">Receivables</span>
+            </div>
+            <div class="value" id="fin-releases-kpi-receivable" style="color:#dc2626;">KES 0.00</div>
+            <small style="color:var(--text-muted);">Outstanding Balance on Orders</small>
+          </div>
+
+          <div class="metric-card" style="border-left:4px solid #16a34a; cursor:pointer;" onclick="filterFinanceReleases('released')">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <h4>✅ Released to Fulfillment</h4>
+              <span style="font-size:0.75rem; background:#dcfce7; color:#15803d; font-weight:700; padding:2px 6px; border-radius:4px;">Released</span>
+            </div>
+            <div class="value" id="fin-releases-kpi-released" style="color:#16a34a;">0</div>
+            <small style="color:var(--text-muted);">In Delivery, Collection or Installed</small>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="panel-card" style="margin-bottom:16px; padding:12px 16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+          <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; flex:1;">
+            <select id="fin-releases-filter" onchange="renderFinanceReleasesTable()" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem; background:#fff; font-weight:600;">
+              <option value="all">All Releases &amp; Credit Reviews</option>
+              <option value="pending_credit" selected>🛡️ Orders with Unpaid Balance (Credit Review Needed)</option>
+              <option value="pending_full">⏳ Fully Paid Orders (Awaiting Verification)</option>
+              <option value="released">✅ Released Orders</option>
+              <option value="credit_hold">🛑 Credit Holds</option>
+            </select>
+            <input type="text" id="fin-releases-search" oninput="renderFinanceReleasesTable()" placeholder="Search Order #, Customer, Phone, or Reference..." style="min-width:240px; flex:1; max-width:380px; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+          </div>
+          <div id="fin-releases-badge" style="font-size:0.82rem; font-weight:700; color:#334155;"></div>
+        </div>
+
+        <!-- Releases Table -->
+        <div class="panel-card" style="padding:0; overflow:hidden; border:1px solid #e2e8f0; border-radius:8px;">
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr style="background:#f1f5f9; text-transform:uppercase; font-size:0.75rem; letter-spacing:0.5px;">
+                  <th>Order &amp; Customer</th>
+                  <th>Fulfillment Pipeline Workflow</th>
+                  <th>Financial Summary</th>
+                  <th>Credit &amp; Policy Check</th>
+                  <th>Release Status</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="fin-releases-tbody">
+                <tr><td colspan="6" style="text-align:center; padding:24px;">Loading order release queue...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 5C: CUSTOMER SERVICE FEE PAYMENTS & RECEIPTS -->
+      <!-- ======================================================== -->
+      <section id="module-finance_services" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>🛠️ Customer Service Fee Payments</h2>
+            <p>Confirm customer payments for Service Manager-approved electrical jobs, issue official receipts, and credit Shop Treasury.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-sm btn-primary" onclick="loadFinanceServiceCharges()">🔄 Refresh Service Charges</button>
+          </div>
+        </div>
+
+        <div class="admin-metrics" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom:16px;">
+          <div class="metric-card" style="border-left:4px solid #d97706;">
+            <h4>⏳ Awaiting Fee Confirmation</h4>
+            <div class="value" id="fin-svc-pending-count" style="color:#d97706;">0</div>
+            <small id="fin-svc-pending-amt" style="color:var(--text-muted);">KES 0.00</small>
+          </div>
+          <div class="metric-card" style="border-left:4px solid #087443;">
+            <h4>✅ Confirmed Paid Services</h4>
+            <div class="value" id="fin-svc-paid-count" style="color:#087443;">0</div>
+            <small id="fin-svc-paid-amt" style="color:var(--text-muted);">KES 0.00</small>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Job #</th>
+                <th>Customer &amp; Contact</th>
+                <th>Service &amp; Technician</th>
+                <th>Service Fee (KES)</th>
+                <th>Payment Status &amp; Receipt</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="fin-services-tbody">
+              <tr><td colspan="6" style="text-align:center; padding:24px;">Loading completed service charges...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 5B: FINANCIAL TRANSACTION LEDGER -->
+      <!-- ======================================================== -->
+      <section id="module-finance_ledger" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>📒 Financial Transaction Ledger</h2>
+            <p>Audit all sales income, operational expenses, and supplier disbursements across Cash, M-Pesa, and Bank channels.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-sm btn-primary" onclick="openModal('finance-modal')">+ Record Expense / Disbursement</button>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:6px 0 14px 0; flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="btn-sm fin-acct-filter active" id="fin-filter-all" onclick="filterFinanceByAccount('all')" style="background:#0f172a; color:#fff; border:1px solid #0f172a;">All Accounts</button>
+            <button type="button" class="btn-sm fin-acct-filter" id="fin-filter-cash" onclick="filterFinanceByAccount('Cash')" style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">💵 Cash in Hand</button>
+            <button type="button" class="btn-sm fin-acct-filter" id="fin-filter-mpesa" onclick="filterFinanceByAccount('M-Pesa')" style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">📱 M-Pesa Till</button>
+            <button type="button" class="btn-sm fin-acct-filter" id="fin-filter-bank" onclick="filterFinanceByAccount('Bank')" style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">🏦 Bank Account</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Amount (KES)</th>
+                <th>Payment Method</th>
+                <th>M-Pesa / Ref #</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="finance-table-body">
+              <tr><td colspan="8" style="text-align:center; padding:20px;">Loading financial ledger...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 5C: SUPPLIER INVOICES APPROVAL & SETTLEMENT -->
+      <!-- ======================================================== -->
+      <section id="module-finance_invoices" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>🧾 Supplier Invoices</h2>
+            <p>Review supplier invoices, inspect uploaded invoice documents, approve or reject payables, and initiate partial or full payments.</p>
+          </div>
+        </div>
+        <div id="erp-finance-invoices-container"></div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 5D: CONFIRMED SUPPLIER PAYMENTS -->
+      <!-- ======================================================== -->
+      <section id="module-finance_payments" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>💳 Supplier Payments History</h2>
+            <p>View all confirmed bank and M-Pesa disbursement settlements paid to suppliers.</p>
+          </div>
+        </div>
+        <div id="erp-finance-payments-container"></div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 6: DISPATCH MANAGER MODULE -->
+      <!-- ======================================================== -->
+      <section id="module-dispatch" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>🚚 Dispatch Manager Module</h2>
+            <p>Coordinate customer order dispatches, assign delivery drivers, and track packages from warehouse to door.</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-sm btn-primary" onclick="openModal('dispatch-modal')">+ Create Dispatch Run</button>
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Dispatch')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Dispatch #</th>
+                <th>Order No</th>
+                <th>Customer</th>
+                <th>Delivery Address</th>
+                <th>Assigned Driver</th>
+                <th>Scheduled Date</th>
+                <th>Status</th>
+                <th>Driver Notes</th>
+              </tr>
+            </thead>
+            <tbody id="dispatch-table-body">
+              <tr><td colspan="8" style="text-align:center; padding:20px;">Loading dispatch runs...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 7: DRIVER MODULE -->
+      <!-- ======================================================== -->
+      <section id="module-driver" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>🚗 Driver Delivery Portal</h2>
+            <p>Driver active delivery schedule: Confirm customer deliveries and update live transit status.</p>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button class="btn-sm btn-primary" onclick="loadDriverDeliveries()">🔄 Refresh Deliveries</button>
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Driver Portal')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <div id="driver-run-sheet" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:18px;">
+          <!-- Dynamically populated delivery run cards -->
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 8: INVENTORY STOCK CATALOG -->
+      <!-- ======================================================== -->
+      <section id="module-inventory" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>📦 Inventory Stock Catalog</h2>
+            <p>Live stock levels update automatically when supplier invoices are received and when customer sales occur.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Inventory')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <!-- Inventory Master Table -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+          <h3 style="margin:0; color:var(--primary); font-size:1.05rem;">Stock Master Catalog (<span id="erp-inv-count">20</span> Items)</h3>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <input type="search" id="erp-inv-search" placeholder="🔍 Search product name, category, or #ID..." oninput="renderErpInventoryTable()" style="padding:7px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem; min-width:250px; outline:none;">
+            <select id="erp-inv-stock-filter" onchange="renderErpInventoryTable()" style="padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem; background:#fff;">
+              <option value="all">All Stock Levels</option>
+              <option value="in-stock">In Stock</option>
+              <option value="low-stock">Low Stock Alerts</option>
+              <option value="out-of-stock">Out of Stock</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Product & Category</th>
+                <th>Buying Price</th>
+                <th>Selling Price</th>
+                <th>Margin</th>
+                <th>Stock Units</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-table-body">
+              <tr><td colspan="8" style="text-align:center; padding:20px;">Loading inventory products...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 8B: STOCK MOVEMENTS -->
+      <!-- ======================================================== -->
+      <section id="module-inventory_movements" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>🔄 Stock In / Stock Out Movements</h2>
+            <p>Automatic audit trail of customer sale deductions and supplier invoice / delivery stock receipts.</p>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Movement #</th>
+                <th>Product</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th>Reason / Destination</th>
+                <th>Recorded By</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="movements-table-body">
+              <tr><td colspan="7" style="text-align:center; padding:20px;">Loading stock movements...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 8B-2: TECHNICIAN MATERIAL REQUESTS & STOCK ISSUE -->
+      <!-- ======================================================== -->
+      <section id="module-inventory_materials" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>🧱 Technician Material Requests</h2>
+            <p>Inspect live inventory levels, approve, partially approve, or reject technician requests, and officially issue materials (auto-deducting stock &amp; logging movements).</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <select id="inv-mr-filter" onchange="loadInventoryMaterialRequests()" style="padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+              <option value="all">All Material Requests</option>
+              <option value="pending">Pending Review</option>
+              <option value="approved">Approved (Ready to Issue)</option>
+              <option value="partially_approved">Partially Approved (Ready to Issue)</option>
+              <option value="issued">Issued (Stock Deducted)</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <button class="btn-sm btn-primary" onclick="loadInventoryMaterialRequests()">🔄 Refresh</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Request #</th>
+                <th>Service Job &amp; Customer</th>
+                <th>Technician</th>
+                <th>Requested Materials &amp; Live Stock</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-mr-tbody">
+              <tr><td colspan="6" style="text-align:center; padding:20px;">Loading technician material requests...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 8C: PURCHASE ORDERS -->
+      <!-- ======================================================== -->
+      <section id="module-inventory_pos" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>📄 Purchase Orders</h2>
+            <p>Create, assign, and monitor Purchase Orders issued to registered suppliers.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-sm btn-primary" onclick="openCreatePOModal()">+ Create &amp; Assign Purchase Order</button>
+          </div>
+        </div>
+        <div id="erp-inv-pos-container"></div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 8D: SUPPLIER QUOTATIONS -->
+      <!-- ======================================================== -->
+      <section id="module-inventory_quotations" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>💰 Supplier Quotations Review</h2>
+            <p>Inspect unit prices, quoted quantities, and documents submitted by suppliers, then approve or reject quotes.</p>
+          </div>
+        </div>
+        <div id="erp-inv-quotations-container"></div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 8E: INCOMING SUPPLIER DELIVERIES -->
+      <!-- ======================================================== -->
+      <section id="module-inventory_deliveries" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>🚚 Incoming Supplier Deliveries</h2>
+            <p>Verify dispatched quantities &amp; delivery notes, confirm goods receipt, and increment shop inventory stock.</p>
+          </div>
+        </div>
+        <div id="erp-inv-deliveries-container"></div>
+      </section>
+
+      <section id="module-inventory_invoices" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>🧾 Supplier Invoices (Inventory Verification)</h2>
+            <p>Review supplier invoices uploaded to Inventory Manager, verify against delivered goods, and forward to Finance Manager for payment.</p>
+          </div>
+        </div>
+        <div id="erp-inv-invoices-container"></div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE: BOOKING MODULE -->
+      <!-- ======================================================== -->
+      <section id="module-bookings" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>📅 Booking Module</h2>
+            <p>Manage customer service appointments and future product reservations with live confirmation updates.</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="/booking" target="_blank" class="btn-sm btn-primary" style="text-decoration:none;">↗ Open Customer Booking Form</a>
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Bookings')">💬 Feedback</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Ref #</th>
+                <th>Type</th>
+                <th>Customer</th>
+                <th>Booked Service / Product</th>
+                <th>Future Date &amp; Slot</th>
+                <th>Est. Value (KES)</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="admin-bookings-tbody">
+              <tr><td colspan="8" style="text-align:center; padding:20px;">Loading bookings...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 11: HELP MODULE -->
+      <!-- ======================================================== -->
+      <section id="module-help" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>❓ Help Module (Staff &amp; Customer Guides)</h2>
+            <p>Step-by-step SOPs for shop attendants, department managers, technicians, drivers, and customer storefront FAQs.</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="/help" target="_blank" class="btn-sm btn-primary" style="text-decoration:none;">↗ View Public Help Page</a>
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Help')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <div class="panel-card" style="margin-bottom:18px; padding:12px 16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+          <input type="text" id="admin-help-search" oninput="loadAdminHelp()" placeholder="🔍 Search operational SOPs, guides, or FAQs..." style="min-width:240px; flex:1; max-width:420px; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+          <select id="admin-help-audience" onchange="loadAdminHelp()" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem; background:#fff; font-weight:600;">
+            <option value="all">All Audiences (Staff &amp; Customer)</option>
+            <option value="attendant">🧑‍💼 Staff &amp; Attendant SOPs</option>
+            <option value="customer">🛍️ Customer Storefront Guides</option>
+          </select>
+        </div>
+
+        <div id="admin-help-content">Loading help guides &amp; FAQs...</div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 12: ABOUT US MODULE -->
+      <!-- ======================================================== -->
+      <section id="module-about" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>ℹ️ About Us Module</h2>
+            <p>Official shop profile, Meru County showroom &amp; warehouse location, operating hours, and contact directory.</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="/about" target="_blank" class="btn-sm btn-primary" style="text-decoration:none;">↗ View Public About Page</a>
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('About Us')">💬 Feedback</button>
+          </div>
+        </div>
+        <div id="admin-about-content">Loading shop profile...</div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 13: FEEDBACK MODULE -->
+      <!-- ======================================================== -->
+      <section id="module-feedback" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>💬 Feedback Module (Cross-Module Reviews, Incidents &amp; Suggestions)</h2>
+            <p>Monitor quality reviews, resolve customer &amp; department complaints, track staff operational suggestions, and improve service standards across all shop modules.</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-sm" style="background:#1e40af; color:#fff; font-weight:700;" onclick="openModuleFeedbackModal()">➕ Submit Feedback / Incident</button>
+            <a href="/feedback" target="_blank" class="btn-sm btn-primary" style="text-decoration:none;">↗ Open Public Feedback Page</a>
+          </div>
+        </div>
+
+        <!-- Strict Department Isolation Notice (Active for department-scoped roles) -->
+        <div id="admin-feedback-dept-lock-notice" style="display:none; margin-bottom:18px; padding:12px 18px; background:#eff6ff; border:1px solid #bfdbfe; border-left:4px solid #1e40af; border-radius:8px; font-size:0.88rem; color:#1e3a8a;">
+          🔒 <strong>Department Isolation:</strong> You are viewing feedback submitted strictly to your department.
+        </div>
+
+        <!-- Feedback KPI Metrics -->
+        <div class="admin-metrics" style="margin-bottom:20px;">
+          <div class="metric-card">
+            <h4>Total Feedback Entries</h4>
+            <div class="value" id="fb-metric-total" style="color:#0284c7;">0</div>
+            <small style="color:#64748b;">Logged across all modules</small>
+          </div>
+          <div class="metric-card">
+            <h4>Product &amp; Service Reviews</h4>
+            <div class="value" id="fb-metric-reviews" style="color:#16a34a;">0</div>
+            <small style="color:#64748b;" id="fb-metric-reviews-sub">Avg Rating: 5.0 ★</small>
+          </div>
+          <div class="metric-card">
+            <h4>Complaints &amp; Incidents</h4>
+            <div class="value" id="fb-metric-complaints" style="color:#dc2626;">0</div>
+            <small style="color:#64748b;" id="fb-metric-complaints-sub">Requires resolution</small>
+          </div>
+          <div class="metric-card">
+            <h4>Operational Suggestions</h4>
+            <div class="value" id="fb-metric-suggestions" style="color:#d97706;">0</div>
+            <small style="color:#64748b;">Process improvements</small>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="panel-card" style="margin-bottom:16px; padding:12px 16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+          <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; flex:1;">
+            <input type="text" id="admin-feedback-search" oninput="renderAdminFeedbackTable()" placeholder="🔍 Search feedback text, customer, or subject..." style="min-width:240px; flex:1; max-width:340px; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.86rem;">
+            <select id="admin-feedback-filter-type" onchange="renderAdminFeedbackTable()" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.86rem; background:#fff; font-weight:600;">
+              <option value="all">All Feedback Types</option>
+              <option value="review">⭐ Reviews</option>
+              <option value="complaint">⚠️ Complaints / Incidents</option>
+              <option value="suggestion">💡 Suggestions</option>
+            </select>
+            <select id="admin-feedback-filter-module" onchange="renderAdminFeedbackTable()" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.86rem; background:#fff; font-weight:600;">
+              <option value="all">All Modules</option>
+              <option value="cashier">Cashier Desk / New Sale</option>
+              <option value="inventory">Inventory Management</option>
+              <option value="dispatch">Dispatch &amp; Deliveries</option>
+              <option value="services">Services &amp; Technicians</option>
+              <option value="finance">Finance Management</option>
+              <option value="general">Home &amp; General</option>
+            </select>
+          </div>
+          <div id="admin-feedback-count-badge" style="font-size:0.82rem; font-weight:700; color:#475569;"></div>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Module</th>
+                <th>Type</th>
+                <th>Customer / Staff</th>
+                <th>Rating</th>
+                <th>Subject &amp; Message</th>
+                <th>Status</th>
+                <th>Management Reply / Action</th>
+              </tr>
+            </thead>
+            <tbody id="admin-feedback-tbody">
+              <tr><td colspan="8" style="text-align:center; padding:20px;">Loading feedback...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 14: CONTACT US MODULE -->
+      <!-- ======================================================== -->
+      <section id="module-contact" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>📞 Contact Us Module (Customer Inquiries)</h2>
+            <p>View and respond to direct customer inquiries, bulk quotation requests, and technical questions.</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="/contact" target="_blank" class="btn-sm btn-primary" style="text-decoration:none;">↗ Open Public Contact Form</a>
+            <button class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Contact Inquiries')">💬 Feedback</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Ticket Ref</th>
+                <th>Customer &amp; Contacts</th>
+                <th>Subject &amp; Message</th>
+                <th>Status</th>
+                <th>Shop Response / Action</th>
+              </tr>
+            </thead>
+            <tbody id="admin-contact-tbody">
+              <tr><td colspan="5" style="text-align:center; padding:20px;">Loading inquiries...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE: SYSTEM SETTINGS & USER PERMISSIONS -->
+      <!-- ======================================================== -->
+      <section id="module-settings" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>⚙️ System Settings &amp; User Permissions</h2>
+            <p>Configure shop-wide system parameters and manage module access permissions for Cashier, Technician, Inventory Manager, and all staff roles.</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-sm btn-primary" onclick="saveRolePermissions()">💾 Save Role Permissions</button>
+            <button type="button" class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('System Settings')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <div style="background:#f8fafc; border-left:4px solid #0f172a; padding:10px 14px; border-radius:6px; margin-bottom:14px; font-size:0.86rem; color:#0f172a;">
+          <strong>🛡️ Admin Governance Rule:</strong> The Administrator manages system permissions, staff role assignments, and business governance parameters, and does not bypass the normal sales and payment process. Cashier counter sales and payment confirmations are executed exclusively by the Cashier.
+        </div>
+
+        <!-- Role Permissions Matrix -->
+        <div class="metric-card" style="margin-bottom:22px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div>
+              <h3 style="margin:0; font-size:1.05rem; color:var(--primary);">🔐 Role Permissions &amp; Module Access Matrix</h3>
+              <p style="margin:4px 0 0 0; font-size:0.84rem; color:var(--text-muted);">
+                Control which modules each department role can open when signed into the system. Admin manages access without performing daily operational tasks.
+              </p>
+            </div>
+            <button type="button" class="btn-sm" style="background:#087443; color:#fff; font-weight:700;" onclick="saveRolePermissions()">💾 Save Permissions Matrix</button>
+          </div>
+          <div class="table-responsive">
+            <table id="permissions-matrix-table">
+              <thead id="permissions-matrix-head"></thead>
+              <tbody id="permissions-matrix-body">
+                <tr><td style="padding:16px; text-align:center;">Loading role permissions...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Shop & System Configuration -->
+        <div class="metric-card">
+          <h3 style="margin:0 0 6px 0; font-size:1.05rem; color:var(--primary);">🏢 Shop &amp; System Configuration</h3>
+          <p style="margin:0 0 16px 0; font-size:0.84rem; color:var(--text-muted);">Core operational settings for Elight Electrical Shop (Meru County).</p>
+          <form onsubmit="saveSystemSettings(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Official Shop Name *</label>
+                <input type="text" id="set_shop_name" required value="Elight Electrical Shop">
+              </div>
+              <div class="form-group">
+                <label>Operating Region *</label>
+                <input type="text" id="set_operating_region" required value="Meru County Only">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Official Shop Email *</label>
+                <input type="email" id="set_official_email" required value="elightelectrical@ke.com">
+              </div>
+              <div class="form-group">
+                <label>Official Shop Phone *</label>
+                <input type="text" id="set_official_phone" required value="+254 700 123 456">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>M-Pesa Buy Goods Till Number *</label>
+                <input type="text" id="set_mpesa_till" required value="5894210">
+              </div>
+              <div class="form-group">
+                <label>Default Low-Stock Alert Threshold *</label>
+                <input type="number" id="set_low_stock_threshold" min="1" required value="5">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Meru Town Delivery Fee (KES)</label>
+                <input type="number" id="set_meru_town_fee" min="0" value="300">
+              </div>
+              <div class="form-group">
+                <label>Meru Sub-County Delivery Fee (KES)</label>
+                <input type="number" id="set_meru_subcounty_fee" min="0" value="500">
+              </div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:22px; margin:12px 0 18px 0; padding:12px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+              <label style="display:inline-flex; align-items:center; gap:8px; font-size:0.88rem; font-weight:600; color:#0f172a; cursor:pointer;">
+                <input type="checkbox" id="set_allow_registration" checked>
+                Allow Online Customer Self-Registration
+              </label>
+              <label style="display:inline-flex; align-items:center; gap:8px; font-size:0.88rem; font-weight:600; color:#0f172a; cursor:pointer;">
+                <input type="checkbox" id="set_enforce_suspended" checked>
+                Block Suspended User Accounts at Sign-In
+              </label>
+            </div>
+            <div style="display:flex; justify-content:flex-end;">
+              <button type="submit" class="btn-sm btn-primary">💾 Save System Settings</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE: SYSTEM ACTIVITIES MONITOR -->
+      <!-- ======================================================== -->
+      <section id="module-activity" class="erp-module-section">
+        <div class="module-header-row">
+          <div>
+            <h2>📡 System Activities Monitor</h2>
+            <p>Real-time audit trail of logins, role changes, cashier sales, inventory movements, technician jobs, dispatches, purchases, and customer activity.</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-sm btn-primary" onclick="loadSystemActivities()">🔄 Refresh Activities</button>
+            <button type="button" class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('System Activity')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <div class="panel-card" style="margin-bottom:16px; padding:12px 16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+          <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; flex:1;">
+            <select id="activity-dept-filter" onchange="renderSystemActivities()" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem; background:#fff; font-weight:600;">
+              <option value="all">All Departments</option>
+              <option value="Admin & Security">Admin &amp; Security</option>
+              <option value="Cashier & Sales">Cashier &amp; Sales</option>
+              <option value="Inventory">Inventory</option>
+              <option value="Technician & Services">Technician &amp; Services</option>
+              <option value="Dispatch & Delivery">Dispatch &amp; Delivery</option>
+              <option value="Customer Engagement">Customer Engagement</option>
+            </select>
+            <input type="text" id="activity-search-input" oninput="renderSystemActivities()" placeholder="Filter by actor, event, item, or reference..." style="min-width:240px; flex:1; max-width:380px; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+          </div>
+          <div id="activity-count-badge" style="font-size:0.82rem; font-weight:700; color:#334155;"></div>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Date &amp; Time</th>
+                <th>Department</th>
+                <th>User / Actor</th>
+                <th>Action / Event</th>
+                <th>Activity Details</th>
+              </tr>
+            </thead>
+            <tbody id="system-activities-tbody">
+              <tr><td colspan="5" style="text-align:center; padding:20px;">Loading system activities...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 15: REAL-TIME REPORTS & DECISION ANALYTICS -->
+      <!-- ======================================================== -->
+      <section id="module-reports" class="erp-module-section">
+        <div class="module-header-row no-print" style="align-items:flex-start; flex-wrap:wrap; gap:14px;">
+          <div>
+            <h2>📈 Reports</h2>
+            <p>Live analytics across Sales, Purchases, Inventory Valuation, Customer Activity, and Staff Performance.</p>
+            <div style="margin-top:6px; font-size:0.8rem; color:#047857; font-weight:700; display:flex; align-items:center; gap:8px;">
+              <span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:#10b981; box-shadow:0 0 8px #10b981;"></span>
+              <span id="reports-last-synced">Syncing live database...</span>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+            <select id="reports-period-select" onchange="loadRealtimeReports()" style="padding:7px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem; font-weight:600; background:#fff;">
+              <option value="all">Period: All Time</option>
+              <option value="today">Today</option>
+              <option value="7d">Last 7 Days</option>
+              <option value="30d">Last 30 Days</option>
+              <option value="90d">Last 90 Days</option>
+            </select>
+
+            <label style="display:inline-flex; align-items:center; gap:6px; background:#fff; border:1px solid #cbd5e1; padding:6px 10px; border-radius:6px; font-size:0.82rem; font-weight:600; cursor:pointer;">
+              <input type="checkbox" id="reports-autorefresh-toggle" checked onchange="toggleReportsAutoRefresh()">
+              Auto-Sync (15s)
+            </label>
+
+            <button type="button" class="btn-sm btn-primary" onclick="loadRealtimeReports()">🔄 Refresh</button>
+            <button type="button" class="btn-sm" style="background:#087443; color:#fff;" onclick="exportRealtimeReportCSV()">📥 Export CSV</button>
+            <button type="button" class="btn-sm" style="background:#0f172a; color:#fff;" onclick="window.print()">🖨️ Print / PDF</button>
+            <button type="button" class="btn-sm" style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; font-weight:700;" onclick="openModuleFeedbackModal('Reports')">💬 Feedback</button>
+          </div>
+        </div>
+
+        <!-- Report Selector Toolbar -->
+        <div class="panel-card no-print" style="margin-bottom:20px; padding:16px 20px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:14px; background:linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); border:1px solid #bfdbfe;">
+          <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
+            <label for="reports-domain-select" style="font-size:0.92rem; font-weight:800; color:#1e3a8a; letter-spacing:0.01em;">
+              📑 Select Report to View:
+            </label>
+            <select id="reports-domain-select" onchange="switchReportSubTab(this.value)" style="min-width:290px; padding:10px 14px; border:2px solid #2563eb; border-radius:8px; font-size:0.95rem; font-weight:700; color:#0f172a; background:#ffffff; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.12);">
+              <option value="sales">Sales Report</option>
+              <option value="cashier_detailed">Sales by Cashier Detailed</option>
+              <option value="cashier_summary">Sales by Cashier Summary</option>
+              <option value="profit_loss">Profit and Loss</option>
+              <option value="inventory">Inventory Report</option>
+              <option value="customers">Customer Activity Report</option>
+              <option value="staff">Staff Performance Report</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Centered Official A4 Document Preview -->
+        <div class="a4-report-desk">
+          <div id="realtime-reports-body" class="a4-report-sheet">
+            <p style="padding:40px 24px; text-align:center; color:var(--text-muted);">Generating A4 report...</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODALS -->
+  <!-- ======================================================== -->
+
+  <!-- Modal 1: Create User Account -->
+  <div class="modal-overlay" id="user-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Create &amp; Assign User Account</h3>
+        <button class="close-btn" onclick="closeModal('user-modal')">&times;</button>
+      </div>
+      <form onsubmit="handleCreateUser(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="user_full_name" required placeholder="e.g. Esther Karimi">
+          </div>
+          <div class="form-group">
+            <label>Login Username *</label>
+            <input type="text" id="user_username" required placeholder="e.g. esther">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email Address *</label>
+            <input type="email" id="user_email" required placeholder="esther@elight.co.ke">
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="tel" id="user_phone" placeholder="07...">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Assign System Role *</label>
+            <select id="user_role">
+              <option value="cashier">Cashier</option>
+              <option value="technician">Technician</option>
+              <option value="inventory_manager">Inventory Manager</option>
+              <option value="service_manager">Service Manager</option>
+              <option value="finance_manager">Finance Manager</option>
+              <option value="dispatch_manager">Dispatch Manager</option>
+              <option value="driver">Driver</option>
+              <option value="admin">Administrator</option>
+              <option value="customer">Customer</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Initial Password *</label>
+            <input type="text" id="user_password" required value="elight123" placeholder="Initial password">
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+          <button type="button" class="btn-sm" onclick="closeModal('user-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary">Create User Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Register Customer -->
+  <div class="modal-overlay" id="customer-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Register New Customer Profile</h3>
+        <button class="close-btn" onclick="closeModal('customer-modal')">&times;</button>
+      </div>
+      <form onsubmit="handleCreateCustomer(event)">
+        <div class="form-group">
+          <label>Customer Full Name *</label>
+          <input type="text" id="cust_name_input" required placeholder="e.g. Florence Mwikali">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Phone Number *</label>
+            <input type="tel" id="cust_phone_input" required placeholder="07...">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="cust_email_input" placeholder="client@gmail.com">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Location / Physical Address (Meru County)</label>
+          <input type="text" id="cust_location_input" placeholder="e.g. Makutano, Meru">
+        </div>
+        <div class="form-group">
+          <label>Customer Notes</label>
+          <textarea id="cust_notes_input" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border);" placeholder="Project details or equipment notes..."></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn-sm" onclick="closeModal('customer-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary">Save Customer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: Issue Warranty -->
+  <div class="modal-overlay" id="warranty-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Issue Product Warranty Certificate</h3>
+        <button class="close-btn" onclick="closeModal('warranty-modal')">&times;</button>
+      </div>
+      <form onsubmit="handleCreateWarranty(event)">
+        <div class="form-group">
+          <label>Select Customer *</label>
+          <select id="warr_customer_id" required></select>
+        </div>
+        <div class="form-group">
+          <label>Product Name *</label>
+          <input type="text" id="warr_product" required placeholder="e.g. LED Ceiling Panel Light 18W">
+        </div>
+        <div class="form-group">
+          <label>Serial Number</label>
+          <input type="text" id="warr_serial" placeholder="e.g. SN-994821">
+        </div>
+        <div class="form-group">
+          <label>Warranty Expiry Date *</label>
+          <input type="date" id="warr_expiry" required>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn-sm" onclick="closeModal('warranty-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary">Issue Warranty</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: New Service Request -->
+  <div class="modal-overlay" id="service-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>New Installation or Repair Request</h3>
+        <button class="close-btn" onclick="closeModal('service-modal')">&times;</button>
+      </div>
+      <form onsubmit="handleCreateServiceRequest(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Customer Name *</label>
+            <input type="text" id="serv_cust_name" required placeholder="e.g. Apex Towers Ltd">
+          </div>
+          <div class="form-group">
+            <label>Phone Number *</label>
+            <input type="tel" id="serv_phone" required placeholder="07...">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Customer Email (for Portal &amp; Receipt)</label>
+            <input type="email" id="serv_cust_email" placeholder="e.g. customer@gmail.com">
+          </div>
+          <div class="form-group">
+            <label>Estimated Service Fee (KES)</label>
+            <input type="number" id="serv_fee" min="0" step="50" value="800" placeholder="e.g. 800">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Site Location (Meru County) *</label>
+          <input type="text" id="serv_location" required placeholder="e.g. Nkubu / Makutano, Meru">
+        </div>
+        <div class="form-group">
+          <label>Service Type *</label>
+          <select id="serv_type">
+            <option value="Wiring & Rewiring">Wiring & Rewiring (2.5mm / Submersible Cables)</option>
+            <option value="LED Panel & Lighting Installation">LED Panel, Chandelier, Floodlight & RGB Strip Fitting</option>
+            <option value="Switches & USB Socket Setup">Switches, Double USB Sockets & Extension Setup</option>
+            <option value="Panel Board Setup">Consumer Unit 8-Way, MCB & RCCB Protection Setup</option>
+            <option value="Voltage Guard & Surge Protection">Automatic Voltage Guard & Earthing Protection</option>
+            <option value="Submersible Pump & Borehole Wiring">Submersible 3-Core Pump Cable Installation</option>
+            <option value="Solar Installation">Solar Motion Light & Inverter Installation</option>
+            <option value="Fault Repair">Fault Repair & Multimeter Troubleshooting</option>
+            <option value="Appliance Repair">Kettle, Heat Gun & Instant Shower Switch Repair</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Scope of Work / Description</label>
+          <textarea id="serv_desc" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border);" placeholder="Details of electrical requirements..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Scheduled Date</label>
+            <input type="date" id="serv_date">
+          </div>
+          <div class="form-group">
+            <label>Assigned Arrival Time Slot</label>
+            <select id="serv_time_slot">
+              <option value="Pending Service Manager Assignment">Pending Service Manager Assignment</option>
+              <option value="08:00 AM - 10:00 AM">08:00 AM - 10:00 AM</option>
+              <option value="10:00 AM - 12:00 PM">10:00 AM - 12:00 PM</option>
+              <option value="12:00 PM - 02:00 PM">12:00 PM - 02:00 PM</option>
+              <option value="02:00 PM - 04:00 PM">02:00 PM - 04:00 PM</option>
+              <option value="04:00 PM - 06:00 PM">04:00 PM - 06:00 PM</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn-sm" onclick="closeModal('service-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary">Submit Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Adjust Treasury Account Opening Balances -->
+  <div class="modal-overlay" id="adjust-balances-modal">
+    <div class="modal" style="max-width:520px;">
+      <div class="modal-header">
+        <h3>⚙️ Treasury Account Opening Balances</h3>
+        <button class="close-btn" onclick="closeModal('adjust-balances-modal')">&times;</button>
+      </div>
+      <form onsubmit="handleSaveOpeningBalances(event)">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px;">
+          Configure the baseline opening floats for Elight Electrical Shop's operational accounts in Meru County.
+        </p>
+        <div class="form-group">
+          <label>💵 Opening Cash in Hand (KES) *</label>
+          <input type="number" id="opening_cash_input" step="1" min="0" required placeholder="e.g. 15000">
+          <small style="color:var(--text-muted); font-size:0.75rem;">Showroom physical counter cash drawer float.</small>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>📱 Opening M-Pesa Balance (KES) *</label>
+            <input type="number" id="opening_mpesa_input" step="1" min="0" required placeholder="e.g. 65000">
+          </div>
+          <div class="form-group">
+            <label>M-Pesa Till Number</label>
+            <input type="text" id="mpesa_till_input" value="5894210" placeholder="5894210">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>🏦 Opening Bank Balance (KES) *</label>
+            <input type="number" id="opening_bank_input" step="1" min="0" required placeholder="e.g. 350000">
+          </div>
+          <div class="form-group">
+            <label>Bank Name &amp; Branch</label>
+            <input type="text" id="bank_name_input" value="Equity Bank - Meru Branch">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Bank Account Number</label>
+          <input type="text" id="bank_account_no_input" value="0140283940123">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn-sm" onclick="closeModal('adjust-balances-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary">Save Balances</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 5: Record Finance -->
+  <div class="modal-overlay" id="finance-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Record Financial Entry</h3>
+        <button class="close-btn" onclick="closeModal('finance-modal')">&times;</button>
+      </div>
+      <form onsubmit="handleCreateFinanceRecord(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Transaction Type *</label>
+            <select id="fin_type" required>
+              <option value="expense">Expense / Operational Cost</option>
+              <option value="expense">Utilities &amp; Overheads</option>
+              <option value="expense">Staff Salaries &amp; Commissions</option>
+            </select>
+            <small style="color:var(--text-muted); font-size:0.75rem;">Note: Completed sales originate strictly from Cashier checkout and cannot be manually created or altered.</small>
+          </div>
+          <div class="form-group">
+            <label>Expense Category *</label>
+            <select id="fin_category" required>
+              <option value="Inventory Purchase">Inventory Purchase</option>
+              <option value="Transport">Transport / Delivery Fuel</option>
+              <option value="Utilities">Utilities &amp; Power</option>
+              <option value="Salaries">Staff Salaries &amp; Wages</option>
+              <option value="Shop Maintenance">Shop Maintenance</option>
+              <option value="Office Overheads">Office &amp; Admin Overheads</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description *</label>
+          <input type="text" id="fin_desc" required placeholder="e.g. Sale of 4x Floodlights">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Amount (KES) *</label>
+            <input type="number" id="fin_amount" step="0.01" min="1" required placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label>Payment Method</label>
+            <select id="fin_payment">
+              <option value="M-Pesa">M-Pesa</option>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>M-Pesa / Reference Code</label>
+          <input type="text" id="fin_ref" placeholder="e.g. SLK881290Q">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn-sm" onclick="closeModal('finance-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary">Save Entry</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 6: Create Dispatch -->
+  <div class="modal-overlay" id="dispatch-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Schedule Delivery Dispatch</h3>
+        <button class="close-btn" onclick="closeModal('dispatch-modal')">&times;</button>
+      </div>
+      <form onsubmit="handleCreateDispatch(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Order Number *</label>
+            <input type="text" id="disp_order_no" required placeholder="e.g. EL-10499">
+          </div>
+          <div class="form-group">
+            <label>Customer Name *</label>
+            <input type="text" id="disp_cust_name" required placeholder="Customer Name">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Customer Phone *</label>
+            <input type="tel" id="disp_cust_phone" required placeholder="07...">
+          </div>
+          <div class="form-group">
+            <label>Assign Driver</label>
+            <select id="disp_driver"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Delivery Address (Meru County) *</label>
+          <input type="text" id="disp_address" required placeholder="e.g. Makutano / Maua Road, Meru">
+        </div>
+        <div class="form-group">
+          <label>Driver Delivery Notes</label>
+          <input type="text" id="disp_notes" placeholder="e.g. Fragile chandelier, handle with care">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn-sm" onclick="closeModal('dispatch-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary">Schedule Dispatch</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 7: Log Stock In / Stock Out -->
+  <div class="modal-overlay" id="stock-movement-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Record Stock Movement (Stock-In / Out)</h3>
+        <button class="close-btn" onclick="closeModal('stock-movement-modal')">&times;</button>
+      </div>
+      <form onsubmit="handleRecordStockMovement(event)">
+        <div class="form-group">
+          <label>Select Product *</label>
+          <select id="move_product_select" required></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Movement Type *</label>
+            <select id="move_type" required>
+              <option value="STOCK_IN">Stock IN (Restocking)</option>
+              <option value="STOCK_OUT">Stock OUT (Project / Sale)</option>
+              <option value="DAMAGE_WRITE_OFF">Damage / Defect Write-off</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quantity *</label>
+            <input type="number" id="move_quantity" min="1" required placeholder="e.g. 10">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Reason / Destination Notes</label>
+          <input type="text" id="move_reason" placeholder="e.g. Received shipment from Philips Kenya">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn-sm" onclick="closeModal('stock-movement-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary">Record Movement</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 8: Add/Edit Product (Inventory Master) -->
+  <div class="modal-overlay" id="product-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Add New Product to Inventory</h3>
+        <button class="close-btn" onclick="closeModal('product-modal')">&times;</button>
+      </div>
+      <form id="product-form" onsubmit="handleSaveProduct(event)">
+        <input type="hidden" id="edit-product-id">
+        <div class="form-group">
+          <label>Product Name *</label>
+          <input type="text" id="product_name" required placeholder="e.g. Philips 9W LED Bulb">
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="category_name">
+            <option value="Lighting">Lighting</option>
+            <option value="Switches & Sockets">Switches & Sockets</option>
+            <option value="Cables & Wiring">Cables & Wiring</option>
+            <option value="Circuit Protection">Circuit Protection</option>
+            <option value="Appliances">Appliances</option>
+            <option value="General">General</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Buying Price (KES)</label>
+            <input type="number" id="buying_price" step="0.01" min="0" placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label>Selling Price (KES) *</label>
+            <input type="number" id="selling_price" step="0.01" min="0" required placeholder="0.00">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Quantity in Stock *</label>
+            <input type="number" id="quantity_in_stock" min="0" required placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>Reorder Level Alert</label>
+            <input type="number" id="reorder_level" min="1" value="5">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Product Image Path / URL</label>
+          <input type="text" id="image_url" placeholder="e.g. images/bulb.jpg">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+          <button type="button" class="btn-sm" onclick="closeModal('product-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary">Save Product</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 12: Confirm Payment for Existing Customer Order -->
+  <div class="modal-overlay" id="cashier-confirm-modal">
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-header">
+        <h3>✅ Confirm Customer Payment</h3>
+        <button class="close-btn" onclick="closeModal('cashier-confirm-modal')">&times;</button>
+      </div>
+      <form onsubmit="handleConfirmCustomerPayment(event)">
+        <input type="hidden" id="confirm_order_no">
+        <input type="hidden" id="confirm_order_amount">
+        <div id="confirm_order_summary" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:14px; font-size:0.86rem;"></div>
+
+        <div class="form-group">
+          <label>Payment Method Received *</label>
+          <select id="confirm_payment_method" onchange="toggleConfirmCashFields()">
+            <option value="M-Pesa">M-Pesa</option>
+            <option value="Cash">Cash Paid at Shop Counter</option>
+            <option value="Split">⚖️ Split Payment (Cash + M-Pesa)</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+          </select>
+        </div>
+        <div id="confirm_standard_fields">
+          <div class="form-group">
+            <label id="confirm_ref_label">Verified M-Pesa / Payment Reference *</label>
+            <input type="text" id="confirm_payment_ref" placeholder="e.g. SLK991042P">
+          </div>
+          <div class="form-group" id="confirm_cash_group" style="display:none;">
+            <label>Cash Received (KES)</label>
+            <input type="number" id="confirm_cash_tendered" min="1" step="1" oninput="updateConfirmChangePreview()" placeholder="Enter cash tendered">
+            <div id="confirm_change_preview" style="margin-top:6px; font-size:0.84rem; font-weight:700; color:#087443;"></div>
+          </div>
+        </div>
+
+        <!-- Confirm Order Split Payment Panel -->
+        <div id="confirm_split_panel" style="display:none; background:#f8fafc; border:1.5px solid #93c5fd; border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:700; color:#1e40af; font-size:0.85rem;">⚖️ Split Cash + M-Pesa</span>
+            <span id="confirm_split_badge" style="font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:4px; background:#eff6ff; color:#1e40af;">Enter amounts</span>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Cash Portion (KES) *</label>
+              <input type="number" id="confirm_split_cash_amount" min="0" step="1" oninput="handleConfirmSplitCashChange()" placeholder="e.g. 500">
+            </div>
+            <div class="form-group">
+              <label>M-Pesa Portion (KES) *</label>
+              <input type="number" id="confirm_split_mpesa_amount" min="0" step="1" oninput="handleConfirmSplitMpesaChange()" placeholder="e.g. 500">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Cash Tendered by Customer (KES)</label>
+            <input type="number" id="confirm_split_cash_tendered" min="0" step="1" oninput="updateConfirmSplitPreview()" placeholder="Amount handed over">
+            <div id="confirm_split_cash_change" style="margin-top:4px; font-size:0.8rem; font-weight:700; color:#087443; display:none;"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label>M-Pesa Transaction Reference *</label>
+            <input type="text" id="confirm_split_payment_ref" placeholder="e.g. SLK991042P">
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn-sm" onclick="closeModal('cashier-confirm-modal')">Cancel</button>
+          <button type="submit" class="btn-sm" style="background:#087443; color:#fff; font-weight:700;">✅ Confirm Payment &amp; Generate Receipt</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 13: Send Paid Order to Dispatch Manager for Delivery -->
+  <div class="modal-overlay" id="cashier-dispatch-modal">
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-header">
+        <h3>🚚 Send Paid Order for Delivery</h3>
+        <button class="close-btn" onclick="closeModal('cashier-dispatch-modal')">&times;</button>
+      </div>
+      <form onsubmit="handleSendOrderToDispatch(event)">
+        <input type="hidden" id="handoff_order_no">
+        <div id="handoff_order_summary" style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-bottom:14px; font-size:0.86rem; color:#14532d;"></div>
+        <div class="form-group">
+          <label>Meru County Delivery Address / Landmark *</label>
+          <input type="text" id="handoff_delivery_address" required placeholder="e.g. Makutano Stage / Nkubu Town, Meru County">
+        </div>
+        <div class="form-group">
+          <label>Notes for Dispatch Manager &amp; Driver</label>
+          <input type="text" id="handoff_driver_notes" placeholder="e.g. Paid in full, call customer upon arrival">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn-sm" onclick="closeModal('cashier-dispatch-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary">🚚 Release to Dispatch Manager</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 14: Official Shop Payment Receipt -->
+  <div class="modal-overlay" id="cashier-receipt-modal">
+    <div class="modal" style="max-width:460px; width:95%;">
+      <div class="modal-header no-print">
+        <h3>🧾 Official Payment Receipt</h3>
+        <button class="close-btn" onclick="closeModal('cashier-receipt-modal')">&times;</button>
+      </div>
+      <div id="cashier-printable-receipt" style="background:#fff; border:1px dashed #94a3b8; border-radius:8px; padding:18px; font-size:0.84rem; color:#0f172a;">
+        <!-- Populated dynamically -->
+      </div>
+      <div class="no-print" style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button type="button" class="btn-sm" onclick="closeModal('cashier-receipt-modal')">Close</button>
+        <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; font-weight:700;" onclick="printCashierReceipt()">🖨️ Print Official Receipt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: In-Module Feedback & Quality Incident Report -->
+  <div class="modal-overlay" id="module-feedback-modal">
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-header">
+        <h3>💬 Module Feedback &amp; Quality Report</h3>
+        <button class="close-btn" onclick="closeModal('module-feedback-modal')">&times;</button>
+      </div>
+
+      <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div>
+          <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Originating Module</span>
+          <div id="modal-feedback-dept-badge" style="font-size:0.95rem; font-weight:800; color:#1e40af;">Cashier Desk</div>
+        </div>
+        <button type="button" class="btn-sm" style="background:#fff; border:1px solid #cbd5e1; color:#0f172a; font-weight:700; font-size:0.78rem;" onclick="closeModal('module-feedback-modal'); switchModule('feedback');">
+          ↗ Open Full Feedback Module
+        </button>
+      </div>
+
+      <div style="display:flex; gap:8px; border-bottom:2px solid #e2e8f0; margin-bottom:14px;">
+        <button type="button" class="btn-sm active" id="modal-fb-tab-btn-submit" onclick="switchModalFeedbackTab('submit')" style="border-radius:6px 6px 0 0; background:#1e3a8a; color:#fff; font-weight:700; border:none; padding:8px 14px; cursor:pointer;">
+          ➕ Submit Feedback
+        </button>
+        <button type="button" class="btn-sm" id="modal-fb-tab-btn-history" onclick="switchModalFeedbackTab('history')" style="border-radius:6px 6px 0 0; background:#f1f5f9; color:#475569; font-weight:700; border:none; padding:8px 14px; cursor:pointer;">
+          📋 Module Log (<span id="modal-fb-history-count">0</span>)
+        </button>
+      </div>
+
+      <!-- Tab View 1: Submit Form -->
+      <div id="modal-fb-view-submit">
+        <form onsubmit="handleSubmitModuleFeedback(event)">
+          <input type="hidden" id="modal_fb_module_tag" value="general">
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Feedback Category *</label>
+              <select id="modal_fb_type" required>
+                <option value="review">⭐ Product / Service Review</option>
+                <option value="complaint">⚠️ Operational Complaint / Incident</option>
+                <option value="suggestion">💡 Staff / Process Suggestion</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Rating (1 to 5 Stars) *</label>
+              <select id="modal_fb_rating" required>
+                <option value="5">★★★★★ (5 - Excellent)</option>
+                <option value="4">★★★★☆ (4 - Good)</option>
+                <option value="3">★★★☆☆ (3 - Average)</option>
+                <option value="2">★★☆☆☆ (2 - Poor)</option>
+                <option value="1">★☆☆☆☆ (1 - Critical Issue)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Subject / Topic *</label>
+            <input type="text" id="modal_fb_subject" required placeholder="e.g. Counter checkout prompt speed / Cable stock query">
+          </div>
+
+          <div class="form-group">
+            <label>Detailed Feedback / Notes *</label>
+            <textarea id="modal_fb_message" required rows="3" style="width:100%; padding:9px; border-radius:6px; border:1px solid var(--border);" placeholder="Describe the review, suggestion, or issue in detail..."></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Your Name / Role *</label>
+              <input type="text" id="modal_fb_name" required placeholder="Full Name">
+            </div>
+            <div class="form-group">
+              <label>Email / Phone</label>
+              <input type="text" id="modal_fb_contact" placeholder="Contact email or phone">
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+            <button type="button" class="btn-sm" onclick="closeModal('module-feedback-modal')">Cancel</button>
+            <button type="submit" class="btn-sm btn-primary">Submit Feedback</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tab View 2: Module History -->
+      <div id="modal-fb-view-history" style="display:none; max-height:360px; overflow-y:auto;">
+        <div id="modal-fb-history-list" style="display:flex; flex-direction:column; gap:10px;">
+          <!-- Loaded dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Universal Floating Feedback Button in All Modules -->
+  <button id="floating-feedback-trigger" onclick="openModuleFeedbackModal()" title="Leave feedback for this module" style="position:fixed; bottom:22px; right:22px; z-index:999; background:linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color:#fff; border:none; border-radius:30px; padding:10px 18px; font-weight:800; font-size:0.88rem; box-shadow:0 4px 14px rgba(37,99,235,0.4); cursor:pointer; display:flex; align-items:center; gap:8px;">
+    <span>💬</span> Feedback
+  </button>
+
+  <!-- Footer -->
+  <footer>
+    <p><strong>Elight Electrical Shop</strong> &copy; 2026. All Rights Reserved.</p>
+  </footer>
+
+  <!-- Supplier Portal ERP Modals -->
+  <div class="modal-overlay" id="supplier-register-modal">
+    <div class="modal-box" style="max-width:600px;">
+      <div class="modal-header">
+        <h3>🏢 Register Supplier &amp; Create Login Account</h3>
+        <button class="modal-close" onclick="closeModal('supplier-register-modal')">✕</button>
+      </div>
+      <form id="supRegForm" onsubmit="handleRegisterSupplier(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Supplier Company Name *</label>
+            <input type="text" id="reg_sup_name" required placeholder="e.g. East African Cables Ltd">
+          </div>
+          <div class="form-group">
+            <label>Contact Person</label>
+            <input type="text" id="reg_sup_contact" placeholder="e.g. John Kamau">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Login Email (Supabase Auth) *</label>
+            <input type="email" id="reg_sup_email" required placeholder="orders@supplier.com">
+          </div>
+          <div class="form-group">
+            <label>Phone Number *</label>
+            <input type="text" id="reg_sup_phone" required placeholder="07XX XXX XXX">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Address / Location</label>
+            <input type="text" id="reg_sup_address" placeholder="Industrial Area, Nairobi">
+          </div>
+          <div class="form-group">
+            <label>KRA PIN</label>
+            <input type="text" id="reg_sup_kra" placeholder="P051XXXXXXZ">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Supplied Products / Business Notes</label>
+          <input type="text" id="reg_sup_desc" placeholder="LED Lighting, Switchgear, Copper Cables">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Initial Password (min 8 chars, optional for recovery link)</label>
+            <input type="password" id="reg_sup_password" minlength="8" placeholder="Leave blank to send recovery link">
+          </div>
+          <div class="form-group">
+            <label>Account Status</label>
+            <select id="reg_sup_status">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+          <button type="button" class="btn-sm" onclick="closeModal('supplier-register-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary">Create Supplier Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="supplier-reset-pwd-modal">
+    <div class="modal-box" style="max-width:480px;">
+      <div class="modal-header">
+        <h3>🔑 Secure Supplier Password Reset</h3>
+        <button class="modal-close" onclick="closeModal('supplier-reset-pwd-modal')">✕</button>
+      </div>
+      <form onsubmit="handleAdminResetSupplierPassword(event)">
+        <input type="hidden" id="reset_sup_id">
+        <p id="reset_sup_label" style="font-weight:700; color:var(--primary); margin-bottom:10px;"></p>
+        <div class="form-group">
+          <label>Optional Temporary Password (min 8 chars via Supabase Auth)</label>
+          <input type="password" id="reset_sup_temp_pwd" minlength="8" placeholder="Leave empty to issue Supabase recovery link only">
+        </div>
+        <div id="reset_sup_link_box" style="display:none; background:#f8fafc; border:1px solid #cbd5e1; padding:10px; border-radius:8px; margin-bottom:12px;"></div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn-sm" onclick="closeModal('supplier-reset-pwd-modal')">Close</button>
+          <button type="submit" class="btn-sm btn-primary">Process Secure Reset</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="supplier-details-modal">
+    <div class="modal-box" style="max-width:640px;">
+      <div class="modal-header">
+        <h3>🏢 Supplier Details &amp; Activity Summary</h3>
+        <button class="modal-close" onclick="closeModal('supplier-details-modal')">✕</button>
+      </div>
+      <div id="sup_details_body"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="create-po-modal">
+    <div class="modal-box" style="max-width:560px;">
+      <div class="modal-header">
+        <h3>📦 Create &amp; Assign Purchase Order</h3>
+        <button class="modal-close" onclick="closeModal('create-po-modal')">✕</button>
+      </div>
+      <form onsubmit="handleCreatePurchaseOrder(event)">
+        <div class="form-group">
+          <label>Select Supplier *</label>
+          <select id="po_create_supplier" required></select>
+        </div>
+        <div class="form-group">
+          <label>Product Item *</label>
+          <select id="po_create_product" required></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Requested Qty *</label>
+            <input type="number" id="po_create_qty" min="1" value="25" required>
+          </div>
+          <div class="form-group">
+            <label>Expected Delivery Date</label>
+            <input type="date" id="po_create_expected_date">
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;">
+          <button type="button" class="btn-sm" onclick="closeModal('create-po-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary">Create Purchase Order</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="pay-supplier-modal">
+    <div class="modal-box" style="max-width:560px;">
+      <div class="modal-header">
+        <h3>💳 Record Supplier Payment</h3>
+        <button class="modal-close" onclick="closeModal('pay-supplier-modal')">✕</button>
+      </div>
+      <form onsubmit="handleRecordSupplierPayment(event)">
+        <input type="hidden" id="pay_sup_invoice_id">
+        <input type="hidden" id="pay_sup_po_id">
+        <p id="pay_sup_invoice_label" style="font-weight:700; color:var(--primary); margin-bottom:10px;"></p>
+
+        <!-- Auto-filled Where to Pay Credentials from Supplier Quotation / Profile -->
+        <div id="pay_sup_where_box" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 12px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-bottom:6px;">
+            <span id="pay_sup_where_source" style="font-size:0.74rem; font-weight:700; color:#047857; background:#dcfce7; padding:2px 8px; border-radius:999px;">Auto-filled</span>
+          </div>
+          <div class="form-row" style="margin-bottom:6px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label style="font-size:0.76rem;">Payee / Account Name</label>
+              <input type="text" id="pay_sup_dest_payee" placeholder="Supplier account name" style="background:#fff;">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label style="font-size:0.76rem;">Account / Till / Paybill / Phone #</label>
+              <input type="text" id="pay_sup_dest_account" placeholder="e.g. 0700... / Till / Account #" style="background:#fff; font-weight:700;">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label style="font-size:0.76rem;">Bank / Payment Provider</label>
+            <input type="text" id="pay_sup_dest_provider" placeholder="e.g. Safaricom M-Pesa Till / Equity Bank" style="background:#fff;">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Amount to Pay (KES) *</label>
+            <input type="number" id="pay_sup_amount" step="0.01" min="1" required>
+          </div>
+          <div class="form-group">
+            <label>Payment Date *</label>
+            <input type="date" id="pay_sup_date" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Payment Method *</label>
+            <select id="pay_sup_method">
+              <option value="M-Pesa Paybill">M-Pesa Paybill</option>
+              <option value="M-Pesa Buy Goods Till">M-Pesa Buy Goods Till</option>
+              <option value="M-Pesa Send Money">M-Pesa Send Money</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Cheque">Cheque</option>
+              <option value="Cash">Cash</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Transaction Ref # *</label>
+            <input type="text" id="pay_sup_ref" required placeholder="e.g. EQT-2026-9910">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Payment Notes</label>
+          <input type="text" id="pay_sup_notes" placeholder="Partial or full settlement notes">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;">
+          <button type="button" class="btn-sm" onclick="closeModal('pay-supplier-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary">Confirm Payment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Finance Order Credit Review & Release -->
+  <div class="modal-overlay" id="finance-credit-modal">
+    <div class="modal" style="max-width:620px; width:95%;">
+      <div class="modal-header" style="background:#0f172a; color:#fff;">
+        <h3 id="fin_credit_modal_title" style="margin:0; font-size:1.05rem;">🛡️ Finance Credit &amp; Payment Policy Review</h3>
+        <button class="close-btn" onclick="closeModal('finance-credit-modal')" style="color:#fff;">&times;</button>
+      </div>
+      <form onsubmit="handleFinanceReleaseSubmit(event)" style="padding:16px;">
+        <input type="hidden" id="fin_credit_order_no">
+        <input type="hidden" id="fin_credit_action" value="release">
+
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:12px 14px; margin-bottom:14px;" id="fin_credit_order_summary">
+          <!-- Hydrated dynamically -->
+        </div>
+
+        <div id="fin_credit_policy_panel">
+          <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-weight:700; font-size:0.86rem; color:#0f172a;">Credit / Payment Policy Approval Terms *</label>
+            <select id="fin_credit_policy_type" style="width:100%; padding:9px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem; background:#fff;">
+              <option value="Approved 30-Day Trade Credit">📄 Approved 30-Day Trade Credit Policy</option>
+              <option value="Government / Corporate LPO">🏛️ Verified Government / Corporate LPO</option>
+              <option value="Deposit Threshold Met (Balance Due on Site/Delivery)">💵 Deposit Threshold Met (Balance Due on Site / Delivery)</option>
+              <option value="Post-Dated Cheque / Bank Guarantee">🏦 Post-Dated Cheque / Bank Guarantee on File</option>
+              <option value="Management Authorized Credit Waiver">⭐ Management Authorized Credit Waiver</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-weight:700; font-size:0.86rem; color:#0f172a;">Finance Policy Verification Notes &amp; Terms *</label>
+            <textarea id="fin_credit_notes" rows="3" placeholder="State customer credit limit, LPO reference, payment guarantee terms, or site collection arrangements..." style="width:100%; padding:9px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.86rem;"></textarea>
+            <small style="color:#64748b; font-size:0.78rem; display:block; margin-top:4px;">Rule 5 Compliance: Finance must check and document credit/payment policy before release.</small>
+          </div>
+        </div>
+
+        <div id="fin_balance_payment_panel" style="display:none; background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:14px; margin-bottom:14px;">
+          <div style="font-weight:800; color:#166534; font-size:0.92rem; margin-bottom:10px;">💵 Receive Balance Payment at Finance Desk</div>
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom:8px;">
+              <label style="font-size:0.82rem;">Payment Amount Received (KES) *</label>
+              <input type="number" id="fin_balance_amount" min="1" step="1" placeholder="e.g. 5000">
+            </div>
+            <div class="form-group" style="margin-bottom:8px;">
+              <label style="font-size:0.82rem;">Payment Channel *</label>
+              <select id="fin_balance_method">
+                <option value="M-Pesa">M-Pesa (Till 5894210)</option>
+                <option value="Cash">Cash in Hand</option>
+                <option value="Bank Transfer">Bank Transfer (Equity Meru)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label style="font-size:0.82rem;">Transaction / Reference Code *</label>
+            <input type="text" id="fin_balance_ref" placeholder="e.g. SLK892019Q">
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:16px;">
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-sm" style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; font-weight:700;" onclick="handleFinanceCreditHold()">🛑 Place on Credit Hold</button>
+            <button type="button" class="btn-sm" style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3; font-weight:700;" onclick="handleFinanceFlagFailedPayment()">❌ Flag Payment Failed</button>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-sm" onclick="closeModal('finance-credit-modal')">Cancel</button>
+            <button type="submit" id="fin_credit_submit_btn" class="btn-sm btn-primary" style="font-weight:700; background:#16a34a; padding:8px 16px;">✅ Approve Credit &amp; Release Order</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Cashier Formal Printable Invoice -->
+  <div class="modal-overlay" id="cashier-invoice-modal">
+    <div class="modal" style="max-width:720px; width:95%;">
+      <div class="modal-header" style="background:#0f172a; color:#fff;">
+        <h3 style="margin:0; font-size:1.05rem;">📄 Official Sales Invoice</h3>
+        <button class="close-btn" onclick="closeModal('cashier-invoice-modal')" style="color:#fff;">&times;</button>
+      </div>
+      <div id="invoice-modal-content" style="padding:20px; background:#fff; max-height:75vh; overflow-y:auto;">
+        <!-- Injected dynamically -->
+      </div>
+      <div style="padding:12px 20px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+        <button type="button" class="btn-sm" onclick="printInvoiceModalContent()" style="background:#1e3a8a; color:#fff; font-weight:700; padding:8px 16px;">🖨️ Print Invoice</button>
+        <button type="button" class="btn-sm" onclick="closeModal('cashier-invoice-modal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Dispatch Reschedule Delivery Run -->
+  <div class="modal-overlay" id="dispatch-reschedule-modal">
+    <div class="modal" style="max-width:520px; width:95%;">
+      <div class="modal-header" style="background:#1e3a8a; color:#fff;">
+        <h3 style="margin:0; font-size:1.05rem;">📅 Reschedule Delivery Run</h3>
+        <button class="close-btn" onclick="closeModal('dispatch-reschedule-modal')" style="color:#fff;">&times;</button>
+      </div>
+      <form onsubmit="handleDispatchRescheduleSubmit(event)" style="padding:16px;">
+        <input type="hidden" id="reschedule_dispatch_id">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.85rem;">New Scheduled Delivery Date *</label>
+          <input type="date" id="reschedule_new_date" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.85rem;">Reschedule Reason / Customer Notes *</label>
+          <select id="reschedule_reason_select" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; margin-bottom:8px;">
+            <option value="Customer Not Available at Delivery Address">Customer Not Available at Delivery Address</option>
+            <option value="Customer Requested Postponement">Customer Requested Postponement</option>
+            <option value="Road Inaccessible / Adverse Weather">Road Inaccessible / Adverse Weather</option>
+            <option value="Vehicle Mechanical Delay">Vehicle Mechanical Delay</option>
+            <option value="Other / Special Arrangement">Other / Special Arrangement</option>
+          </select>
+          <textarea id="reschedule_notes" rows="2" placeholder="Additional details or customer instructions..." style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;"></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+          <button type="button" class="btn-sm" onclick="closeModal('dispatch-reschedule-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary" style="background:#1e3a8a; font-weight:700;">Confirm Reschedule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Driver Delivery Failure Report -->
+  <div class="modal-overlay" id="driver-failure-modal">
+    <div class="modal" style="max-width:500px; width:95%;">
+      <div class="modal-header" style="background:#b91c1c; color:#fff;">
+        <h3 style="margin:0; font-size:1.05rem;">❌ Report Delivery Failure</h3>
+        <button class="close-btn" onclick="closeModal('driver-failure-modal')" style="color:#fff;">&times;</button>
+      </div>
+      <form onsubmit="handleDriverFailureSubmit(event)" style="padding:16px;">
+        <input type="hidden" id="driver_fail_dispatch_id">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.85rem;">Reason for Failed Delivery *</label>
+          <select id="driver_fail_reason" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="Customer Phone Unreachable / Gate Locked">Customer Phone Unreachable / Gate Locked</option>
+            <option value="Customer Postponed upon Arrival">Customer Postponed upon Arrival</option>
+            <option value="Incorrect Delivery Address Given">Incorrect Delivery Address Given</option>
+            <option value="Customer Refused Acceptance / Damaged Site">Customer Refused Acceptance / Damaged Site</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.85rem;">Driver Report Details *</label>
+          <textarea id="driver_fail_notes" rows="3" required placeholder="Describe what occurred at customer location..." style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;"></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+          <button type="button" class="btn-sm" onclick="closeModal('driver-failure-modal')">Cancel</button>
+          <button type="submit" class="btn-sm" style="background:#dc2626; color:#fff; font-weight:700; padding:8px 16px;">Submit Failure Report</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Service Manager Review Completion Report (Approve & Bill OR Return for Further Work) -->
+  <div class="modal-overlay" id="service-approval-modal">
+    <div class="modal" style="max-width:600px; width:95%;">
+      <div class="modal-header" style="background:#047857; color:#fff;">
+        <h3 style="margin:0; font-size:1.05rem;">⭐ Review Completion Report &amp; Bill Service Fee</h3>
+        <button class="close-btn" onclick="closeModal('service-approval-modal')" style="color:#fff;">&times;</button>
+      </div>
+      <form onsubmit="handleServiceApprovalSubmit(event)" style="padding:16px;">
+        <input type="hidden" id="service_approval_request_id">
+        <div id="service-approval-summary" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+          <!-- Hydrated dynamically -->
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.85rem;">Service Fee to Charge Customer (KES) *</label>
+          <input type="number" id="service_approval_fee" min="0" step="50" required placeholder="e.g. 800" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-weight:700;">
+          <small style="color:var(--text-muted); font-size:0.76rem;">Approved jobs with a service fee move to Finance Manager for payment confirmation &amp; customer receipt download.</small>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.85rem;">Service Manager Inspection Notes / Rework Instructions *</label>
+          <textarea id="service_approval_notes" rows="2" placeholder="Enter approval remarks, OR describe further work required if returning the job to technician..." style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;"></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px; flex-wrap:wrap;">
+          <button type="button" class="btn-sm" onclick="closeModal('service-approval-modal')">Cancel</button>
+          <button type="button" class="btn-sm" style="background:#d97706; color:#fff; font-weight:700; padding:8px 14px;" onclick="handleServiceReturnForRework()">↩️ Return for Further Work</button>
+          <button type="submit" class="btn-sm btn-primary" style="background:#15803d; font-weight:700; padding:8px 16px;">✅ Approve Completion &amp; Charge Fee</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Technician Submit Material Request -->
+  <div class="modal-overlay" id="tech-material-request-modal">
+    <div class="modal" style="max-width:620px; width:95%;">
+      <div class="modal-header" style="background:#1e3a8a; color:#fff;">
+        <h3 style="margin:0; font-size:1.05rem;">🧱 Request Materials from Inventory</h3>
+        <button class="close-btn" onclick="closeModal('tech-material-request-modal')" style="color:#fff;">&times;</button>
+      </div>
+      <form onsubmit="handleTechMaterialRequestSubmit(event)" style="padding:16px;">
+        <input type="hidden" id="mr_service_request_id">
+        <div id="mr-job-summary" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 12px; font-size:0.86rem; color:#1e3a8a; margin-bottom:12px; font-weight:600;"></div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label style="font-weight:700; font-size:0.85rem; margin:0;">Materials Needed *</label>
+            <button type="button" class="btn-sm" style="background:#e0e7ff; color:#1e3a8a; font-weight:700;" onclick="addTechMaterialRow()">+ Add Item</button>
+          </div>
+          <div id="mr-items-rows" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.85rem;">Technician Notes / Site Requirement</label>
+          <input type="text" id="mr_notes" placeholder="e.g. Required for main distribution panel wiring at customer premises" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-sm" onclick="closeModal('tech-material-request-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary" style="font-weight:700;">📤 Send to Inventory Manager</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Technician Submit Completion Report -->
+  <div class="modal-overlay" id="tech-completion-modal">
+    <div class="modal" style="max-width:560px; width:95%;">
+      <div class="modal-header" style="background:#047857; color:#fff;">
+        <h3 style="margin:0; font-size:1.05rem;">📝 Submit Technician Completion Report</h3>
+        <button class="close-btn" onclick="closeModal('tech-completion-modal')" style="color:#fff;">&times;</button>
+      </div>
+      <form onsubmit="handleTechCompletionSubmit(event)" style="padding:16px;">
+        <input type="hidden" id="comp_service_request_id">
+        <div id="comp-job-summary" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; font-size:0.86rem; margin-bottom:12px;"></div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.85rem;">Work Performed &amp; Inspection Findings *</label>
+          <textarea id="comp_notes" rows="3" required placeholder="Describe installation, repair, or maintenance completed, voltage/continuity tests verified, and customer handover status..." style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.85rem;">Final Materials Used Summary</label>
+          <input type="text" id="comp_materials_used" placeholder="e.g. 20m 2.5mm cable, 2x 20A MCB" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-sm" onclick="closeModal('tech-completion-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary" style="background:#047857; font-weight:700;">✅ Submit Completion Report</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Inventory Manager Review Material Request -->
+  <div class="modal-overlay" id="inventory-mr-review-modal">
+    <div class="modal" style="max-width:640px; width:95%;">
+      <div class="modal-header" style="background:#102b46; color:#fff;">
+        <h3 style="margin:0; font-size:1.05rem;">📦 Check Stock &amp; Review Material Request</h3>
+        <button class="close-btn" onclick="closeModal('inventory-mr-review-modal')" style="color:#fff;">&times;</button>
+      </div>
+      <div style="padding:16px;">
+        <input type="hidden" id="inv_mr_review_id">
+        <div id="inv-mr-review-summary" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; font-size:0.86rem; margin-bottom:12px;"></div>
+        <div id="inv-mr-review-items" style="display:flex; flex-direction:column; gap:8px; max-height:240px; overflow-y:auto; margin-bottom:12px;"></div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.85rem;">Inventory Review Notes (Required if rejecting or partial)</label>
+          <input type="text" id="inv_mr_review_notes" placeholder="e.g. Approved from main store bin B2 / Partial due to stock limit" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn-sm" onclick="closeModal('inventory-mr-review-modal')">Cancel</button>
+          <button type="button" class="btn-sm" style="background:#dc2626; color:#fff; font-weight:700;" onclick="submitInventoryMrReview('reject')">❌ Reject</button>
+          <button type="button" class="btn-sm" style="background:#d97706; color:#fff; font-weight:700;" onclick="submitInventoryMrReview('partial_approve')">⚖️ Partial Approve</button>
+          <button type="button" class="btn-sm" style="background:#087443; color:#fff; font-weight:700;" onclick="submitInventoryMrReview('approve')">✅ Approve Full</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Finance Manager Confirm Service Fee Payment -->
+  <div class="modal-overlay" id="finance-service-pay-modal">
+    <div class="modal" style="max-width:520px; width:95%;">
+      <div class="modal-header" style="background:#087443; color:#fff;">
+        <h3 style="margin:0; font-size:1.05rem;">💵 Confirm Customer Service Fee Payment</h3>
+        <button class="close-btn" onclick="closeModal('finance-service-pay-modal')" style="color:#fff;">&times;</button>
+      </div>
+      <form onsubmit="handleConfirmServiceFeePaymentSubmit(event)" style="padding:16px;">
+        <input type="hidden" id="fin_svc_pay_id">
+        <div id="fin-svc-pay-summary" style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:10px 12px; font-size:0.86rem; color:#065f46; margin-bottom:12px;"></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Amount Paid (KES) *</label>
+            <input type="number" id="fin_svc_pay_amount" min="1" step="0.01" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+          </div>
+          <div class="form-group">
+            <label>Payment Method *</label>
+            <select id="fin_svc_pay_method" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+              <option value="M-Pesa">M-Pesa</option>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Transaction / M-Pesa / Receipt Reference # *</label>
+          <input type="text" id="fin_svc_pay_ref" required placeholder="e.g. UJK89XY12P or CASH-SRV-101" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-sm" onclick="closeModal('finance-service-pay-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary" style="background:#087443; font-weight:700;">✅ Confirm Payment &amp; Issue Receipt</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Customer Care Follow-Up Review -->
+  <div class="modal-overlay" id="customer-care-modal">
+    <div class="modal" style="max-width:620px; width:95%;">
+      <div class="modal-header" style="background:#1e3a8a; color:#fff;">
+        <h3 style="margin:0; font-size:1.05rem;">📞 Log Customer Care Follow-Up Call</h3>
+        <button class="close-btn" onclick="closeModal('customer-care-modal')" style="color:#fff;">&times;</button>
+      </div>
+      <form onsubmit="handleCustomerCareSubmit(event)" style="padding:16px;">
+        <input type="hidden" id="cc_modal_task_id">
+        <input type="hidden" id="cc_modal_order_no">
+
+        <div id="cc-modal-summary" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+          <!-- Hydrated dynamically -->
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-weight:700; font-size:0.85rem;">Product Condition on Arrival *</label>
+            <select id="cc_product_condition" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+              <option value="Good Condition">✅ Good Condition (Intact &amp; Tested)</option>
+              <option value="Damaged / Defect">❌ Damaged / Defect Reported</option>
+              <option value="Missing Parts / Accessories">⚠️ Missing Parts / Accessories</option>
+              <option value="Packaging Torn but Product Intact">📦 Packaging Torn but Product Intact</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-weight:700; font-size:0.85rem;">Delivery Satisfaction (1 - 5) *</label>
+            <select id="cc_delivery_satisfaction" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+              <option value="5">⭐⭐⭐⭐⭐ 5 - Extremely Satisfied</option>
+              <option value="4">⭐⭐⭐⭐ 4 - Satisfied</option>
+              <option value="3">⭐⭐⭐ 3 - Average</option>
+              <option value="2">⭐⭐ 2 - Unsatisfied</option>
+              <option value="1">⭐ 1 - Very Dissatisfied</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-weight:700; font-size:0.85rem;">Installation Satisfaction (where applicable)</label>
+            <select id="cc_installation_satisfaction" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+              <option value="5">⭐⭐⭐⭐⭐ 5 - Excellent Workmanship</option>
+              <option value="4">⭐⭐⭐⭐ 4 - Good Installation</option>
+              <option value="3">⭐⭐⭐ 3 - Fair</option>
+              <option value="2">⭐⭐ 2 - Poor Installation</option>
+              <option value="1">⭐ 1 - Substandard / Faulty</option>
+              <option value="">N/A - Delivery / Counter Only</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-weight:700; font-size:0.85rem;">Delivery &amp; Crew Feedback Notes</label>
+            <input type="text" id="cc_delivery_notes" placeholder="Driver punctuality, courteousness...">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.85rem;">Customer Comments / Complaints / Recommendations</label>
+          <textarea id="cc_feedback_notes" rows="3" placeholder="Record customer remarks, suggestions, or issues to follow up on..." style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;"></textarea>
+        </div>
+
+        <div style="margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="cc_is_complaint" style="width:16px; height:16px;">
+          <label for="cc_is_complaint" style="font-size:0.85rem; font-weight:700; color:#dc2626; cursor:pointer;">
+            ⚠️ Flag as Formal Customer Complaint (Escalate to Management)
+          </label>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+          <button type="button" class="btn-sm" onclick="closeModal('customer-care-modal')">Cancel</button>
+          <button type="submit" class="btn-sm btn-primary" style="background:#1e3a8a; font-weight:700; padding:8px 18px;">💾 Log Customer Follow-Up</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Enterprise ERP Logic -->
+  <script src="js/admin_erp.js?v=21"></script>
+  <script src="js/admin_suppliers.js?v=8"></script>
+</body>
+</html>

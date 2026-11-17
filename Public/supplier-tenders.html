@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restock Requests &amp; Tenders | Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/supplier-portal.css">
+</head>
+<body>
+
+  <!-- Exact Frontpage Header Design with Logo & Title -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo" style="width:68px;height:68px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Supplier Procurement Portal • Meru Town, Meru County, Kenya</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="storefront-layout">
+    <!-- Dedicated Supplier Left-Aligned Navigation Sidebar -->
+    <nav>
+      <div class="nav-links">
+        <a href="/supplier-portal" data-tab="dashboard">
+          📊 Dashboard Overview
+        </a>
+        <a href="/supplier-tenders" data-tab="tenders">
+          📦 Restock Tenders
+          <span class="cart-pill" id="navTendersBadge" style="display:none; background:#f59e0b; color:#0f172a;">0</span>
+        </a>
+        <a href="/supplier-orders" data-tab="orders">
+          🚚 Deliveries &amp; Invoices
+          <span class="cart-pill" id="navOrdersBadge" style="display:none; background:#10b981; color:#ffffff;">0</span>
+        </a>
+        <a href="/supplier-payments" data-tab="payments">
+          💰 Payments Received
+          <span class="cart-pill" id="navPaymentsBadge" style="display:none; background:#f59e0b; color:#0f172a;">0</span>
+        </a>
+      </div>
+      <div class="nav-auth-box">
+        <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px 12px; text-align:center;">
+          <div id="headerSupplierName" style="font-size:0.86rem; font-weight:700; color:#ffd54a; word-break:break-word;">🏢 Supplier (Loading...)</div>
+        </div>
+        <button type="button" onclick="logoutSupplier()" style="width:100%; background:#ef4444; color:#ffffff; border:none; border-radius:6px; padding:10px 14px; font-size:0.85rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; margin-top:8px;">
+          🚪 Sign Out
+        </button>
+      </div>
+    </nav>
+
+    <div class="storefront-content">
+      <main class="portal-shell">
+
+    <!-- Page Header Banner -->
+    <div class="page-header-banner">
+      <div>
+        <h2><span>📦</span> Restock Requests / Tender Quotes Needed</h2>
+        <p>Review restock purchase orders requested by Elight Electrical Shop's Inventory Manager, quote your wholesale unit prices, and provide your payout credentials.</p>
+      </div>
+      <div>
+        <span id="pendingQuotesCountBadge" class="badge badge-amber" style="font-size:0.88rem; padding:6px 14px; display:none;">0 pending</span>
+      </div>
+    </div>
+
+    <!-- Tenders Container Card -->
+    <section class="portal-card">
+      <div class="portal-card-header header-primary">
+        <span>Available Purchase Orders Awaiting Quotation</span>
+        <span style="font-size:0.85rem; color:var(--sys-text-muted); font-weight:normal;">Submit itemized unit prices &amp; payout details</span>
+      </div>
+      <div class="divider-line"></div>
+
+      <div id="restockOrdersContainer">
+        <div class="empty-state-text">Loading restock purchase orders...</div>
+      </div>
+    </section>
+
+  </main>
+    </div> <!-- /.storefront-content -->
+  </div> <!-- /.storefront-layout -->
+
+  <div id="toast-msg"></div>
+
+  <script src="js/supplier_common.js"></script>
+  <script>
+    async function loadTendersPage() {
+      await initSupplierHeader('tenders');
+
+      try {
+        const res = await authFetch('/api/supplier/purchase-orders');
+        if (!res || !res.ok) return;
+
+        const data = await res.json();
+        const pos = data.purchase_orders || [];
+
+        const pendingPOs = pos.filter(p => {
+          const s = String(p.status || '').toLowerCase();
+          return s === 'pending_supplier_quotation' || s === 'pending';
+        });
+
+        const box = document.getElementById('restockOrdersContainer');
+        const badge = document.getElementById('pendingQuotesCountBadge');
+        const navBadge = document.getElementById('navTendersBadge');
+
+        if (pendingPOs.length > 0) {
+          badge.textContent = `${pendingPOs.length} pending requests`;
+          badge.style.display = 'inline-block';
+          if (navBadge) {
+            navBadge.textContent = pendingPOs.length;
+            navBadge.style.display = 'inline-block';
+          }
+
+          box.innerHTML = pendingPOs.map(po => {
+            const itemsSummary = (po.items || []).map(i => `${i.ordered_qty || 1}x ${i.product_name}`).join(', ') || 'Restock electrical products';
+            const orderDate = (po.order_date || po.created_at || new Date().toISOString()).slice(0, 10);
+            return `
+              <div class="order-card">
+                <div>
+                  <div class="order-meta-title">Restock Purchase Order #${po.po_number || po.po_id} requested by Elight Electrical Shop (${po.created_by || 'Inventory Manager'}) on ${orderDate}</div>
+                  <div class="order-meta-sub">Items Requested: <strong>${escapeHtml(itemsSummary)}</strong></div>
+                  <div class="order-items-badge">⏳ Quotation &amp; Payment Credentials Required</div>
+                </div>
+                <div>
+                  <a href="/supplier-quote?po_id=${po.po_id}" class="btn-gold">
+                    Fill Tender Quote &amp; Payment Credentials &rarr;
+                  </a>
+                </div>
+              </div>
+            `;
+          }).join('');
+        } else {
+          badge.style.display = 'none';
+          if (navBadge) navBadge.style.display = 'none';
+          box.innerHTML = '<div class="empty-state-text">No pending restock requests awaiting your quotation right now. All requests are up to date!</div>';
+        }
+      } catch (err) {
+        console.error('loadTendersPage error:', err);
+      }
+    }
+
+    loadTendersPage();
+  </script>
+</body>
+</html>
+

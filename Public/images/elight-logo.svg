@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <!-- Rich Royal & Navy Blue Circular Background -->
+    <radialGradient id="royalBlueBg" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#1a4e8e"/>
+      <stop offset="58%" stop-color="#0e2e59"/>
+      <stop offset="100%" stop-color="#071936"/>
+    </radialGradient>
+
+    <!-- Gleaming Metallic Gold Outer Circular Border -->
+    <linearGradient id="outerGoldBorder" x1="15" y1="15" x2="185" y2="185" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fff8dc"/>
+      <stop offset="20%" stop-color="#f3cf68"/>
+      <stop offset="42%" stop-color="#b88428"/>
+      <stop offset="62%" stop-color="#fffdf2"/>
+      <stop offset="82%" stop-color="#d4a340"/>
+      <stop offset="100%" stop-color="#9a6a1b"/>
+    </linearGradient>
+
+    <!-- Brushed Champagne-Platinum-Gold Gradient for Roman Serif E -->
+    <linearGradient id="goldStemGrad" x1="76" y1="62" x2="128" y2="138" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#d4a548"/>
+      <stop offset="22%" stop-color="#f5e3b8"/>
+      <stop offset="38%" stop-color="#fffdf7"/>
+      <stop offset="54%" stop-color="#ead096"/>
+      <stop offset="78%" stop-color="#c39237"/>
+      <stop offset="100%" stop-color="#9e6e1d"/>
+    </linearGradient>
+
+    <!-- Flowing Metallic Gold Gradient for Twin S-Waves -->
+    <linearGradient id="goldWaveGrad" x1="10" y1="115" x2="178" y2="92" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#c79538"/>
+      <stop offset="26%" stop-color="#f7dc88"/>
+      <stop offset="48%" stop-color="#eed08a"/>
+      <stop offset="58%" stop-color="#fffcf2"/>
+      <stop offset="76%" stop-color="#c8983d"/>
+      <stop offset="100%" stop-color="#9b6c1e"/>
+    </linearGradient>
+
+    <!-- Metallic Gold Inner Monogram Ring Gradient -->
+    <linearGradient id="goldRingGrad" x1="45" y1="44" x2="160" y2="156" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#d2a243"/>
+      <stop offset="24%" stop-color="#fff9e8"/>
+      <stop offset="46%" stop-color="#c69335"/>
+      <stop offset="68%" stop-color="#9d6d1d"/>
+      <stop offset="84%" stop-color="#fff8e3"/>
+      <stop offset="100%" stop-color="#b88428"/>
+    </linearGradient>
+
+    <!-- Subtle Depth Shadow -->
+    <filter id="luxuryShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="2.5" stdDeviation="2.2" flood-color="#030b1c" flood-opacity="0.58"/>
+    </filter>
+
+    <!-- Main Upper Sweeping S-Wave Path -->
+    <path id="mainWavePath" d="
+      M 6 102
+      C 28 114, 52 115, 86 99
+      C 114 86, 142 81, 178 100
+      C 144 88, 118 93, 89 107
+      C 54 124, 28 119, 6 102
+      Z
+    "/>
+
+    <!-- Secondary Lower Sweeping Wave Path -->
+    <path id="subWavePath" d="
+      M 46 125.5
+      C 62 125, 76 116, 94 108
+      C 108 102, 120 102, 132 103.5
+      C 119 104.5, 107 106.5, 95 113.5
+      C 77 123, 61 129, 46 125.5
+      Z
+    "/>
+
+    <!-- Mask that carves authentic negative-space wave gaps through the inner monogram ring -->
+    <mask id="ringCutoutMask" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200">
+      <rect x="0" y="0" width="200" height="200" fill="#ffffff"/>
+      <use href="#mainWavePath" fill="#000000" stroke="#000000" stroke-width="5.2" stroke-linejoin="round"/>
+      <use href="#subWavePath" fill="#000000" stroke="#000000" stroke-width="4.4" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+
+  <!-- 1. Circular Blue Badge with Metallic Gold Outer Border -->
+  <circle
+    cx="100"
+    cy="100"
+    r="96"
+    fill="url(#royalBlueBg)"
+    stroke="url(#outerGoldBorder)"
+    stroke-width="6.5"
+  />
+  <!-- Subtle fine inner gold pinstripe inside the outer border -->
+  <circle
+    cx="100"
+    cy="100"
+    r="90.5"
+    fill="none"
+    stroke="url(#outerGoldBorder)"
+    stroke-width="1"
+    opacity="0.45"
+  />
+
+  <!-- 2. Centered Gold Monogram Inside the Circular Emblem -->
+  <g transform="translate(100, 100) scale(0.92) translate(-94, -100)" filter="url(#luxuryShadow)">
+    <!-- Monogram Gold Circle Ring with Authentic Wave Cutouts -->
+    <circle
+      cx="104"
+      cy="100"
+      r="56"
+      fill="none"
+      stroke="url(#goldRingGrad)"
+      stroke-width="5.2"
+      mask="url(#ringCutoutMask)"
+    />
+
+    <!-- Upper Half of Classic Roman Serif "E" -->
+    <path
+      d="
+        M 78 63
+        L 112 63
+        C 118 63, 122 63, 125.2 62.2
+        L 124.2 77.2
+        L 122 77.2
+        C 121.2 70.8, 119.5 68.2, 112.5 68.2
+        L 100.2 68.2
+        L 100.2 97.5
+        L 87.5 102.5
+        L 87.5 73.5
+        C 87.5 67.2, 85.5 65.2, 78 65
+        Z
+      "
+      fill="url(#goldStemGrad)"
+    />
+
+    <!-- Lower Half of Classic Roman Serif "E" -->
+    <path
+      d="
+        M 87.5 113
+        L 100.2 107.5
+        L 100.2 133
+        L 111.5 133
+        C 120 133, 123.2 130.8, 125 123.5
+        L 127.2 123.5
+        L 124.8 138
+        L 79.5 138
+        L 79.5 136
+        C 85.5 135.8, 87.5 134.2, 87.5 128.8
+        Z
+      "
+      fill="url(#goldStemGrad)"
+    />
+
+    <!-- Main Upper Sweeping Gold S-Wave -->
+    <use href="#mainWavePath" fill="url(#goldWaveGrad)"/>
+
+    <!-- Secondary Lower Sweeping Gold Wave -->
+    <use href="#subWavePath" fill="url(#goldWaveGrad)"/>
+  </g>
+</svg>

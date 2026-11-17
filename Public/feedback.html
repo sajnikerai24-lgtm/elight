@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Feedback & Reviews - Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="/images/elight-favicon.svg?v=7">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo" style="width:60px;height:60px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Your one-stop destination for quality electrical fittings, lighting &amp; appliances</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="storefront-layout">
+    <!-- Left Vertical Navigation Sidebar -->
+    <nav>
+      <div class="nav-links">
+        <a href="/">🏠 Home</a>
+        <a href="/products">📦 Product Catalog</a>
+        <a href="/cart">
+          🛒 Cart <span class="cart-pill" id="cart-count">0</span>
+        </a>
+        <a href="/booking">📅 Book</a>
+        <a href="/contact">📞 Contact Us</a>
+        <a href="/help">❓ Help</a>
+        <a href="/feedback" class="active">💬 Feedback</a>
+        <a href="/about">ℹ️ About Us</a>
+      </div>
+      <div class="nav-auth-box">
+        <a href="/login" class="admin-link-btn" id="navAuthLink">🔐 Login</a>
+      </div>
+    </nav>
+
+    <div class="storefront-content">
+
+  <div class="module-page-wrap">
+    <div class="module-hero-banner">
+      <div>
+        <h2>💬 Customer Reviews &amp; Feedback</h2>
+        <p>Share your shopping or installation experience, or submit a service complaint directly to shop management so we can serve you better.</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.12); padding:12px 20px; border-radius:10px; text-align:center;">
+        <div style="font-size:1.6rem; font-weight:800; color:var(--accent);" id="avgRatingBadge">★ 5.0 / 5</div>
+        <div style="font-size:0.8rem; color:#e2e8f0;" id="totalReviewsBadge">Verified Customer Reviews</div>
+      </div>
+    </div>
+
+    <div id="feedbackSuccessBox" class="confirmation-box" style="display:none;">
+      <strong style="color:#065f46; font-size:1.05rem;" id="feedbackSuccessTitle">✓ Feedback Submitted!</strong>
+      <p style="margin:6px 0 0 0; color:#047857; font-size:0.92rem;" id="feedbackSuccessMsg"></p>
+    </div>
+
+    <div class="module-two-col">
+      <!-- Left: Submit Review or Complaint -->
+      <div class="module-card">
+        <h3>✍️ Share a Review or Report a Complaint</h3>
+        <form id="feedbackForm" onsubmit="submitFeedbackForm(event)">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <div class="form-group">
+              <label for="fbType">Feedback Type *</label>
+              <select id="fbType" onchange="toggleRatingVisibility()" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="review">⭐ Product / Service Review (Public)</option>
+                <option value="complaint">⚠️ Service or Product Complaint (Confidential to Management)</option>
+                <option value="suggestion">💡 Improvement Suggestion</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="fbDepartment">Send To Department *</label>
+              <select id="fbDepartment" required style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="general">🏢 General Store &amp; Management</option>
+                <option value="cashier">🧾 Cashier Desk &amp; Sales</option>
+                <option value="inventory">📦 Inventory &amp; Product Stock</option>
+                <option value="services">🔧 Electrical Services &amp; Technicians</option>
+                <option value="dispatch">🚚 Dispatch &amp; Deliveries</option>
+                <option value="finance">💵 Finance &amp; Billing</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" id="ratingGroup">
+            <label>Overall Rating *</label>
+            <div class="star-picker" id="starPicker">
+              <span data-val="1" class="active" onclick="selectStar(1)">★</span>
+              <span data-val="2" class="active" onclick="selectStar(2)">★</span>
+              <span data-val="3" class="active" onclick="selectStar(3)">★</span>
+              <span data-val="4" class="active" onclick="selectStar(4)">★</span>
+              <span data-val="5" class="active" onclick="selectStar(5)">★</span>
+            </div>
+            <input type="hidden" id="fbRating" value="5">
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <div class="form-group">
+              <label>Your Name *</label>
+              <input type="text" id="fbName" required placeholder="e.g. Mary Njeri">
+            </div>
+            <div class="form-group">
+              <label>Email Address (For Follow-up)</label>
+              <input type="email" id="fbEmail" placeholder="you@example.com">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Summary / Subject *</label>
+            <input type="text" id="fbSubject" required placeholder="e.g. Great LED panel quality / Delivery feedback">
+          </div>
+
+          <div class="form-group">
+            <label>Your Detailed Review or Complaint *</label>
+            <textarea id="fbMessage" rows="4" required style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; font-family:inherit;" placeholder="Tell us what went well or how we can resolve your concern..."></textarea>
+          </div>
+
+          <button type="submit" class="checkout-btn" id="fbSubmitBtn">
+            💬 Submit Feedback
+          </button>
+        </form>
+      </div>
+
+      <!-- Right: Published Customer Reviews -->
+      <div class="module-card">
+        <h3>🌟 Verified Customer Reviews</h3>
+        <div id="reviewsWall">Loading customer reviews...</div>
+      </div>
+    </div>
+  </div>
+
+    <footer>
+      <p><strong>Elight Electrical Shop</strong> &copy; 2026. All rights reserved.</p>
+      <p>Location: Meru, Meru County, Kenya | Call / WhatsApp: +254 700 123 456 | Email: elightelectrical@ke.com</p>
+    </footer>
+    </div>
+  </div>
+
+  <script src="js/site_nav.js"></script>
+  <script>
+    function escapeHTML(str) {
+      return String(str || '').replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    function selectStar(val) {
+      document.getElementById('fbRating').value = val;
+      document.querySelectorAll('#starPicker span').forEach(s => {
+        s.classList.toggle('active', Number(s.getAttribute('data-val')) <= val);
+      });
+    }
+
+    function toggleRatingVisibility() {
+      const type = document.getElementById('fbType').value;
+      if (type === 'complaint') {
+        selectStar(2);
+      } else {
+        selectStar(5);
+      }
+    }
+
+    async function loadPublicReviews() {
+      const wall = document.getElementById('reviewsWall');
+      try {
+        const res = await fetch('/api/feedback');
+        const data = await res.json();
+        if (data.summary) {
+          document.getElementById('avgRatingBadge').textContent = `★ ${Number(data.summary.averageRating).toFixed(1)} / 5`;
+          document.getElementById('totalReviewsBadge').textContent = `Based on ${data.summary.totalReviews} Verified Reviews`;
+        }
+        const list = data.feedback || [];
+        if (list.length === 0) {
+          wall.innerHTML = '<p style="color:var(--text-muted);">No published reviews yet. Be the first to review!</p>';
+          return;
+        }
+        const deptLabels = {
+          general: 'General Management',
+          cashier: 'Cashier & Sales',
+          inventory: 'Inventory & Products',
+          services: 'Services & Technicians',
+          dispatch: 'Dispatch & Delivery',
+          finance: 'Finance & Billing'
+        };
+        wall.innerHTML = list.map(r => {
+          const stars = '★'.repeat(Number(r.rating || 5)) + '☆'.repeat(5 - Number(r.rating || 5));
+          const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('en-KE', { year:'numeric', month:'short', day:'numeric' }) : '';
+          const deptTag = r.module_tag ? (deptLabels[String(r.module_tag).toLowerCase()] || r.module_tag) : '';
+          return `
+            <div style="border-bottom:1px solid #e2e8f0; padding:14px 0;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <strong style="color:#0f172a;">${escapeHTML(r.customer_name)}</strong>
+                  ${deptTag ? `<span style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; padding:1px 8px; border-radius:999px; font-size:0.72rem; font-weight:700;">${escapeHTML(deptTag)}</span>` : ''}
+                </div>
+                <span style="color:#f59e0b; font-size:0.95rem; letter-spacing:1px;">${stars}</span>
+              </div>
+              <div style="font-weight:700; color:var(--primary); font-size:0.92rem; margin-bottom:4px;">${escapeHTML(r.subject)}</div>
+              <p style="margin:0 0 6px 0; font-size:0.88rem; color:#334155; line-height:1.55;">${escapeHTML(r.message)}</p>
+              <div style="font-size:0.76rem; color:#94a3b8;">Posted ${escapeHTML(dateStr)}</div>
+              ${r.admin_reply ? `
+                <div style="margin-top:8px; background:#eff6ff; border-left:3px solid var(--primary); padding:8px 12px; border-radius:4px; font-size:0.83rem; color:#1e3a8a;">
+                  <strong>⚡ Elight Shop Response:</strong> ${escapeHTML(r.admin_reply)}
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        wall.innerHTML = '<p style="color:#b91c1c;">Failed to load reviews.</p>';
+      }
+    }
+
+    async function submitFeedbackForm(e) {
+      e.preventDefault();
+      const btn = document.getElementById('fbSubmitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      const payload = {
+        feedback_type: document.getElementById('fbType').value,
+        module_tag: document.getElementById('fbDepartment').value,
+        rating: Number(document.getElementById('fbRating').value),
+        customer_name: document.getElementById('fbName').value.trim(),
+        customer_email: document.getElementById('fbEmail').value.trim(),
+        subject: document.getElementById('fbSubject').value.trim(),
+        message: document.getElementById('fbMessage').value.trim()
+      };
+
+      try {
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Submission failed');
+
+        document.getElementById('feedbackSuccessMsg').textContent = data.message;
+        const box = document.getElementById('feedbackSuccessBox');
+        box.style.display = 'block';
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        document.getElementById('fbSubject').value = '';
+        document.getElementById('fbMessage').value = '';
+        loadPublicReviews();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '💬 Submit Feedback';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        const raw = localStorage.getItem('elight_user');
+        if (raw) {
+          const u = JSON.parse(raw);
+          const cleanName = String(u.full_name || '').replace(/\s*\(customer\)\s*$/i, '').trim();
+          if (cleanName) document.getElementById('fbName').value = cleanName;
+          if (u.email) document.getElementById('fbEmail').value = u.email;
+        }
+      } catch (e) {}
+      loadPublicReviews();
+    });
+  </script>
+</body>
+</html>
+

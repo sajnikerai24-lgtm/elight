@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopping Cart & Checkout - Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="/images/elight-favicon.svg?v=7">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo" style="width:60px;height:60px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Your one-stop destination for quality electrical fittings, lighting &amp; appliances</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="storefront-layout">
+    <!-- Left Vertical Navigation Sidebar -->
+    <nav>
+      <div class="nav-links">
+        <a href="/">🏠 Home</a>
+        <a href="/products">📦 Product Catalog</a>
+        <a href="/cart" class="active">
+          🛒 Cart <span class="cart-pill" id="cart-count">0</span>
+        </a>
+        <a href="/booking">📅 Book</a>
+        <a href="/contact">📞 Contact Us</a>
+        <a href="/help">❓ Help</a>
+        <a href="/feedback">💬 Feedback</a>
+        <a href="/about">ℹ️ About Us</a>
+      </div>
+      <div class="nav-auth-box">
+        <a href="/login" class="admin-link-btn" id="navAuthLink">🔐 Login</a>
+      </div>
+    </nav>
+
+    <div class="storefront-content">
+
+  <!-- Main Cart Container -->
+  <main>
+    <div class="catalog-header">
+      <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">
+        <a href="/" style="color:var(--primary); text-decoration:none;">Home</a> &gt; 
+        <a href="/products" style="color:var(--primary); text-decoration:none;">Catalog</a> &gt; 
+        <span>Shopping Cart</span>
+      </div>
+      <h2>🛒 Shopping Cart & Checkout</h2>
+    </div>
+
+    <!-- Empty Cart State (Hidden by default) -->
+    <div id="empty-cart-state" class="empty-cart-state" style="display:none;">
+      <div class="empty-cart-icon">🛒</div>
+      <h3>Your shopping cart is currently empty</h3>
+      <p style="color:var(--text-muted); margin: 10px 0 25px 0;">
+        Browse our catalog of lighting, cables, switches, and circuit protection products.
+      </p>
+      <a href="/products" class="btn-hero-primary" style="display:inline-flex;">
+        🛍️ Browse Products Catalog
+      </a>
+    </div>
+
+    <!-- Active Cart Layout -->
+    <div id="cart-content" class="cart-page-layout">
+      
+      <!-- Left Column: Cart Items -->
+      <div class="cart-items-panel">
+        <div class="section-title" style="margin-bottom:15px;">
+          <h3>Review Your Items (<span id="cart-items-total-qty">0</span>)</h3>
+          <button class="btn-sm btn-danger" onclick="clearCart()" style="font-size:0.8rem;">
+            Clear Cart
+          </button>
+        </div>
+
+        <div class="cart-table-head">
+          <span>Item</span>
+          <span>Description</span>
+          <span>Quantity</span>
+          <span style="text-align:right;">Subtotal</span>
+          <span></span>
+        </div>
+
+        <div id="cart-items-list">
+          <!-- Dynamically populated by cart.js -->
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; padding-top:16px; border-top:1px solid var(--border);">
+          <a href="/products" class="view-all-link">
+            ← Continue Shopping
+          </a>
+        </div>
+      </div>
+
+      <!-- Right Column: Order Summary & Two-Step Checkout -->
+      <div class="cart-summary-panel">
+        <h3 style="color:var(--primary); margin-bottom:16px; font-size:1.2rem;">Order Summary</h3>
+        
+        <div class="summary-row">
+          <span style="color:var(--text-muted);">Items Subtotal:</span>
+          <strong id="summary-subtotal">KES 0.00</strong>
+        </div>
+
+        <div class="summary-row">
+          <span style="color:var(--text-muted);">Estimated Delivery:</span>
+          <span id="summary-shipping" style="font-weight:600; color:#087443;">KES 300.00 (Same-Day Courier)</span>
+        </div>
+
+        <div class="summary-divider"></div>
+
+        <div class="summary-total">
+          <span>Total:</span>
+          <span id="summary-grand-total">KES 0.00</span>
+        </div>
+
+        <!-- Step 1: Confirm Button (Shown First) -->
+        <div id="confirm-step-box" style="margin-top:18px;">
+          <button type="button" class="checkout-btn" onclick="openDeliveryDetailsStep()">
+            ✅ Confirm Order
+          </button>
+          <p style="margin-top:10px; font-size:0.78rem; color:var(--text-muted); text-align:center;">
+            Click Confirm to enter your delivery &amp; M-Pesa payment details next.
+          </p>
+        </div>
+
+        <!-- Step 2: Delivery Details Form (Revealed After Clicking Confirm) -->
+        <form id="checkout-form" onsubmit="handleCheckout(event)" style="display:none; margin-top:20px; padding-top:18px; border-top:2px dashed var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="font-size:1rem; margin:0; color:var(--primary);">🚚 Delivery Details</h4>
+            <button type="button" onclick="backToConfirmStep()" style="background:none; border:none; color:var(--text-muted); font-size:0.8rem; font-weight:600; cursor:pointer; text-decoration:underline;">
+              ← Back
+            </button>
+          </div>
+          
+          <div class="form-group">
+            <label for="cust_name">Full Name *</label>
+            <input type="text" id="cust_name" required placeholder="e.g. John Kamau">
+          </div>
+
+          <div class="form-group">
+            <label for="cust_delivery">Delivery Option (Meru County Only)</label>
+            <select id="cust_delivery" onchange="updateDeliveryOption()">
+              <option value="meru_town">Same-Day Courier (Meru Town &amp; Makutano) - KES 300</option>
+              <option value="meru_subcounty">Meru Sub-Counties Dispatch (Nkubu, Maua, Timau, Kianjai) - KES 500</option>
+              <option value="pickup">Store Pick-Up (Meru Town Showroom) - FREE</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="cust_location">Delivery Address / Notes</label>
+            <input type="text" id="cust_location" placeholder="e.g. Makutano, Meru, Apt 4B">
+          </div>
+
+          <div class="form-group">
+            <label for="cust_payment">Payment Method *</label>
+            <select id="cust_payment" onchange="toggleStorefrontPaymentNotice()">
+              <option value="mpesa">M-Pesa (Buy Goods Till 5894210)</option>
+              <option value="cash">Cash on Delivery / Shop Counter</option>
+            </select>
+          </div>
+
+          <!-- M-Pesa Phone Number & Transaction Code -->
+          <div class="form-group" id="cust_phone_group">
+            <label for="cust_phone">M-Pesa Phone Number *</label>
+            <input type="tel" id="cust_phone" required placeholder="e.g. 0712 345 678">
+            <div style="margin-top:6px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:8px 10px; font-size:0.8rem; color:#14532d;">
+              Pay via M-Pesa <strong>Buy Goods Till: 5894210</strong> (ELIGHT ELECTRICAL SHOP)
+            </div>
+            <div style="margin-top:8px;">
+              <label for="cust_mpesa_code" style="font-size:0.82rem; font-weight:600; color:var(--text-main); display:block; margin-bottom:4px;">M-Pesa Transaction Code (Optional)</label>
+              <input type="text" id="cust_mpesa_code" placeholder="e.g. SLK884290Q" style="text-transform:uppercase;">
+            </div>
+          </div>
+
+          <button type="submit" id="checkout-submit-btn" class="checkout-btn" style="margin-top:16px;">
+            ✅ Complete &amp; Place Order
+          </button>
+        </form>
+
+        <div style="margin-top:16px; font-size:0.75rem; color:var(--text-muted); text-align:center;">
+          🔒 Secure Checkout | Official shop receipt &amp; instant dispatch confirmation.
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Sign-In Required Modal (Shown when clicking Confirm Order while logged out) -->
+  <div class="modal-overlay" id="signin-required-modal">
+    <div class="modal" style="text-align:center; max-width:440px;">
+      <div style="font-size:3rem; margin-bottom:8px;">🔐</div>
+      <h2 style="color:var(--primary); margin-bottom:8px; font-size:1.35rem;">Sign In Required</h2>
+      <p style="color:var(--text-muted); font-size:0.94rem; line-height:1.55; margin-bottom:20px;">
+        Please sign in to your account first before proceeding with delivery details and payment. Your cart items are safely saved!
+      </p>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <a href="/login?next=%2Fcart%3Fstep%3Ddelivery" class="checkout-btn" style="text-decoration:none;">
+          🔐 Sign In to Proceed
+        </a>
+        <a href="/login?signup=1&amp;next=%2Fcart%3Fstep%3Ddelivery" class="btn-sm" style="background:#eff6ff; color:var(--primary); border:1px solid #bfdbfe; padding:11px 16px; border-radius:6px; font-size:0.9rem; font-weight:700; text-decoration:none;">
+          New Customer? Create Account
+        </a>
+        <button type="button" onclick="closeSignInPrompt()" style="background:none; border:none; color:var(--text-muted); font-size:0.86rem; font-weight:600; padding:6px; cursor:pointer;">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Confirmation Modal -->
+  <div class="modal-overlay" id="order-modal">
+    <div class="modal" style="text-align:center;">
+      <div style="font-size:3.5rem; margin-bottom:10px;">🎉</div>
+      <h2 style="color:var(--primary); margin-bottom:8px;">Order Placed Successfully!</h2>
+      <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:18px;">
+        Thank you for shopping with Elight Electrical Shop.
+      </p>
+
+      <div style="background:#f8fafc; border:1px solid var(--border); border-radius:6px; padding:16px; text-align:left; font-size:0.9rem; margin-bottom:20px;" id="order-receipt-details">
+        <!-- Populated dynamically -->
+      </div>
+
+      <div style="display:flex; justify-content:center; gap:12px;">
+        <a href="/products" class="btn-sm btn-primary" style="padding:10px 20px; font-size:0.95rem; text-decoration:none;">
+          Continue Shopping
+        </a>
+      </div>
+    </div>
+  </div>
+
+    <!-- Footer -->
+    <footer id="contact">
+      <p><strong>Elight Electrical Shop</strong> &copy; 2026. All rights reserved.</p>
+      <p>Location: Meru, Meru County, Kenya | Call / WhatsApp: +254 700 000 000 | Email: elightelectrical@ke.com</p>
+    </footer>
+    </div>
+  </div>
+
+  <!-- Search & Dedicated Cart Scripts -->
+  <script src="js/search_module.js"></script>
+  <script src="js/cart.js?v=3"></script>
+  <script>
+    (function() {
+      try {
+        const u = localStorage.getItem('elight_user');
+        const link = document.getElementById('navAuthLink');
+        if (u && link) {
+          const user = JSON.parse(u);
+          const cleanName = String(user.full_name || 'Account').replace(/\s*\(customer\)\s*$/i, '');
+          link.innerHTML = `👤 ${cleanName}`;
+          link.href = user.role === 'customer' ? '/customer' : '/admin';
+        }
+      } catch(e) {}
+    })();
+  </script>
+</body>
+</html>
+

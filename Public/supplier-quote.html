@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fill Tender Quote &amp; Payment Credentials | Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/supplier-portal.css">
+  <style>
+    .quote-badge {
+      background: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+      font-size: 0.78rem;
+      font-weight: 800;
+      padding: 4px 12px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .quote-title {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--sys-primary);
+      margin-bottom: 4px;
+    }
+    .quote-subtitle {
+      font-size: 0.88rem;
+      color: var(--sys-text-muted);
+    }
+    .section-label {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--sys-primary);
+      margin-bottom: 12px;
+    }
+    .price-input {
+      width: 130px;
+      padding: 7px 10px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-align: right;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      outline: none;
+    }
+    .price-input:focus {
+      border-color: var(--sys-primary);
+      box-shadow: 0 0 0 3px rgba(16, 43, 70, 0.12);
+    }
+    .total-banner {
+      background: #0f2740;
+      color: #ffffff;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 16px;
+      border-top: 2px solid var(--sys-accent);
+      border-radius: 0 0 8px 8px;
+    }
+    .total-banner-label {
+      font-size: 0.88rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #cbd5e1;
+    }
+    .total-banner-val {
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: var(--sys-accent);
+    }
+    .form-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Exact Frontpage Header Design with Logo & Title -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo" style="width:68px;height:68px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Supplier Procurement Portal • Meru Town, Meru County, Kenya</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="storefront-layout">
+    <!-- Dedicated Supplier Left-Aligned Navigation Sidebar -->
+    <nav>
+      <div class="nav-links">
+        <a href="/supplier-portal" data-tab="dashboard">
+          📊 Dashboard Overview
+        </a>
+        <a href="/supplier-tenders" class="active" data-tab="tenders">
+          📦 Restock Tenders
+        </a>
+        <a href="/supplier-orders" data-tab="orders">
+          🚚 Deliveries &amp; Invoices
+        </a>
+        <a href="/supplier-payments" data-tab="payments">
+          💰 Payments Received
+        </a>
+      </div>
+      <div class="nav-auth-box">
+        <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px 12px; text-align:center;">
+          <div id="headerSupplierName" style="font-size:0.86rem; font-weight:700; color:#ffd54a; word-break:break-word;">🏢 Supplier (Loading...)</div>
+        </div>
+        <button type="button" onclick="logoutSupplier()" style="width:100%; background:#ef4444; color:#ffffff; border:none; border-radius:6px; padding:10px 14px; font-size:0.85rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; margin-top:8px;">
+          🚪 Sign Out
+        </button>
+      </div>
+    </nav>
+
+    <div class="storefront-content">
+      <main class="portal-shell">
+
+    <!-- Header Actions Row -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+      <div>
+        <div class="quote-badge">Supplier Tender Submission</div>
+        <h2 class="quote-title">Fill Tender Quote &amp; Payment Credentials</h2>
+        <p class="quote-subtitle" id="tenderPoSubtext">Loading requested purchase order details...</p>
+      </div>
+      <div>
+        <a href="/supplier-tenders" class="btn-back">&larr; Back to Tender Requests</a>
+      </div>
+    </div>
+
+    <!-- Main Quotation Form -->
+    <form id="tenderSubmissionForm" onsubmit="submitTenderQuote(event)">
+      <input type="hidden" id="tender_po_id">
+
+      <!-- SECTION 1: Product Pricing Table -->
+      <section class="portal-card" style="margin-bottom:24px;">
+        <div class="section-label">1. Quoted Product Prices for Restock</div>
+        <p class="card-description">
+          Enter your quoted wholesale unit price (KSh) for each requested electrical item (maximum <strong>KSh 1,500.00</strong> per unit). Line totals and overall tender quotation will calculate automatically.
+        </p>
+
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th style="width:18%;">Category</th>
+                <th style="width:36%;">Product &amp; Specification</th>
+                <th style="width:16%; text-align:center;">Requested Quantity</th>
+                <th style="width:15%; text-align:right;">Your Tender Unit Price (Max KSh 1,500)</th>
+                <th style="width:15%; text-align:right;">Line Total (KSh)</th>
+              </tr>
+            </thead>
+            <tbody id="tenderItemsTableBody">
+              <tr><td colspan="5" style="text-align:center; padding:18px;">Loading items...</td></tr>
+            </tbody>
+          </table>
+          <div class="total-banner">
+            <span class="total-banner-label">TOTAL TENDER QUOTATION:</span>
+            <span class="total-banner-val" id="totalTenderQuotationDisplay">KSh 0.00</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2: Payment Credentials -->
+      <section class="portal-card" style="margin-bottom:24px;">
+        <div class="section-label">2. Your Payment Credentials for the Restock Payment</div>
+        <p class="card-description">
+          Specify exactly where and how Elight Electrical Shop Finance Manager should disburse payment once the supplied goods are verified and received.
+        </p>
+
+        <div class="form-grid-3" style="margin-bottom:16px;">
+          <div class="form-group">
+            <label>Preferred Payment Method</label>
+            <select id="tender_pay_method" class="form-control" required onchange="handlePaymentMethodChange()">
+              <option value="M-Pesa Send Money (Phone Number)">M-Pesa Send Money (Phone Number)</option>
+              <option value="M-Pesa Buy Goods Till">M-Pesa Buy Goods Till</option>
+              <option value="M-Pesa Paybill Account">M-Pesa Paybill Account</option>
+              <option value="Bank EFT / Wire Transfer">Bank EFT / Wire Transfer</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Account / Payee Business Name</label>
+            <input type="text" id="tender_pay_name" class="form-control" placeholder="e.g. Mark Kamau or Metsec Cables Ltd" required>
+          </div>
+          <div class="form-group">
+            <label id="lblPayAccount">Payment Account / Till / Phone Number</label>
+            <input type="text" id="tender_pay_account" class="form-control" placeholder="e.g. 0700203672" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Bank / Provider Name</label>
+          <input type="text" id="tender_pay_bank" class="form-control" placeholder="e.g. Safaricom M-Pesa / Equity Bank Kenya / KCB Bank">
+        </div>
+      </section>
+
+      <!-- SECTION 3: Delivery Commitment & Remarks -->
+      <section class="portal-card" style="margin-bottom:24px;">
+        <div class="section-label">3. Delivery Commitment &amp; Remarks</div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Expected Supply / Dispatch Date</label>
+            <input type="date" id="tender_expected_date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>Supplier Quotation Notes / Terms</label>
+            <input type="text" id="tender_notes" class="form-control" placeholder="e.g. Fresh stock available, can supply immediately upon tender approval">
+          </div>
+        </div>
+      </section>
+
+      <!-- SUBMIT BUTTON -->
+      <div style="text-align:center; margin-bottom:40px;">
+        <button type="submit" id="submitTenderBtn" class="btn-gold" style="font-size:1.05rem; padding:15px 36px; border-radius:10px;">
+          📝 Submit Tender with Prices &amp; Payment Credentials
+        </button>
+      </div>
+    </form>
+
+  </main>
+    </div> <!-- /.storefront-content -->
+  </div> <!-- /.storefront-layout -->
+
+  <div id="toast-msg"></div>
+
+  <script src="js/supplier_common.js"></script>
+  <script>
+    const MAX_QUOTATION_UNIT_PRICE = 1500;
+    let activeTenderItems = [];
+
+    function handlePaymentMethodChange() {
+      const method = document.getElementById('tender_pay_method').value;
+      const lbl = document.getElementById('lblPayAccount');
+      const input = document.getElementById('tender_pay_account');
+      const bank = document.getElementById('tender_pay_bank');
+
+      if (method.includes('Phone')) {
+        lbl.textContent = 'M-Pesa Phone Number';
+        input.placeholder = 'e.g. 0700203672';
+        bank.value = 'Safaricom M-Pesa';
+      } else if (method.includes('Till')) {
+        lbl.textContent = 'Buy Goods Till Number';
+        input.placeholder = 'e.g. 987654';
+        bank.value = 'Safaricom M-Pesa Till';
+      } else if (method.includes('Paybill')) {
+        lbl.textContent = 'Paybill Business & Account #';
+        input.placeholder = 'e.g. Paybill: 247247, Acc: 123456';
+        bank.value = 'Safaricom M-Pesa Paybill';
+      } else {
+        lbl.textContent = 'Bank Account Number';
+        input.placeholder = 'e.g. 01109012345600';
+        bank.value = 'Equity Bank Kenya';
+      }
+    }
+
+    async function loadQuoteForm() {
+      const supplier = await initSupplierHeader('tenders');
+
+      // Set default delivery date to tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      document.getElementById('tender_expected_date').value = tomorrow.toISOString().slice(0, 10);
+
+      // Pre-fill payment credentials from supplier profile
+      if (supplier) {
+        document.getElementById('tender_pay_name').value = supplier.contact_name || supplier.supplier_name || '';
+        document.getElementById('tender_pay_account').value = supplier.phone || supplier.mobile || '';
+        document.getElementById('tender_pay_bank').value = 'Safaricom M-Pesa';
+      }
+
+      // Read po_id from URL query string
+      const urlParams = new URLSearchParams(window.location.search);
+      const poId = urlParams.get('po_id');
+
+      try {
+        const res = await authFetch('/api/supplier/purchase-orders');
+        if (!res || !res.ok) return;
+
+        const data = await res.json();
+        const pos = data.purchase_orders || [];
+
+        let targetPO = null;
+        if (poId) {
+          targetPO = pos.find(p => Number(p.po_id) === Number(poId));
+        }
+        if (!targetPO && pos.length > 0) {
+          targetPO = pos.find(p => {
+            const s = String(p.status || '').toLowerCase();
+            return s === 'pending_supplier_quotation' || s === 'pending';
+          }) || pos[0];
+        }
+
+        if (!targetPO) {
+          document.getElementById('tenderPoSubtext').textContent = 'No restock purchase order found. Please return to the tenders page.';
+          document.getElementById('tenderItemsTableBody').innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No purchase order found. <a href="/supplier-tenders">Go back</a></td></tr>';
+          return;
+        }
+
+        document.getElementById('tender_po_id').value = targetPO.po_id;
+        const orderDate = (targetPO.order_date || targetPO.created_at || '').slice(0, 10);
+        document.getElementById('tenderPoSubtext').textContent =
+          `Restock Purchase Order #${targetPO.po_number || targetPO.po_id} requested by Elight Electrical Shop (${targetPO.created_by || 'Inventory Manager'}) on ${orderDate}`;
+
+        activeTenderItems = targetPO.items && targetPO.items.length > 0 ? targetPO.items : [{
+          product_id: 1,
+          product_name: 'Electrical Item',
+          category_name: 'Electricals',
+          ordered_qty: 10,
+          unit_cost: 0
+        }];
+
+        const tbody = document.getElementById('tenderItemsTableBody');
+        tbody.innerHTML = activeTenderItems.map((it, idx) => {
+          const cat = it.category_name || it.category || 'General';
+          const qty = it.ordered_qty || it.quantity || 1;
+          const rawInitial = Number(it.unit_cost || 0);
+          const initialPrice = rawInitial > MAX_QUOTATION_UNIT_PRICE ? MAX_QUOTATION_UNIT_PRICE : rawInitial;
+          const lineTotal = qty * initialPrice;
+          return `
+            <tr>
+              <td><strong>${escapeHtml(cat)}</strong></td>
+              <td>${escapeHtml(it.product_name)}</td>
+              <td style="text-align:center; font-weight:700;">${qty} units</td>
+              <td style="text-align:right;">
+                <input type="number" step="0.01" min="1" max="${MAX_QUOTATION_UNIT_PRICE}"
+                  class="price-input"
+                  id="tender_price_${idx}"
+                  value="${initialPrice > 0 ? initialPrice : ''}"
+                  placeholder="Max 1,500.00"
+                  title="Maximum unit price is KSh ${MAX_QUOTATION_UNIT_PRICE.toLocaleString()}"
+                  required
+                  oninput="handleTenderPriceInput(${idx})">
+                <div id="tender_price_hint_${idx}" style="font-size:0.74rem; color:#dc2626; font-weight:700; margin-top:4px; display:none;">
+                  Max allowed: KSh 1,500.00
+                </div>
+              </td>
+              <td style="text-align:right; font-weight:800;" id="tender_line_total_${idx}">
+                ${formatKES(lineTotal)}
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        recalculateTenderTotals();
+      } catch (err) {
+        console.error('Error loading tender quote form:', err);
+      }
+    }
+
+    function handleTenderPriceInput(idx) {
+      const input = document.getElementById(`tender_price_${idx}`);
+      const hint = document.getElementById(`tender_price_hint_${idx}`);
+      if (input) {
+        const val = Number(input.value);
+        if (val > MAX_QUOTATION_UNIT_PRICE) {
+          input.value = MAX_QUOTATION_UNIT_PRICE;
+          input.style.borderColor = '#dc2626';
+          if (hint) hint.style.display = 'block';
+          showToast(`Maximum unit price allowed is KSh ${MAX_QUOTATION_UNIT_PRICE.toLocaleString()} per unit.`);
+        } else {
+          input.style.borderColor = '#cbd5e1';
+          if (hint) hint.style.display = 'none';
+        }
+      }
+      recalculateTenderTotals();
+    }
+
+    function recalculateTenderTotals() {
+      let grandTotal = 0;
+      activeTenderItems.forEach((it, idx) => {
+        const input = document.getElementById(`tender_price_${idx}`);
+        let unitPrice = input ? Number(input.value || 0) : 0;
+        if (unitPrice > MAX_QUOTATION_UNIT_PRICE) {
+          unitPrice = MAX_QUOTATION_UNIT_PRICE;
+        }
+        const qty = it.ordered_qty || it.quantity || 1;
+        const lineTotal = unitPrice * qty;
+        grandTotal += lineTotal;
+        const lineCell = document.getElementById(`tender_line_total_${idx}`);
+        if (lineCell) lineCell.textContent = formatKES(lineTotal);
+      });
+      document.getElementById('totalTenderQuotationDisplay').textContent = formatKES(grandTotal);
+    }
+
+    async function submitTenderQuote(event) {
+      event.preventDefault();
+      const poId = document.getElementById('tender_po_id').value;
+      if (!poId) {
+        showToast('Purchase Order ID missing.');
+        return;
+      }
+
+      let grandTotal = 0;
+      let priceExceededItem = null;
+      const quotedItems = activeTenderItems.map((it, idx) => {
+        const input = document.getElementById(`tender_price_${idx}`);
+        const unitPrice = Number(input?.value || 0);
+        if (unitPrice > MAX_QUOTATION_UNIT_PRICE) {
+          priceExceededItem = it.product_name || `Item #${idx + 1}`;
+        }
+        const qty = it.ordered_qty || it.quantity || 1;
+        grandTotal += unitPrice * qty;
+        return {
+          product_id: it.product_id,
+          product_name: it.product_name,
+          category_name: it.category_name,
+          requested_qty: qty,
+          available_qty: qty,
+          quantity: qty,
+          unit_price: unitPrice,
+          quoted_unit_price: unitPrice,
+          line_total: unitPrice * qty
+        };
+      });
+
+      if (priceExceededItem) {
+        showToast(`Unit price for "${priceExceededItem}" cannot exceed KSh ${MAX_QUOTATION_UNIT_PRICE.toLocaleString()} per unit.`);
+        return;
+      }
+
+      if (grandTotal <= 0) {
+        showToast('Please enter your quoted unit prices for the requested products.');
+        return;
+      }
+
+      const paymentMethod = document.getElementById('tender_pay_method').value;
+      const payeeName = document.getElementById('tender_pay_name').value.trim();
+      const accountNumber = document.getElementById('tender_pay_account').value.trim();
+      const bankName = document.getElementById('tender_pay_bank').value.trim();
+      const expectedDate = document.getElementById('tender_expected_date').value;
+      const supplierNotes = document.getElementById('tender_notes').value.trim();
+
+      const paymentCredentials = {
+        payment_method: paymentMethod,
+        payee_name: payeeName,
+        account_number: accountNumber,
+        bank_name: bankName
+      };
+
+      const payload = {
+        po_id: poId,
+        total_amount: grandTotal,
+        preferred_payment_method: paymentMethod,
+        payee_name: payeeName,
+        payment_account: accountNumber,
+        bank_provider: bankName,
+        payment_credentials: paymentCredentials,
+        expected_delivery_date: expectedDate,
+        expected_supply_date: expectedDate,
+        notes: supplierNotes,
+        supplier_notes: supplierNotes,
+        items: quotedItems
+      };
+
+      const btn = document.getElementById('submitTenderBtn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting Tender Quote...';
+
+      try {
+        const res = await authFetch('/api/supplier/quotations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'Quotation submission failed');
+        }
+
+        showToast('Tender quote & payment credentials submitted successfully!');
+        setTimeout(() => {
+          window.location.href = '/supplier-tenders';
+        }, 1200);
+      } catch (err) {
+        showToast(err.message || 'Error submitting tender quotation.');
+        btn.disabled = false;
+        btn.textContent = '📝 Submit Tender with Prices & Payment Credentials';
+      }
+    }
+
+    loadQuoteForm();
+  </script>
+</body>
+</html>
+

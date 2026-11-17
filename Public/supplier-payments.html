@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payments Received | Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/supplier-portal.css">
+  <style>
+    @media print {
+      body > header,
+      .storefront-layout,
+      #toast-msg,
+      #paymentReceiptModal .modal-header,
+      #paymentReceiptModal .modal-footer {
+        display: none !important;
+      }
+      #paymentReceiptModal {
+        position: static !important;
+        display: block !important;
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      #paymentReceiptModal .modal-card {
+        box-shadow: none !important;
+        max-width: 100% !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Exact Frontpage Header Design with Logo & Title -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo" style="width:68px;height:68px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Supplier Procurement Portal • Meru Town, Meru County, Kenya</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="storefront-layout">
+    <!-- Dedicated Supplier Left-Aligned Navigation Sidebar -->
+    <nav>
+      <div class="nav-links">
+        <a href="/supplier-portal" data-tab="dashboard">
+          📊 Dashboard Overview
+        </a>
+        <a href="/supplier-tenders" data-tab="tenders">
+          📦 Restock Tenders
+        </a>
+        <a href="/supplier-orders" data-tab="orders">
+          🚚 Deliveries &amp; Invoices
+        </a>
+        <a href="/supplier-payments" data-tab="payments">
+          💰 Payments Received
+          <span class="cart-pill" id="navPaymentsBadge" style="display:none; background:#f59e0b; color:#0f172a;">0</span>
+        </a>
+      </div>
+      <div class="nav-auth-box">
+        <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px 12px; text-align:center;">
+          <div id="headerSupplierName" style="font-size:0.86rem; font-weight:700; color:#ffd54a; word-break:break-word;">🏢 Supplier (Loading...)</div>
+        </div>
+        <button type="button" onclick="logoutSupplier()" style="width:100%; background:#ef4444; color:#ffffff; border:none; border-radius:6px; padding:10px 14px; font-size:0.85rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; margin-top:8px;">
+          🚪 Sign Out
+        </button>
+      </div>
+    </nav>
+
+    <div class="storefront-content">
+      <main class="portal-shell">
+
+    <!-- Page Header Banner -->
+    <div class="page-header-banner" style="background:linear-gradient(135deg, #78350f 0%, #b45309 100%);">
+      <div>
+        <h2><span>💰</span> Payments Received from Finance</h2>
+        <p>Elight Electrical Shop Finance Manager has disbursed payment for these orders using your payment credentials. Verify receipt in your account, click <strong>"Confirm Payment Received"</strong>, and download your official payment receipt.</p>
+      </div>
+      <div>
+        <span id="paymentsCountBadge" class="badge badge-amber" style="font-size:0.88rem; padding:6px 14px; display:none;">0 records</span>
+      </div>
+    </div>
+
+    <!-- Payments Container Card -->
+    <section class="portal-card">
+      <div class="portal-card-header header-gold">
+        <span>Finance Disbursements &amp; Official Payment Receipts</span>
+        <span style="font-size:0.85rem; color:var(--sys-text-muted); font-weight:normal;">Confirm payment receipt and download PDF receipt for your records</span>
+      </div>
+      <div class="divider-line divider-gold"></div>
+
+      <div id="paymentsContainer">
+        <div class="empty-state-text">Loading disbursed payments...</div>
+      </div>
+    </section>
+
+  </main>
+    </div> <!-- /.storefront-content -->
+  </div> <!-- /.storefront-layout -->
+
+  <!-- MODAL: OFFICIAL SUPPLIER PAYMENT RECEIPT -->
+  <div class="modal-overlay" id="paymentReceiptModal">
+    <div class="modal-card" style="max-width:600px;">
+      <div class="modal-header">
+        <h3>🧾 Official Supplier Payment Receipt</h3>
+        <button type="button" class="modal-close-btn" onclick="closeModal('paymentReceiptModal')">&times;</button>
+      </div>
+      <div class="modal-body" id="paymentReceiptBody" style="max-height:72vh; overflow-y:auto;"></div>
+      <div class="modal-footer" style="flex-wrap:wrap;">
+        <button type="button" class="btn-navy" style="background:#64748b;" onclick="closeModal('paymentReceiptModal')">Close</button>
+        <button type="button" class="btn-navy" onclick="window.print()">🖨️ Print Receipt</button>
+        <button type="button" class="btn-green" id="modalDownloadReceiptBtn" onclick="downloadPaymentReceipt(currentReceiptPaymentId)">📥 Download PDF Receipt</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-msg"></div>
+
+  <script src="js/supplier_common.js"></script>
+  <script>
+    let loadedPayments = [];
+    let currentReceiptPaymentId = null;
+
+    async function loadPaymentsPage() {
+      await initSupplierHeader('payments');
+
+      try {
+        const res = await authFetch('/api/supplier/payments');
+        if (!res || !res.ok) return;
+
+        const data = await res.json();
+        const payments = data.payments || [];
+        loadedPayments = payments;
+
+        const box = document.getElementById('paymentsContainer');
+        const badge = document.getElementById('paymentsCountBadge');
+        const navBadge = document.getElementById('navPaymentsBadge');
+
+        if (payments.length > 0) {
+          badge.textContent = `${payments.length} disbursed payments`;
+          badge.style.display = 'inline-block';
+          if (navBadge) {
+            navBadge.textContent = payments.length;
+            navBadge.style.display = 'inline-block';
+          }
+
+          box.innerHTML = payments.map(p => {
+            const amount = Number(p.amount_paid || 0);
+            const date = String(p.payment_date || p.created_at || '').slice(0, 10);
+            const isConfirmed = Boolean(p.confirmed_by_supplier || /confirmed received/i.test(p.notes || ''));
+            const payNum = p.payment_number || `PAY-${p.payment_id}`;
+            const receiptNo = p.receipt_number || `RCP-${payNum}`;
+            const orderInfo = [
+              p.po_number ? `PO: <strong>${escapeHtml(p.po_number)}</strong>` : '',
+              p.invoice_number ? `Invoice: <strong>${escapeHtml(p.invoice_number)}</strong>` : ''
+            ].filter(Boolean).join(' • ');
+
+            return `
+              <div class="order-card">
+                <div>
+                  <div class="order-meta-title" style="color:var(--sys-amber);">Disbursed Payment: ${formatKES(amount)}</div>
+                  <div class="order-meta-sub">
+                    Receipt: <strong>${escapeHtml(receiptNo)}</strong> • Reference: <strong>${escapeHtml(p.transaction_ref || payNum)}</strong> • Method: <strong>${escapeHtml(p.payment_method || 'M-Pesa')}</strong>
+                  </div>
+                  ${orderInfo ? `<div style="font-size:0.83rem; color:#334155; margin-top:4px;">${orderInfo}</div>` : ''}
+                  <div style="font-size:0.82rem; color:#64748b; margin-top:4px;">
+                    Disbursed by ${escapeHtml(p.recorded_by || 'Finance Manager')} on ${escapeHtml(date)}
+                  </div>
+                  <div style="margin-top:6px;">
+                    ${isConfirmed
+                      ? `<span class="badge badge-success" style="font-size:0.82rem; padding:4px 10px;">✅ Payment Confirmed by Supplier</span>`
+                      : `<span class="badge badge-amber" style="font-size:0.82rem; padding:4px 10px;">⏳ Awaiting Supplier Confirmation</span>`}
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                  ${isConfirmed
+                    ? ''
+                    : `<button type="button" class="btn-gold" onclick="confirmPaymentReceived(${p.payment_id})">✅ Confirm Payment Received</button>`}
+                  <button type="button" class="btn-navy" onclick="openPaymentReceiptModal(${p.payment_id})">
+                    🧾 View Receipt
+                  </button>
+                  <button type="button" class="btn-green" onclick="downloadPaymentReceipt(${p.payment_id})">
+                    📥 Download Receipt
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        } else {
+          badge.style.display = 'none';
+          if (navBadge) navBadge.style.display = 'none';
+          box.innerHTML = '<div class="empty-state-text">No disbursed payments from Finance yet.</div>';
+        }
+      } catch (err) {
+        console.error('loadPaymentsPage error:', err);
+      }
+    }
+
+    async function confirmPaymentReceived(paymentId) {
+      if (!confirm('Have you verified receipt of this payment in your account / phone?')) {
+        return;
+      }
+      try {
+        const res = await authFetch(`/api/supplier/payments/${paymentId}/confirm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: 'Confirmed received by supplier' })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Confirmation failed');
+        showToast('Payment confirmed received! You can now download your official receipt.');
+        await loadPaymentsPage();
+      } catch (err) {
+        showToast(err.message || 'Failed to confirm payment.');
+      }
+    }
+
+    function openPaymentReceiptModal(paymentId) {
+      const p = loadedPayments.find(item => Number(item.payment_id) === Number(paymentId));
+      if (!p) {
+        showToast('Payment record not found.');
+        return;
+      }
+      currentReceiptPaymentId = Number(paymentId);
+
+      const payNum = p.payment_number || `PAY-${p.payment_id}`;
+      const receiptNo = p.receipt_number || `RCP-${payNum}`;
+      const payDate = String(p.payment_date || p.created_at || '').slice(0, 10) || '—';
+      const isConfirmed = Boolean(p.confirmed_by_supplier || /confirmed received/i.test(p.notes || ''));
+      const supplierName = currentSupplierProfile?.supplier_name || 'Verified Supplier';
+      const supplierContact = currentSupplierProfile?.contact_name || '—';
+      const supplierPhone = currentSupplierProfile?.phone || '—';
+      const supplierEmail = currentSupplierProfile?.email || '—';
+
+      document.getElementById('paymentReceiptBody').innerHTML = `
+        <div style="border:1px solid #cbd5e1; border-radius:10px; padding:18px; background:#ffffff;">
+          <div style="text-align:center; border-bottom:2px solid #102b46; padding-bottom:12px; margin-bottom:14px;">
+            <div style="font-size:1.15rem; font-weight:900; color:#102b46; letter-spacing:0.5px;">ELIGHT ELECTRICAL SHOP</div>
+            <div style="font-size:0.8rem; color:#475569;">Meru Town, Meru County, Kenya • Tel: +254 700 123 456</div>
+            <div style="margin-top:8px; display:inline-block; background:#102b46; color:#ffd54a; padding:3px 12px; border-radius:4px; font-size:0.78rem; font-weight:800; letter-spacing:0.4px;">
+              OFFICIAL SUPPLIER PAYMENT RECEIPT
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; font-size:0.84rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:14px;">
+            <div><strong>Receipt No:</strong> <code>${escapeHtml(receiptNo)}</code></div>
+            <div><strong>Payment Voucher:</strong> <code>${escapeHtml(payNum)}</code></div>
+            <div><strong>Disbursement Date:</strong> ${escapeHtml(payDate)}</div>
+            <div><strong>Method:</strong> ${escapeHtml(p.payment_method || 'Bank Transfer')}</div>
+            <div><strong>Transaction Ref:</strong> <code>${escapeHtml(p.transaction_ref || payNum)}</code></div>
+            <div>
+              <strong>Status:</strong>
+              <span class="badge ${isConfirmed ? 'badge-success' : 'badge-amber'}">
+                ${isConfirmed ? 'CONFIRMED RECEIVED' : 'DISBURSED'}
+              </span>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; font-size:0.84rem; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:14px;">
+            <div><strong>Supplier / Payee:</strong> ${escapeHtml(supplierName)}</div>
+            <div><strong>Purchase Order:</strong> ${escapeHtml(p.po_number || (p.po_id ? `PO-${p.po_id}` : 'N/A'))}</div>
+            <div><strong>Contact Person:</strong> ${escapeHtml(supplierContact)}</div>
+            <div><strong>Invoice Ref:</strong> ${escapeHtml(p.invoice_number || (p.invoice_id ? `INV-${p.invoice_id}` : 'N/A'))}</div>
+            <div><strong>Phone:</strong> ${escapeHtml(supplierPhone)}</div>
+            <div><strong>Disbursed By:</strong> ${escapeHtml(p.recorded_by || 'Finance Manager')}</div>
+            <div style="grid-column:span 2;"><strong>Email:</strong> ${escapeHtml(supplierEmail)}</div>
+          </div>
+
+          <div style="background:#ecfdf5; border:1.5px solid #087443; border-radius:8px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <span style="font-weight:800; color:#065f46; font-size:0.9rem;">TOTAL AMOUNT PAID</span>
+            <span style="font-weight:900; color:#087443; font-size:1.25rem;">${formatKES(p.amount_paid)}</span>
+          </div>
+
+          <div style="font-size:0.8rem; color:#475569; background:#f8fafc; border-radius:6px; padding:10px 12px; border:1px dashed #cbd5e1;">
+            <strong>Notes &amp; Confirmation Log:</strong><br>
+            ${escapeHtml(p.notes || 'Payment disbursed by Elight Electrical Shop Finance Manager.')}
+          </div>
+        </div>
+      `;
+
+      openModal('paymentReceiptModal');
+    }
+
+    async function downloadPaymentReceipt(paymentId) {
+      if (!paymentId) return;
+      try {
+        showToast('Generating PDF payment receipt...');
+        const res = await authFetch(`/api/supplier/payments/${paymentId}/receipt`);
+        if (!res) return;
+        if (!res.ok) {
+          let errMsg = 'Failed downloading payment receipt.';
+          try {
+            const errJson = await res.json();
+            if (errJson.message) errMsg = errJson.message;
+          } catch (e) {}
+          throw new Error(errMsg);
+        }
+
+        const blob = await res.blob();
+        const p = loadedPayments.find(item => Number(item.payment_id) === Number(paymentId));
+        const payNum = (p?.payment_number || `PAY-${paymentId}`).replace(/[^a-zA-Z0-9._-]/g, '_');
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Payment-Receipt-${payNum}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => window.URL.revokeObjectURL(url), 1500);
+        showToast('Official payment receipt downloaded!');
+      } catch (err) {
+        console.error('downloadPaymentReceipt error:', err);
+        showToast(err.message || 'Failed to download receipt.');
+      }
+    }
+
+    loadPaymentsPage();
+  </script>
+</body>
+</html>
+

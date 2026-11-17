@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="/images/elight-favicon.svg?v=7">
+  <style>
+    :root {
+      --bg-light: #f8fafc;
+      --card-bg: #ffffff;
+      --border-color: #e2e8f0;
+      --border-focus: #0284c7;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary-blue: #0284c7;
+      --primary-hover: #0369a1;
+      --accent-pill: #f1f5f9;
+    }
+
+    body.white-auth-page {
+      min-height: 100vh;
+      background: #f8fafc;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+    }
+
+    .white-auth-nav {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .white-auth-nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 500;
+      margin-left: 20px;
+      transition: color 0.2s;
+    }
+
+    .white-auth-nav a:hover {
+      color: var(--primary-blue);
+    }
+
+    .auth-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .auth-card-white {
+      max-width: 480px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr;
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+      overflow: hidden;
+    }
+
+    .form-panel {
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    #signUpView {
+      max-height: 440px;
+      overflow-y: scroll;
+      padding-right: 8px;
+    }
+
+    #signUpView::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #signUpView::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 999px;
+    }
+
+    #signUpView::-webkit-scrollbar-thumb {
+      background: #94a3b8;
+      border-radius: 999px;
+    }
+
+    #signUpView::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+
+    /* Tabs for Sign In vs Sign Up */
+    .auth-tabs {
+      display: flex;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: 10px;
+      margin-bottom: 24px;
+    }
+
+    .auth-tab-btn {
+      flex: 1;
+      text-align: center;
+      padding: 10px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .auth-tab-btn.active {
+      background: #ffffff;
+      color: var(--primary-blue);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    .auth-header h2 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin: 0 0 6px 0;
+      letter-spacing: -0.5px;
+    }
+
+    .auth-header p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin: 0 0 22px 0;
+      line-height: 1.4;
+    }
+
+    .form-group-white {
+      margin-bottom: 16px;
+    }
+
+    .form-group-white label {
+      display: block;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 6px;
+    }
+
+    .input-white {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: 8px;
+      border: 1.5px solid #cbd5e1;
+      background: #f8fafc;
+      color: #0f172a;
+      font-size: 0.95rem;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input-white:hover {
+      border-color: #94a3b8;
+    }
+
+    .input-white:focus {
+      background: #ffffff;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .btn-auth-primary {
+      width: 100%;
+      padding: 13px;
+      background: var(--primary-blue);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 6px;
+    }
+
+    .btn-auth-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-auth-primary:active {
+      transform: translateY(0);
+    }
+
+    .auth-alert-box {
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      margin-bottom: 18px;
+      display: none;
+    }
+
+    .auth-alert-box.error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      display: block;
+    }
+
+    .auth-alert-box.success {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #15803d;
+      display: block;
+    }
+  </style>
+</head>
+
+<body class="white-auth-page">
+
+  <!-- Header -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo"
+        style="width:60px;height:60px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Your one-stop destination for quality electrical fittings, lighting &amp; appliances</p>
+      </div>
+    </div>
+  </header>
+
+  <div
+    style="background:#ffffff; border-bottom:1px solid #e2e8f0; padding:10px 28px; display:flex; justify-content:flex-end; gap:20px; font-size:0.88rem; font-weight:600;">
+    <a href="/" style="color:#334155; text-decoration:none;">🏠 Home</a>
+    <a href="/products" style="color:#334155; text-decoration:none;">📦 Products</a>
+    <a href="/cart" style="color:#0284c7; text-decoration:none;">🛒 Cart</a>
+  </div>
+
+  <!-- Main Container -->
+  <main class="auth-container">
+    <div class="auth-card-white">
+
+      <!-- Main Form Panel (Login / Sign Up) -->
+      <div class="form-panel">
+
+        <div id="authAlert" class="auth-alert-box"></div>
+
+        <!-- ============================================== -->
+        <!-- VIEW 1: SIGN IN FORM (Staff, Roles & Customers) -->
+        <!-- ============================================== -->
+        <div id="signInView">
+          <div class="auth-header">
+            <h2>Welcome Back</h2>
+            <p>Sign in with your username, email, or phone number to access your account.</p>
+          </div>
+
+          <form id="loginForm">
+            <div class="form-group-white">
+              <label for="loginUsername">Username, Email, Full Name, or Phone Number</label>
+              <input type="text" id="loginUsername" class="input-white"
+                placeholder="e.g. 0712345678, customer, user@email.com..." required autocomplete="username">
+            </div>
+
+            <div class="form-group-white">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <label for="loginPassword" style="margin-bottom:0;">Password</label>
+                <span id="toggleLoginPwd"
+                  style="font-size:0.75rem; color:#0284c7; cursor:pointer; font-weight:600;">Show</span>
+              </div>
+              <input type="password" id="loginPassword" class="input-white" placeholder="Enter password" required
+                autocomplete="current-password">
+            </div>
+
+            <div
+              style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; font-size:0.85rem;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#475569;">
+                <input type="checkbox" id="rememberMe" checked> Remember this device
+              </label>
+              <a href="javascript:void(0)" onclick="switchAuthTab('signup')"
+                style="color:#0284c7; text-decoration:none; font-weight:600; font-size:0.82rem;">New Customer?
+                Register</a>
+            </div>
+
+            <button type="submit" id="submitLoginBtn" class="btn-auth-primary">
+              Sign In to Account →
+            </button>
+          </form>
+
+          <div
+            style="margin-top:14px; text-align:center; padding-top:12px; border-top:1px solid #e2e8f0; font-size:0.84rem; color:#475569;">
+            Registered Vendor / Supplier? <a href="/supplier-login"
+              style="color:#0b2545; font-weight:700; text-decoration:underline;">Sign in to Supplier Portal →</a>
+          </div>
+        </div>
+
+        <!-- VIEW 2: NEW CUSTOMER SIGN UP FORM -->
+        <!-- ============================================== -->
+        <div id="signUpView" style="display:none;">
+          <div class="auth-header">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+              <button type="button" onclick="switchAuthTab('signin')"
+                style="background:#f1f5f9; border:1px solid #e2e8f0; color:#475569; padding:6px 12px; border-radius:6px; font-size:0.82rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:5px;">←
+                Back to Sign In</button>
+            </div>
+            <h2>Create Account</h2>
+            <p>Register to track your electrical purchases, manage active warranties, and enjoy priority delivery.</p>
+          </div>
+
+          <form id="registerForm">
+            <div class="form-group-white">
+              <label for="regFullName">Full Name *</label>
+              <input type="text" id="regFullName" class="input-white" placeholder="e.g. Dr. Anthony Njoroge" required>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div class="form-group-white">
+                <label for="regPhone">Phone Number * (10 Digits)</label>
+                <input type="tel" id="regPhone" class="input-white" placeholder="07XXXXXXXX or 01XXXXXXXX"
+                  maxlength="10" pattern="[0-9]{10}" inputmode="numeric" required>
+              </div>
+              <div class="form-group-white">
+                <label for="regEmail">Email Address</label>
+                <input type="email" id="regEmail" class="input-white" placeholder="e.g. name@example.com">
+              </div>
+            </div>
+
+            <div class="form-group-white">
+              <label for="regLocation">Delivery Location / Address</label>
+              <input type="text" id="regLocation" class="input-white" placeholder="e.g. Makutano, Meru / Nkubu">
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div class="form-group-white">
+                <label for="regPassword">Password *</label>
+                <input type="password" id="regPassword" class="input-white" placeholder="Minimum 6 characters" required>
+              </div>
+              <div class="form-group-white">
+                <label for="regConfirmPassword">Confirm Password *</label>
+                <input type="password" id="regConfirmPassword" class="input-white" placeholder="Confirm password"
+                  required>
+              </div>
+            </div>
+
+            <button type="submit" id="submitRegisterBtn" class="btn-auth-primary">
+              Create Account →
+            </button>
+          </form>
+        </div>
+
+        <div style="margin-top:24px; text-align:center; font-size:0.82rem; color:#64748b;">
+          Looking for items? <a href="/products" style="color:#0284c7; text-decoration:none; font-weight:600;">Browse
+            Full Catalog</a>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    const alertBox = document.getElementById('authAlert');
+    const signInView = document.getElementById('signInView');
+    const signUpView = document.getElementById('signUpView');
+
+    // Switch between Sign In and Sign Up views
+    function switchAuthTab(tab) {
+      alertBox.style.display = 'none';
+      if (tab === 'signin') {
+        signInView.style.display = 'block';
+        signUpView.style.display = 'none';
+      } else {
+        signInView.style.display = 'none';
+        signUpView.style.display = 'block';
+        const nameInput = document.getElementById('regFullName');
+        if (nameInput) setTimeout(() => nameInput.focus(), 50);
+      }
+    }
+
+    function showAlert(msg, isError = true) {
+      alertBox.textContent = msg;
+      alertBox.className = 'auth-alert-box ' + (isError ? 'error' : 'success');
+      alertBox.style.display = 'block';
+    }
+
+    // Password visibility toggle
+    const pwdInput = document.getElementById('loginPassword');
+    const togglePwd = document.getElementById('toggleLoginPwd');
+    togglePwd.addEventListener('click', () => {
+      if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        togglePwd.textContent = 'Hide';
+      } else {
+        pwdInput.type = 'password';
+        togglePwd.textContent = 'Show';
+      }
+    });
+
+    // Submit Login
+    const loginForm = document.getElementById('loginForm');
+    const submitLoginBtn = document.getElementById('submitLoginBtn');
+
+    async function performLogin(username, password) {
+      submitLoginBtn.disabled = true;
+      submitLoginBtn.textContent = 'Authenticating...';
+      alertBox.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          showAlert(data.message || 'Login failed. Please check credentials.', true);
+          submitLoginBtn.disabled = false;
+          submitLoginBtn.textContent = 'Sign In to Account →';
+          return;
+        }
+
+        showAlert(data.message || 'Login successful! Redirecting...', false);
+        localStorage.setItem('elight_user', JSON.stringify(data.user));
+        localStorage.setItem('elight_token', data.token);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const nextUrl = urlParams.get('next');
+        const safeNext = (nextUrl && nextUrl.startsWith('/') && !nextUrl.startsWith('//')) ? nextUrl : null;
+        const targetUrl = safeNext || (data.user?.role === 'customer' ? '/customer' : '/admin');
+        setTimeout(() => {
+          window.location.href = targetUrl;
+        }, 700);
+
+      } catch (err) {
+        console.error(err);
+        showAlert('Network error connecting to server.', true);
+        submitLoginBtn.disabled = false;
+        submitLoginBtn.textContent = 'Sign In to Account →';
+      }
+    }
+
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      let u = document.getElementById('loginUsername').value.trim();
+      const p = document.getElementById('loginPassword').value.trim();
+
+      // Normalize Kenyan +254 / 2547... / 2541... phone prefix when entered as phone
+      const digits = u.replace(/\D/g, '');
+      if (/^\+?254[17]\d{8}$/.test(u.replace(/[\s-]/g, ''))) {
+        u = '0' + digits.slice(3);
+      } else if (/^[\d\s-]+$/.test(u) && digits.length >= 6) {
+        u = digits;
+      }
+
+      performLogin(u, p);
+    });
+
+    // Input restriction for registration phone number
+    const regPhoneInput = document.getElementById('regPhone');
+    if (regPhoneInput) {
+      regPhoneInput.addEventListener('input', function () {
+        let v = this.value;
+        if (/^\+254/.test(v)) {
+          v = '0' + v.replace(/^\+254/, '');
+        } else if (/^254\d/.test(v)) {
+          v = '0' + v.replace(/^254/, '');
+        }
+        this.value = v.replace(/\D/g, '').slice(0, 10);
+      });
+    }
+
+    // Submit Customer Registration
+    const regForm = document.getElementById('registerForm');
+    const submitRegBtn = document.getElementById('submitRegisterBtn');
+
+    regForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fullName = document.getElementById('regFullName').value.trim();
+      const phone = document.getElementById('regPhone').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const location = document.getElementById('regLocation').value.trim();
+      const password = document.getElementById('regPassword').value.trim();
+      const confirmPassword = document.getElementById('regConfirmPassword').value.trim();
+
+      let cleanPhone = phone.replace(/\D/g, '');
+      if (cleanPhone.startsWith('254') && cleanPhone.length === 12) {
+        cleanPhone = '0' + cleanPhone.slice(3);
+      }
+
+      if (cleanPhone.length !== 10) {
+        showAlert('Customer phone number must be exactly 10 digits (e.g. 0712345678 or 0112345678).', true);
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showAlert('Passwords do not match. Please re-enter.', true);
+        return;
+      }
+
+      if (password.length < 6) {
+        showAlert('Password must be at least 6 characters.', true);
+        return;
+      }
+
+      submitRegBtn.disabled = true;
+      submitRegBtn.textContent = 'Creating Account...';
+      alertBox.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            full_name: fullName,
+            phone: cleanPhone,
+            email: email,
+            location: location,
+            password: password
+          })
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+          showAlert(data.message || 'Registration failed.', true);
+          submitRegBtn.disabled = false;
+          submitRegBtn.textContent = 'Create Account →';
+          return;
+        }
+
+        showAlert(data.message, false);
+        localStorage.setItem('elight_user', JSON.stringify(data.user));
+        localStorage.setItem('elight_token', data.token);
+
+        const regUrlParams = new URLSearchParams(window.location.search);
+        const regNextUrl = regUrlParams.get('next');
+        const safeRegNext = (regNextUrl && regNextUrl.startsWith('/') && !regNextUrl.startsWith('//')) ? regNextUrl : null;
+        const targetUrl = safeRegNext || (data.user?.role === 'customer' ? '/customer' : '/admin');
+        setTimeout(() => {
+          window.location.href = targetUrl;
+        }, 900);
+
+      } catch (err) {
+        console.error(err);
+        showAlert('Network error connecting to server.', true);
+        submitRegBtn.disabled = false;
+        submitRegBtn.textContent = 'Create Account →';
+      }
+    });
+
+    // Check query params or existing session
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('signup') === '1') {
+        switchAuthTab('signup');
+      }
+
+      if (params.get('switch') === '1') {
+        return; // Allow switching accounts without auto-redirecting
+      }
+
+      const stored = localStorage.getItem('elight_user');
+      if (stored) {
+        try {
+          const user = JSON.parse(stored);
+          const nextUrl = params.get('next');
+          const safeNext = (nextUrl && nextUrl.startsWith('/') && !nextUrl.startsWith('//')) ? nextUrl : null;
+          const targetUrl = safeNext || (user.role === 'customer' ? '/customer' : '/admin');
+          showAlert(`Already signed in as ${user.full_name}. Redirecting...`, false);
+          setTimeout(() => {
+            window.location.href = targetUrl;
+          }, 900);
+        } catch (e) { }
+      }
+    });
+  </script>
+</body>
+
+</html>

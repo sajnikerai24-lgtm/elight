@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supplier Portal Login | Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    :root {
+      --sys-primary: #102b46;
+      --sys-primary-light: #173b5e;
+      --sys-accent: #ffc107;
+      --sys-accent-hover: #e0a800;
+      --sys-bg: #f4f6f9;
+      --sys-card-bg: #ffffff;
+      --sys-text: #1f2937;
+      --sys-text-muted: #64748b;
+      --sys-border: #e2e8f0;
+      --sys-input-border: #cbd5e1;
+      --sys-gold-tint: #fffbeb;
+      --sys-gold-border: #fcd34d;
+      --sys-gold-text: #b45309;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body {
+      min-height: 100vh;
+      background: var(--sys-bg);
+      color: var(--sys-text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* System Storefront Header */
+    .system-header {
+      background: radial-gradient(circle at 50% 0%, #1b4168 0%, #0d233a 75%);
+      color: #ffffff;
+      padding: 16px 28px;
+      border-bottom: 3px solid var(--sys-accent);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .system-header-brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      text-decoration: none;
+      color: #ffffff;
+    }
+    .supplier-header-logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 10px rgba(243, 207, 104, 0.32));
+      transition: transform 0.25s ease, filter 0.25s ease;
+    }
+    .supplier-header-logo:hover {
+      transform: scale(1.05);
+      filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 20px rgba(250, 204, 21, 0.65));
+    }
+    .header-brand-title {
+      display: flex;
+      flex-direction: column;
+    }
+    .header-brand-title h1 {
+      font-size: clamp(1.4rem, 2.2vw, 1.85rem);
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      line-height: 1.15;
+      background: linear-gradient(180deg, #fff8d6 0%, #ffd54a 48%, #f59e0b 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 14px rgba(255, 193, 7, 0.22));
+      margin: 0;
+    }
+    .header-brand-title h1::after {
+      content: "";
+      display: block;
+      width: 95px;
+      height: 2px;
+      margin: 5px 0 5px 0;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #ffd54a, transparent);
+    }
+    .header-brand-title p {
+      color: #e2ecf5;
+      font-size: 0.82rem;
+      font-weight: 500;
+      letter-spacing: 0.35px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+      margin: 0;
+    }
+
+    .system-header-nav {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    .system-header-nav a {
+      color: #e2ecf5;
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: color 0.15s;
+    }
+    .system-header-nav a:hover {
+      color: var(--sys-accent);
+    }
+    .system-header-nav a.active-link {
+      color: var(--sys-accent);
+      border-bottom: 2px solid var(--sys-accent);
+      padding-bottom: 2px;
+    }
+
+    /* Centered Login Container */
+    .login-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 36px 18px;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 540px;
+      background: var(--sys-card-bg);
+      border: 1px solid var(--sys-border);
+      border-radius: 16px;
+      padding: 38px 36px;
+      box-shadow: 0 15px 35px -5px rgba(16, 43, 70, 0.1), 0 6px 12px -2px rgba(16, 43, 70, 0.05);
+    }
+    @media (max-width: 580px) {
+      .login-card { padding: 26px 20px; }
+    }
+
+    .card-title {
+      font-size: 1.65rem;
+      font-weight: 900;
+      color: var(--sys-primary);
+      text-align: center;
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+    .card-subtitle {
+      font-size: 0.86rem;
+      color: var(--sys-text-muted);
+      text-align: center;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    /* Quick Select Supplier Box */
+    .quick-select-box {
+      border: 1.5px dashed var(--sys-gold-border);
+      background: var(--sys-gold-tint);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 22px;
+    }
+    .quick-select-label {
+      font-size: 0.84rem;
+      font-weight: 800;
+      color: var(--sys-gold-text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .quick-select-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .quick-select-row select {
+      flex: 1;
+      background: #ffffff;
+      color: var(--sys-text);
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.86rem;
+      font-weight: 500;
+      outline: none;
+      cursor: pointer;
+    }
+    .quick-select-row select:focus {
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+    }
+    .btn-enter-portal {
+      background: linear-gradient(135deg, #ffc107 0%, #f59e0b 100%);
+      color: #0d233a;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-weight: 800;
+      font-size: 0.86rem;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+      transition: transform 0.1s, opacity 0.15s;
+    }
+    .btn-enter-portal:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    /* Divider */
+    .divider-text {
+      text-align: center;
+      font-size: 0.72rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 20px;
+      font-weight: 700;
+      position: relative;
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--sys-primary);
+      margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%;
+      background: #ffffff;
+      color: var(--sys-text);
+      border: 1.5px solid var(--sys-input-border);
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-group input:focus {
+      border-color: #0284c7;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+    }
+    .password-hint {
+      font-size: 0.78rem;
+      color: var(--sys-text-muted);
+      margin-top: 5px;
+    }
+
+    /* Primary Submit Button */
+    .btn-submit-login {
+      width: 100%;
+      background: linear-gradient(135deg, #ffc107 0%, #f59e0b 100%);
+      color: #0d233a;
+      border: none;
+      border-radius: 8px;
+      padding: 13px;
+      font-weight: 900;
+      font-size: 0.98rem;
+      cursor: pointer;
+      margin-top: 6px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn-submit-login:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+    .btn-submit-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Back Link */
+    .back-link {
+      display: block;
+      text-align: center;
+      color: var(--sys-primary);
+      text-decoration: none;
+      font-size: 0.84rem;
+      font-weight: 600;
+      transition: color 0.15s;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Alerts */
+    .alert-box {
+      display: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .alert-error {
+      display: block;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+    }
+    .alert-success {
+      display: block;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #15803d;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Exact Frontpage Header Design with Logo & Title -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo" style="width:68px;height:68px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Supplier Procurement Portal • Authorized Vendor Access</p>
+      </div>
+      <div style="text-align:right;">
+        <a href="/login" style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:8px 14px; border-radius:6px; font-size:0.82rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:5px; transition:background 0.15s; white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+          ← Staff Login
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Centered Login Container -->
+  <main class="login-container">
+    <div class="login-card">
+      <h2 class="card-title">Supplier Portal Login</h2>
+      <p class="card-subtitle">Access your restock requests, fill in product tender quotes &amp; payment credentials, and confirm restock payments</p>
+
+      <!-- Alert Box -->
+      <div id="loginAlert" class="alert-box"></div>
+
+      <!-- Quick Select Supplier (One-Click) -->
+      <div class="quick-select-box">
+        <div class="quick-select-label">
+          <span>⚡</span> Quick Select Supplier (One-Click)
+        </div>
+        <div class="quick-select-row">
+          <select id="quickSupplierSelect" onchange="handleQuickSelectChange()">
+            <option value="">Select registered supplier profile...</option>
+            <option value="3" data-email="sales@metsec.co.ke" data-contact="Mark Kamau">Mark Kamau (Metsec Cables Kenya)</option>
+            <option value="1" data-email="sales@philipsea.com" data-contact="David Mwangi">David Mwangi (Philips Lighting Kenya Dist.)</option>
+            <option value="2" data-email="orders@schneiderelectric.co.ke" data-contact="Grace Wanjiku">Grace Wanjiku (Schneider Electric Kenya)</option>
+          </select>
+          <button type="button" class="btn-enter-portal" onclick="executeQuickLogin()">Enter Portal &rarr;</button>
+        </div>
+      </div>
+
+      <!-- Separator -->
+      <div class="divider-text">— OR LOG IN WITH EMAIL &amp; PASSWORD —</div>
+
+      <!-- Email & Password Form -->
+      <form id="supplierLoginForm" onsubmit="handleSupplierLogin(event)">
+        <div class="form-group">
+          <label for="supEmail">Supplier Email Address</label>
+          <input type="email" id="supEmail" required autocomplete="email" placeholder="e.g. kamau@gmail.com">
+        </div>
+
+        <div class="form-group">
+          <label for="supPassword">Password</label>
+          <input type="password" id="supPassword" required autocomplete="current-password" placeholder="Enter password (default: supplier123)">
+          <div class="password-hint">Default test password: <strong>supplier123</strong></div>
+        </div>
+
+        <button type="submit" id="loginSubmitBtn" class="btn-submit-login">Sign In to Supplier Portal</button>
+      </form>
+
+      <!-- Option to Go Back to Staff Login -->
+      <div style="margin-top:4px; text-align:center; padding-top:14px; border-top:1px solid #e2e8f0; font-size:0.86rem; color:#475569;">
+        Elight Staff Member?
+        <a href="/login" style="color:var(--sys-primary); font-weight:800; text-decoration:underline; display:inline-flex; align-items:center; gap:5px; margin-left:4px;">
+          ← Back to Staff Login
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const SUPPLIER_SESSION_KEY = 'elight_supplier_session';
+
+    function showAlert(msg, isSuccess = false) {
+      const box = document.getElementById('loginAlert');
+      if (!box) return;
+      box.textContent = msg;
+      box.className = isSuccess ? 'alert-box alert-success' : 'alert-box alert-error';
+    }
+
+    function clearAlert() {
+      const box = document.getElementById('loginAlert');
+      if (box) {
+        box.textContent = '';
+        box.className = 'alert-box';
+      }
+    }
+
+    // Load registered supplier profiles into dropdown
+    async function loadQuickProfiles() {
+      try {
+        const res = await fetch('/api/supplier/auth/quick-profiles');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
+          const sel = document.getElementById('quickSupplierSelect');
+          sel.innerHTML = '<option value="">Select registered supplier profile...</option>' +
+            data.profiles.map(p => {
+              const displayName = p.contact_name ? `${p.contact_name} (${p.supplier_name || p.company_name})` : (p.supplier_name || p.company_name);
+              return `<option value="${p.supplier_id}" data-email="${p.email || ''}" data-contact="${p.contact_name || ''}">${displayName}</option>`;
+            }).join('');
+        }
+      } catch (e) {}
+    }
+
+    function handleQuickSelectChange() {
+      const sel = document.getElementById('quickSupplierSelect');
+      const opt = sel.options[sel.selectedIndex];
+      if (opt && opt.value) {
+        const email = opt.getAttribute('data-email');
+        if (email) document.getElementById('supEmail').value = email;
+        document.getElementById('supPassword').value = 'supplier123';
+      }
+    }
+
+    // One-Click Enter Portal
+    async function executeQuickLogin() {
+      clearAlert();
+      const sel = document.getElementById('quickSupplierSelect');
+      const supplierId = sel.value;
+      const opt = sel.options[sel.selectedIndex];
+      const email = opt?.getAttribute('data-email') || document.getElementById('supEmail').value.trim();
+
+      if (!supplierId && !email) {
+        showAlert('Please select a supplier profile from the dropdown first.');
+        return;
+      }
+
+      const btn = document.querySelector('.btn-enter-portal');
+      btn.disabled = true;
+      btn.textContent = 'Entering...';
+
+      try {
+        const res = await fetch('/api/supplier/auth/quick-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ supplier_id: supplierId, email })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          showAlert(data.message || 'Quick login failed.');
+          return;
+        }
+
+        localStorage.removeItem('elight_user');
+        localStorage.setItem(SUPPLIER_SESSION_KEY, JSON.stringify({
+          session: data.session,
+          supplier: data.supplier
+        }));
+        window.location.replace('/supplier-portal');
+      } catch (err) {
+        showAlert('Connection error during quick login.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Enter Portal &rarr;';
+      }
+    }
+
+    // Standard Form Login
+    async function handleSupplierLogin(e) {
+      e.preventDefault();
+      clearAlert();
+      const btn = document.getElementById('loginSubmitBtn');
+      const email = document.getElementById('supEmail').value.trim();
+      const password = document.getElementById('supPassword').value;
+
+      btn.disabled = true;
+      btn.textContent = 'Authenticating...';
+
+      try {
+        const res = await fetch('/api/supplier/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          showAlert(data.message || 'Authentication failed. Please verify email and password.');
+          return;
+        }
+
+        localStorage.removeItem('elight_user');
+        localStorage.setItem(SUPPLIER_SESSION_KEY, JSON.stringify({
+          session: data.session,
+          supplier: data.supplier
+        }));
+        window.location.replace('/supplier-portal');
+      } catch (err) {
+        showAlert('Network error connecting to Supplier Portal server.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sign In to Supplier Portal';
+      }
+    }
+
+    // Check existing session
+    (async function checkExistingSession() {
+      try {
+        const raw = localStorage.getItem(SUPPLIER_SESSION_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed?.session?.access_token) {
+          const res = await fetch('/api/supplier/auth/me', {
+            headers: { Authorization: `Bearer ${parsed.session.access_token}` }
+          });
+          if (res.ok) {
+            window.location.replace('/supplier-portal');
+          } else {
+            localStorage.removeItem(SUPPLIER_SESSION_KEY);
+          }
+        }
+      } catch (e) {}
+    })();
+
+    loadQuickProfiles();
+  </script>
+</body>
+</html>

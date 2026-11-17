@@ -1,0 +1,452 @@
+[
+  {
+    "movement_id": 51,
+    "product_id": 27,
+    "product_name": "100W Solar Street & Compound Floodlight with Remote",
+    "type": "STOCK_IN",
+    "quantity": 11,
+    "reason": "Supplier Invoice Received (INV-PO-17-7991 / PO-17)",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-16T08:12:56.173935+00:00"
+  },
+  {
+    "movement_id": 50,
+    "product_id": 27,
+    "product_name": "100W Solar Street & Compound Floodlight with Remote",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Material Issue MR-2026-89705 for Service #SR-22 (Tech: Brian Kipchumba (Technician))",
+    "recorded_by": "Grace Kerubo (Inventory Manager)",
+    "created_at": "2026-11-16T07:15:59.835491+00:00"
+  },
+  {
+    "movement_id": 47,
+    "product_id": 4,
+    "product_name": "Double Socket Outlet with USB",
+    "type": "STOCK_IN",
+    "quantity": 20,
+    "reason": "Supplier Invoice Received (INV-PO-16-9338 / PO-16)",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-15T18:06:00.018657+00:00"
+  },
+  {
+    "movement_id": 46,
+    "product_id": 15,
+    "product_name": "Automatic Voltage Guard / Protector (13A)",
+    "type": "STOCK_IN",
+    "quantity": 13,
+    "reason": "Supplier Invoice Received (INV-PO-15-9448 / PO-15)",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-13T08:17:24.588247+00:00"
+  },
+  {
+    "movement_id": 45,
+    "product_id": 14,
+    "product_name": "20A Double Pole Water Heater Switch with Neon",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Online Customer Order EL-850440",
+    "recorded_by": "Online Home Storefront",
+    "created_at": "2026-11-13T06:56:34.43357+00:00"
+  },
+  {
+    "movement_id": 44,
+    "product_id": 6,
+    "product_name": "LED Ceiling Panel Light 18W",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Counter Sale EL-563993 to Walk-In Customer",
+    "recorded_by": "Esther Karimi (Cashier)",
+    "created_at": "2026-11-13T05:45:18.938727+00:00"
+  },
+  {
+    "movement_id": 43,
+    "product_id": 1,
+    "product_name": "Philips 9W LED Bulb",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Counter Sale EL-563993 to Walk-In Customer",
+    "recorded_by": "Esther Karimi (Cashier)",
+    "created_at": "2026-11-13T05:45:18.369891+00:00"
+  },
+  {
+    "movement_id": 42,
+    "product_id": 6,
+    "product_name": "LED Ceiling Panel Light 18W",
+    "type": "STOCK_IN",
+    "quantity": 20,
+    "reason": "Supplier Invoice Received (INV-PO-1-9420 / PO-1)",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-12T19:18:31.686866+00:00"
+  },
+  {
+    "movement_id": 41,
+    "product_id": 1,
+    "product_name": "Philips 9W LED Bulb",
+    "type": "STOCK_IN",
+    "quantity": 100,
+    "reason": "Supplier Invoice Received (INV-PO-1-9420 / PO-1)",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-12T19:18:30.665107+00:00"
+  },
+  {
+    "movement_id": 40,
+    "product_id": 6,
+    "product_name": "LED Ceiling Panel Light 18W",
+    "type": "STOCK_IN",
+    "quantity": 20,
+    "reason": "Supplier Invoice Received (INV-1-5839 / PO-1)",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-12T18:20:46.62149+00:00"
+  },
+  {
+    "movement_id": 39,
+    "product_id": 1,
+    "product_name": "Philips 9W LED Bulb",
+    "type": "STOCK_IN",
+    "quantity": 100,
+    "reason": "Supplier Invoice Received (INV-1-5839 / PO-1)",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-12T18:20:46.012727+00:00"
+  },
+  {
+    "movement_id": 37,
+    "product_id": 14,
+    "product_name": "20A Double Pole Water Heater Switch with Neon",
+    "type": "STOCK_OUT",
+    "quantity": 3,
+    "reason": "Counter Sale EL-930511 to Auto Stock Walk-in",
+    "recorded_by": "Esther Karimi (Cashier)",
+    "created_at": "2026-11-12T09:33:20.767961+00:00"
+  },
+  {
+    "movement_id": 33,
+    "product_id": 14,
+    "product_name": "20A Double Pole Water Heater Switch with Neon",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Manual stock level adjustment",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-12T09:24:03.505868+00:00"
+  },
+  {
+    "movement_id": 32,
+    "product_id": 15,
+    "product_name": "Automatic Voltage Guard / Protector (13A)",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Manual stock level adjustment",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-12T09:24:00.313884+00:00"
+  },
+  {
+    "movement_id": 31,
+    "product_id": 13,
+    "product_name": "Digital Multimeter AC/DC Voltage Tester",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Manual stock level adjustment",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-12T09:23:56.643847+00:00"
+  },
+  {
+    "movement_id": 30,
+    "product_id": 13,
+    "product_name": "Digital Multimeter AC/DC Voltage Tester",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Manual stock level adjustment",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-12T09:23:52.492597+00:00"
+  },
+  {
+    "movement_id": 29,
+    "product_id": 5,
+    "product_name": "Circuit Breaker (MCB) 20A Single Pole",
+    "type": "STOCK_IN",
+    "quantity": 1,
+    "reason": "Manual stock level adjustment",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-12T09:23:44.972689+00:00"
+  },
+  {
+    "movement_id": 28,
+    "product_id": 14,
+    "product_name": "20A Double Pole Water Heater Switch with Neon",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Manual stock level adjustment",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-12T09:23:37.176853+00:00"
+  },
+  {
+    "movement_id": 27,
+    "product_id": 14,
+    "product_name": "20A Double Pole Water Heater Switch with Neon",
+    "type": "STOCK_IN",
+    "quantity": 1,
+    "reason": "Manual stock level adjustment",
+    "recorded_by": "Inventory Manager",
+    "created_at": "2026-11-12T09:23:36.542039+00:00"
+  },
+  {
+    "movement_id": 26,
+    "product_id": 3,
+    "product_name": "Twin with Earth 2.5mm Cable (100m)",
+    "type": "STOCK_IN",
+    "quantity": 20,
+    "reason": "GRN GRN-2026-9199285 Confirmed (DEL-2026-3001 / PO-2026-0105)",
+    "recorded_by": "Grace Kerubo (Inventory Manager)",
+    "created_at": "2026-11-12T09:23:12.728052+00:00"
+  },
+  {
+    "movement_id": 25,
+    "product_id": 14,
+    "product_name": "20A Double Pole Water Heater Switch with Neon",
+    "type": "STOCK_IN",
+    "quantity": 6,
+    "reason": "GRN GRN-2026-5118678 Confirmed (DEL-2026-4954148 / PO-2026-3797115)",
+    "recorded_by": "Verification Runner",
+    "created_at": "2026-11-12T09:15:51.659065+00:00"
+  },
+  {
+    "movement_id": 24,
+    "product_id": 14,
+    "product_name": "20A Double Pole Water Heater Switch with Neon",
+    "type": "STOCK_IN",
+    "quantity": 6,
+    "reason": "GRN GRN-2026-0769818 Confirmed (DEL-2026-0591957 / PO-2026-9538443)",
+    "recorded_by": "Verification Runner",
+    "created_at": "2026-11-12T09:00:08.05736+00:00"
+  },
+  {
+    "movement_id": 23,
+    "product_id": 14,
+    "product_name": "20A Double Pole Water Heater Switch with Neon",
+    "type": "STOCK_IN",
+    "quantity": 6,
+    "reason": "GRN GRN-2026-4564296 Confirmed (DEL-2026-4389734 / PO-2026-3372975)",
+    "recorded_by": "Verification Runner",
+    "created_at": "2026-11-12T08:39:05.981745+00:00"
+  },
+  {
+    "movement_id": 22,
+    "product_id": 1,
+    "product_name": "Philips 9W LED Bulb",
+    "type": "STOCK_OUT",
+    "quantity": 5,
+    "reason": "Cleanup post-test stock restoration",
+    "recorded_by": "System Test Cleanup",
+    "created_at": "2026-11-11T18:41:43.41218+00:00"
+  },
+  {
+    "movement_id": 21,
+    "product_id": 1,
+    "product_name": "Philips 9W LED Bulb",
+    "type": "STOCK_IN",
+    "quantity": 5,
+    "reason": "Supplier Delivery Confirmed (DEL-2026-7966816 / PO-2026-6180047)",
+    "recorded_by": "Grace Kerubo",
+    "created_at": "2026-11-11T18:41:23.338618+00:00"
+  },
+  {
+    "movement_id": 20,
+    "product_id": 1,
+    "product_name": "Philips 9W LED Bulb",
+    "type": "STOCK_OUT",
+    "quantity": 5,
+    "reason": "Cleanup interrupted test run stock",
+    "recorded_by": "System Cleanup",
+    "created_at": "2026-11-11T18:40:04.579417+00:00"
+  },
+  {
+    "movement_id": 19,
+    "product_id": 1,
+    "product_name": "Philips 9W LED Bulb",
+    "type": "STOCK_IN",
+    "quantity": 5,
+    "reason": "Supplier Delivery Confirmed (DEL-2026-0648614 / PO-2026-8881315)",
+    "recorded_by": "Grace Kerubo",
+    "created_at": "2026-11-11T18:38:32.786463+00:00"
+  },
+  {
+    "movement_id": 18,
+    "product_id": 9,
+    "product_name": "Electric Cordless Kettle 1.8L",
+    "type": "STOCK_IN",
+    "quantity": 1,
+    "reason": "Inventory Manager manual stock adjustment",
+    "recorded_by": "Grace Kerubo (Inventory Manager)",
+    "created_at": "2026-11-10T09:09:46.31053+00:00"
+  },
+  {
+    "movement_id": 17,
+    "product_id": 9,
+    "product_name": "Electric Cordless Kettle 1.8L",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Inventory Manager manual stock adjustment",
+    "recorded_by": "Grace Kerubo (Inventory Manager)",
+    "created_at": "2026-11-10T09:09:46.018319+00:00"
+  },
+  {
+    "movement_id": 16,
+    "product_id": 9,
+    "product_name": "Electric Cordless Kettle 1.8L",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Inventory Manager manual stock adjustment",
+    "recorded_by": "Grace Kerubo (Inventory Manager)",
+    "created_at": "2026-11-10T09:09:45.763084+00:00"
+  },
+  {
+    "movement_id": 15,
+    "product_id": 9,
+    "product_name": "Electric Cordless Kettle 1.8L",
+    "type": "STOCK_IN",
+    "quantity": 1,
+    "reason": "Inventory Manager manual stock adjustment",
+    "recorded_by": "Grace Kerubo (Inventory Manager)",
+    "created_at": "2026-11-10T09:09:44.963865+00:00"
+  },
+  {
+    "movement_id": 14,
+    "product_id": 9,
+    "product_name": "Electric Cordless Kettle 1.8L",
+    "type": "STOCK_IN",
+    "quantity": 1,
+    "reason": "Inventory Manager manual stock adjustment",
+    "recorded_by": "Grace Kerubo (Inventory Manager)",
+    "created_at": "2026-11-10T09:09:44.922344+00:00"
+  },
+  {
+    "movement_id": 13,
+    "product_id": 9,
+    "product_name": "Electric Cordless Kettle 1.8L",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Inventory Manager manual stock adjustment",
+    "recorded_by": "Grace Kerubo (Inventory Manager)",
+    "created_at": "2026-11-10T09:09:44.758387+00:00"
+  },
+  {
+    "movement_id": 12,
+    "product_id": 9,
+    "product_name": "Electric Cordless Kettle 1.8L",
+    "type": "STOCK_IN",
+    "quantity": 1,
+    "reason": "Inventory Manager manual stock adjustment",
+    "recorded_by": "Grace Kerubo (Inventory Manager)",
+    "created_at": "2026-11-10T09:09:44.297444+00:00"
+  },
+  {
+    "movement_id": 11,
+    "product_id": 1,
+    "product_name": "Philips 9W LED Bulb",
+    "type": "STOCK_OUT",
+    "quantity": 2,
+    "reason": "Online Customer Order EL-TEST999",
+    "recorded_by": "Online Home Storefront",
+    "created_at": "2026-11-10T08:32:37.147082+00:00"
+  },
+  {
+    "movement_id": 10,
+    "product_id": 1,
+    "product_name": "Philips 9W LED Bulb",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Counter Sale EL-437146 to Walk-In Customer",
+    "recorded_by": "Esther Karimi (Cashier)",
+    "created_at": "2026-11-10T06:25:29.056384+00:00"
+  },
+  {
+    "movement_id": 9,
+    "product_id": 3,
+    "product_name": "Twin with Earth 2.5mm Cable (100m)",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Paid Customer Order EL-884215 (Eng. David Mutua)",
+    "recorded_by": "Esther Karimi (Cashier)",
+    "created_at": "2026-11-10T06:24:21.675253+00:00"
+  },
+  {
+    "movement_id": 8,
+    "product_id": 5,
+    "product_name": "Circuit Breaker (MCB) 20A Single Pole",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Paid Customer Order EL-884215 (Eng. David Mutua)",
+    "recorded_by": "Esther Karimi (Cashier)",
+    "created_at": "2026-11-10T06:24:20.816943+00:00"
+  },
+  {
+    "movement_id": 7,
+    "product_id": 14,
+    "product_name": "20A Double Pole Water Heater Switch with Neon",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Online Customer Order EL-585765",
+    "recorded_by": "Online Home",
+    "created_at": "2026-11-04T14:10:40.308544+00:00"
+  },
+  {
+    "movement_id": 6,
+    "product_id": 1,
+    "product_name": "Philips 9W LED Bulb",
+    "type": "STOCK_OUT",
+    "quantity": 2,
+    "reason": "Counter Sale EL-206663 to Test Split Buyer",
+    "recorded_by": "Esther Karimi (Cashier)",
+    "created_at": "2026-11-04T09:40:14.748545+00:00"
+  },
+  {
+    "movement_id": 5,
+    "product_id": 13,
+    "product_name": "Digital Multimeter AC/DC Voltage Tester",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Counter Sale EL-268014 to Walk-In Customer",
+    "recorded_by": "Esther Karimi (Cashier)",
+    "created_at": "2026-11-04T08:57:53.144563+00:00"
+  },
+  {
+    "movement_id": 4,
+    "product_id": 2,
+    "product_name": "Schneider 1-Way Light Switch",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "Counter Sale EL-268014 to Walk-In Customer",
+    "recorded_by": "Esther Karimi (Cashier)",
+    "created_at": "2026-11-04T08:57:50.932503+00:00"
+  },
+  {
+    "movement_id": 3,
+    "product_id": 7,
+    "product_name": "Crystal Chandelier Light",
+    "type": "STOCK_OUT",
+    "quantity": 1,
+    "reason": "In-store walk-in sale",
+    "recorded_by": "Grace Kerubo",
+    "created_at": "2026-10-30T13:10:04.724531+00:00"
+  },
+  {
+    "movement_id": 2,
+    "product_id": 3,
+    "product_name": "Twin with Earth 2.5mm Cable (100m)",
+    "type": "STOCK_OUT",
+    "quantity": 4,
+    "reason": "Issued to Dr. Njoroge installation project",
+    "recorded_by": "Brian Kipchumba",
+    "created_at": "2026-10-30T13:10:04.724531+00:00"
+  },
+  {
+    "movement_id": 1,
+    "product_id": 1,
+    "product_name": "Philips 9W LED Bulb",
+    "type": "STOCK_IN",
+    "quantity": 50,
+    "reason": "Supplier bulk delivery",
+    "recorded_by": "Grace Kerubo",
+    "created_at": "2026-10-30T13:10:04.724531+00:00"
+  }
+]

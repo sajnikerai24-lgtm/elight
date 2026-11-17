@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Products Catalog - Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="/images/elight-favicon.svg?v=7">
+</head>
+
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo"
+        style="width:60px;height:60px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Your one-stop destination for quality electrical fittings, lighting &amp; appliances</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="storefront-layout">
+    <!-- Left Vertical Navigation Sidebar -->
+    <nav>
+      <div class="nav-links">
+        <a href="/">🏠 Home</a>
+        <a href="/products" class="active">📦 Product Catalog</a>
+        <a href="/cart">
+          🛒 Cart <span class="cart-pill" id="cart-count">0</span>
+        </a>
+        <a href="/booking">📅 Book</a>
+        <a href="/contact">📞 Contact Us</a>
+        <a href="/help">❓ Help</a>
+        <a href="/feedback">💬 Feedback</a>
+        <a href="/about">ℹ️ About Us</a>
+      </div>
+      <div class="nav-auth-box">
+        <a href="/login" class="admin-link-btn" id="navAuthLink">🔐 Login</a>
+      </div>
+    </nav>
+
+    <div class="storefront-content">
+
+  <!-- Catalog Main Container -->
+  <main>
+    <div class="catalog-header">
+      <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">
+        <a href="/" style="color:var(--primary); text-decoration:none;">Home</a> &gt; <span>Products Catalog &amp;
+          Search</span>
+      </div>
+      <h2>Search Products</h2>
+    </div>
+
+    <!-- Filter & Sort Toolbar -->
+    <div class="catalog-toolbar">
+      <div class="search-bar" style="margin:0; flex:1; min-width:250px;" data-elight-search>
+        <input type="search" id="search" placeholder="Search by product name, category, or #ID..."
+          aria-label="Search catalog">
+      </div>
+
+      <div class="catalog-filters" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+        <select id="category-filter" class="filter-select" aria-label="Filter by category">
+          <option value="All">All Categories</option>
+        </select>
+
+        <div class="price-range-group" title="Filter by Selling Price (KES)">
+          <span style="font-size:0.78rem; color:var(--text-muted); font-weight:700;">KES</span>
+          <input type="number" id="min-price" placeholder="Min" min="0" step="50" aria-label="Minimum price">
+          <span style="color:#94a3b8;">–</span>
+          <input type="number" id="max-price" placeholder="Max" min="0" step="50" aria-label="Maximum price">
+        </div>
+
+        <select id="sort-select" class="sort-select" aria-label="Sort products">
+          <option value="relevance">Sort: Best Match</option>
+          <option value="name-asc">Sort: Name (A–Z)</option>
+          <option value="price-asc">Sort: Price (Low to High)</option>
+          <option value="price-desc">Sort: Price (High to Low)</option>
+          <option value="stock-desc">Sort: Highest Stock</option>
+        </select>
+
+        <button type="button" id="reset-filters-btn" class="btn-reset-search" style="display:none;">
+          ✕ Reset
+        </button>
+      </div>
+    </div>
+
+    <!-- Category Chips for Quick Filtering -->
+    <div class="category-chips" id="category-chips" style="margin-bottom:20px; justify-content:flex-start;"></div>
+
+    <!-- Catalog Status & Grid -->
+    <p id="status">Loading live products catalog...</p>
+    <div class="products" id="product-list"></div>
+  </main>
+
+    <!-- Footer -->
+    <footer id="contact">
+      <p><strong>Elight Electrical Shop</strong> &copy; 2026. All rights reserved.</p>
+      <p>Location: Meru, Meru County, Kenya | Call / WhatsApp: +254 700 000 000 | Email: elightelectrical@ke.com</p>
+    </footer>
+    </div>
+  </div>
+
+  <!-- Search Module & Dedicated Products Page Script -->
+  <script src="js/search_module.js"></script>
+  <script src="js/products.js?v=2"></script>
+  <script>
+    (function () {
+      try {
+        const u = localStorage.getItem('elight_user');
+        const link = document.getElementById('navAuthLink');
+        if (u && link) {
+          const user = JSON.parse(u);
+          const cleanName = String(user.full_name || 'Account').replace(/\s*\(customer\)\s*$/i, '');
+          link.innerHTML = `👤 ${cleanName}`;
+          link.href = user.role === 'customer' ? '/customer' : '/admin';
+        }
+      } catch (e) { }
+    })();
+  </script>
+</body>
+
+</html>

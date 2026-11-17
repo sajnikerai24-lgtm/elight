@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us - Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="/images/elight-favicon.svg?v=7">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo" style="width:60px;height:60px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Your one-stop destination for quality electrical fittings, lighting &amp; appliances</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="storefront-layout">
+    <!-- Left Vertical Navigation Sidebar -->
+    <nav>
+      <div class="nav-links">
+        <a href="/">🏠 Home</a>
+        <a href="/products">📦 Product Catalog</a>
+        <a href="/cart">
+          🛒 Cart <span class="cart-pill" id="cart-count">0</span>
+        </a>
+        <a href="/booking">📅 Book</a>
+        <a href="/contact" class="active">📞 Contact Us</a>
+        <a href="/help">❓ Help</a>
+        <a href="/feedback">💬 Feedback</a>
+        <a href="/about">ℹ️ About Us</a>
+      </div>
+      <div class="nav-auth-box">
+        <a href="/login" class="admin-link-btn" id="navAuthLink">🔐 Login</a>
+      </div>
+    </nav>
+
+    <div class="storefront-content">
+
+  <div class="module-page-wrap">
+    <div class="module-hero-banner">
+      <div>
+        <h2>📞 Contact Elight Electrical Shop</h2>
+        <p>Have a question about an electrical specification, bulk contractor quotation, or order delivery? Send us a direct inquiry below.</p>
+      </div>
+      <a href="/help" class="btn-hero-outline" style="padding:10px 18px; font-size:0.9rem;">❓ Browse Quick FAQs</a>
+    </div>
+
+    <div id="contactConfirmBox" class="confirmation-box" style="display:none;">
+      <span style="background:#10b981; color:#fff; padding:4px 10px; border-radius:999px; font-size:0.75rem; font-weight:800;">✓ INQUIRY SENT</span>
+      <h3 style="color:#065f46; margin:10px 0 4px 0;">We Have Received Your Message!</h3>
+      <div>Inquiry Ticket: <span class="confirmation-ref" id="inqTicketRef">INQ-2026-0000</span></div>
+      <p id="inqConfirmMsg" style="margin:10px 0 0 0; color:#047857; font-size:0.92rem;"></p>
+    </div>
+
+    <div class="module-two-col">
+      <!-- Left: Direct Inquiry Form -->
+      <div class="module-card">
+        <h3>✉️ Send Us an Inquiry</h3>
+        <form id="contactForm" onsubmit="submitContactForm(event)">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="contactName" required placeholder="e.g. Eng. Patrick Karanja">
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <div class="form-group">
+              <label>Email Address *</label>
+              <input type="email" id="contactEmail" required placeholder="patrick@company.co.ke">
+            </div>
+            <div class="form-group">
+              <label>Phone / WhatsApp Number</label>
+              <input type="tel" id="contactPhone" placeholder="0712 345 678">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Inquiry Topic / Subject *</label>
+            <select id="contactSubjectSelect" onchange="syncSubjectInput()" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; margin-bottom:10px;">
+              <option value="Wholesale / Contractor Bulk Quotation">Wholesale / Contractor Bulk Quotation</option>
+              <option value="Product Availability & Specification Inquiry">Product Availability &amp; Specification Inquiry</option>
+              <option value="Electrical Installation / Technician Consultation">Electrical Installation / Technician Consultation</option>
+              <option value="Order Delivery Within Meru County">Order Delivery Within Meru County</option>
+              <option value="Warranty Claim or After-Sales Support">Warranty Claim or After-Sales Support</option>
+              <option value="Custom">Other Topic (Specify below)</option>
+            </select>
+            <input type="text" id="contactSubjectCustom" style="display:none;" placeholder="Enter custom inquiry subject...">
+          </div>
+
+          <div class="form-group">
+            <label>Your Message *</label>
+            <textarea id="contactMessage" rows="5" required style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; font-family:inherit;" placeholder="List the products, quantities, or question you would like our shop team to assist you with..."></textarea>
+          </div>
+
+          <button type="submit" class="checkout-btn" id="contactSubmitBtn">
+            📨 Send Message
+          </button>
+        </form>
+      </div>
+
+      <!-- Right: Direct Communication Channels -->
+      <div>
+        <div class="module-card">
+          <h3>⚡ Direct Shop Channels</h3>
+          <div style="display:grid; gap:14px; font-size:0.92rem; color:#334155;">
+            <div style="padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+              <strong style="color:var(--primary); display:block;">📞 Showroom Sales &amp; Quotations</strong>
+              <span>+254 700 123 456 / +254 712 345 678 (WhatsApp)</span>
+            </div>
+            <div style="padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+              <strong style="color:var(--primary); display:block;">🔧 Technical &amp; Installation Desk</strong>
+              <span>+254 722 111 002 (Mon – Sat, 8:00 AM – 6:00 PM)</span>
+            </div>
+            <div style="padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+              <strong style="color:var(--primary); display:block;">✉️ Official Email</strong>
+              <span><code>elightelectrical@ke.com</code></span>
+            </div>
+            <div style="padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+              <strong style="color:var(--primary); display:block;">📍 Visit Our Showroom</strong>
+              <span>Elight Plaza, Ground Floor, Njuri Ncheke Street, Meru, Meru County, Kenya</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <footer>
+      <p><strong>Elight Electrical Shop</strong> &copy; 2026. All rights reserved.</p>
+      <p>Location: Meru, Meru County, Kenya | Call / WhatsApp: +254 700 123 456 | Email: elightelectrical@ke.com</p>
+    </footer>
+    </div>
+  </div>
+
+  <script src="js/site_nav.js"></script>
+  <script>
+    function syncSubjectInput() {
+      const sel = document.getElementById('contactSubjectSelect').value;
+      const custom = document.getElementById('contactSubjectCustom');
+      custom.style.display = sel === 'Custom' ? 'block' : 'none';
+      custom.required = sel === 'Custom';
+    }
+
+    async function submitContactForm(e) {
+      e.preventDefault();
+      const btn = document.getElementById('contactSubmitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Sending Message...';
+
+      const selVal = document.getElementById('contactSubjectSelect').value;
+      const subject = selVal === 'Custom'
+        ? document.getElementById('contactSubjectCustom').value.trim()
+        : selVal;
+
+      const payload = {
+        full_name: document.getElementById('contactName').value.trim(),
+        email: document.getElementById('contactEmail').value.trim(),
+        phone: document.getElementById('contactPhone').value.trim(),
+        subject,
+        message: document.getElementById('contactMessage').value.trim()
+      };
+
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Failed to send inquiry');
+
+        document.getElementById('inqTicketRef').textContent = data.inquiry.ticket_ref;
+        document.getElementById('inqConfirmMsg').textContent = data.message;
+        const box = document.getElementById('contactConfirmBox');
+        box.style.display = 'block';
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        document.getElementById('contactMessage').value = '';
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📨 Send Message';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        const raw = localStorage.getItem('elight_user');
+        if (raw) {
+          const u = JSON.parse(raw);
+          const cleanName = String(u.full_name || '').replace(/\s*\(customer\)\s*$/i, '').trim();
+          if (cleanName) document.getElementById('contactName').value = cleanName;
+          if (u.email) document.getElementById('contactEmail').value = u.email;
+          if (u.phone) document.getElementById('contactPhone').value = u.phone;
+        }
+      } catch (e) {}
+    });
+  </script>
+</body>
+</html>
+

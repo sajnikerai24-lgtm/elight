@@ -1,0 +1,123 @@
+[
+  {
+    "feedback_id": 1794555899182,
+    "customer_name": "Beatrice Njeri",
+    "customer_email": "0722334455@customer.elight.co.ke",
+    "feedback_type": "service_review",
+    "rating": 5,
+    "subject": "Order #EL-973260 Post-Fulfillment Follow-Up",
+    "message": "Product Condition: Good Condition. Delivery: 5/5 (Fast delivery). Installation: 5/5 (Satisfied). Customer Feedback: No issues reported.",
+    "status": "published",
+    "created_at": "2026-11-13T07:44:59.182Z"
+  },
+  {
+    "feedback_id": 1794555849770,
+    "customer_name": "David Mwangi",
+    "customer_email": "0711223344@customer.elight.co.ke",
+    "feedback_type": "service_review",
+    "rating": 5,
+    "subject": "Order #EL-726173 Post-Fulfillment Follow-Up",
+    "message": "Product Condition: Good Condition. Delivery: 5/5 (Driver was punctual and polite). Customer Feedback: No issues reported.",
+    "status": "published",
+    "created_at": "2026-11-13T07:44:09.770Z"
+  },
+  {
+    "feedback_id": 1794554802455,
+    "customer_name": "Beatrice Njeri",
+    "customer_email": "0722334455@customer.elight.co.ke",
+    "feedback_type": "service_review",
+    "rating": 5,
+    "subject": "Order #EL-491325 Post-Fulfillment Follow-Up",
+    "message": "Product Condition: Good Condition. Delivery: 5/5 (Fast delivery). Installation: 5/5 (Satisfied). Customer Feedback: No issues reported.",
+    "status": "published",
+    "created_at": "2026-11-13T07:26:42.456Z"
+  },
+  {
+    "feedback_id": 1794554752767,
+    "customer_name": "David Mwangi",
+    "customer_email": "0711223344@customer.elight.co.ke",
+    "feedback_type": "service_review",
+    "rating": 5,
+    "subject": "Order #EL-556665 Post-Fulfillment Follow-Up",
+    "message": "Product Condition: Good Condition. Delivery: 5/5 (Driver was punctual and polite). Customer Feedback: No issues reported.",
+    "status": "published",
+    "created_at": "2026-11-13T07:25:52.767Z"
+  },
+  {
+    "feedback_id": 1794554638835,
+    "customer_name": "Beatrice Njeri",
+    "customer_email": "0722334455@customer.elight.co.ke",
+    "feedback_type": "service_review",
+    "rating": 5,
+    "subject": "Order #EL-505700 Post-Fulfillment Follow-Up",
+    "message": "Product Condition: Good Condition. Delivery: 5/5 (Fast delivery). Installation: 5/5 (Satisfied). Customer Feedback: No issues reported.",
+    "status": "published",
+    "created_at": "2026-11-13T07:23:58.835Z"
+  },
+  {
+    "feedback_id": 1794554589210,
+    "customer_name": "David Mwangi",
+    "customer_email": "0711223344@customer.elight.co.ke",
+    "feedback_type": "service_review",
+    "rating": 5,
+    "subject": "Order #EL-431531 Post-Fulfillment Follow-Up",
+    "message": "Product Condition: Good Condition. Delivery: 5/5 (Driver was punctual and polite). Customer Feedback: No issues reported.",
+    "status": "published",
+    "created_at": "2026-11-13T07:23:09.210Z"
+  },
+  {
+    "feedback_id": 1794554443779,
+    "customer_name": "Beatrice Njeri",
+    "customer_email": "0722334455@customer.elight.co.ke",
+    "feedback_type": "service_review",
+    "rating": 5,
+    "subject": "Order #EL-615401 Post-Fulfillment Follow-Up",
+    "message": "Product Condition: Good Condition. Delivery: 5/5 (Fast delivery). Installation: 5/5 (Satisfied). Customer Feedback: No issues reported.",
+    "status": "published",
+    "created_at": "2026-11-13T07:20:43.779Z"
+  },
+  {
+    "feedback_id": 1794554394377,
+    "customer_name": "David Mwangi",
+    "customer_email": "0711223344@customer.elight.co.ke",
+    "feedback_type": "service_review",
+    "rating": 5,
+    "subject": "Order #EL-116588 Post-Fulfillment Follow-Up",
+    "message": "Product Condition: Good Condition. Delivery: 5/5 (Driver was punctual and polite). Customer Feedback: No issues reported.",
+    "status": "published",
+    "created_at": "2026-11-13T07:19:54.377Z"
+  },
+  {
+    "feedback_id": 1794554297411,
+    "customer_name": "David Mwangi",
+    "customer_email": "0711223344@customer.elight.co.ke",
+    "feedback_type": "service_review",
+    "rating": 5,
+    "subject": "Order #EL-119937 Post-Fulfillment Follow-Up",
+    "message": "Product Condition: Good Condition. Delivery: 5/5 (Driver was punctual and polite). Customer Feedback: No issues reported.",
+    "status": "published",
+    "created_at": "2026-11-13T07:18:17.411Z"
+  },
+  {
+    "feedback_id": 1794554209614,
+    "customer_name": "David Mwangi",
+    "customer_email": "0711223344@customer.elight.co.ke",
+    "feedback_type": "service_review",
+    "rating": 5,
+    "subject": "Order #EL-938008 Post-Fulfillment Follow-Up",
+    "message": "Product Condition: Good Condition. Delivery: 5/5 (Driver was punctual and polite). Customer Feedback: No issues reported.",
+    "status": "published",
+    "created_at": "2026-11-13T07:16:49.614Z"
+  },
+  {
+    "feedback_id": 1794553994991,
+    "customer_name": "David Mwangi",
+    "customer_email": "0711223344@customer.elight.co.ke",
+    "feedback_type": "service_review",
+    "rating": 5,
+    "subject": "Order #EL-438088 Post-Fulfillment Follow-Up",
+    "message": "Product Condition: Good Condition. Delivery: 5/5 (Driver was punctual and polite). Customer Feedback: No issues reported.",
+    "status": "published",
+    "created_at": "2026-11-13T07:13:14.991Z"
+  }
+]

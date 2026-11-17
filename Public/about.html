@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Us - Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="/images/elight-favicon.svg?v=7">
+</head>
+
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo"
+        style="width:60px;height:60px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Your one-stop destination for quality electrical fittings, lighting &amp; appliances</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="storefront-layout">
+    <!-- Left Vertical Navigation Sidebar -->
+    <nav>
+      <div class="nav-links">
+        <a href="/">🏠 Home</a>
+        <a href="/products">📦 Product Catalog</a>
+        <a href="/cart">
+          🛒 Cart <span class="cart-pill" id="cart-count">0</span>
+        </a>
+        <a href="/booking">📅 Book</a>
+        <a href="/contact">📞 Contact Us</a>
+        <a href="/help">❓ Help</a>
+        <a href="/feedback">💬 Feedback</a>
+        <a href="/about" class="active">ℹ️ About Us</a>
+      </div>
+      <div class="nav-auth-box">
+        <a href="/login" class="admin-link-btn" id="navAuthLink">🔐 Login</a>
+      </div>
+    </nav>
+
+    <div class="storefront-content">
+
+      <div class="module-page-wrap">
+        <div class="module-hero-banner">
+          <div>
+            <h2>ℹ️ About Elight Electrical Shop</h2>
+            <p id="aboutTagline">Powering Kenyan Homes, Commercial Buildings &amp; Contractors with Certified Electrical
+              Supplies.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="/products" class="btn-hero-primary" style="padding:10px 18px; font-size:0.9rem;">🛍️ Browse
+              Catalog</a>
+            <a href="/booking" class="btn-hero-outline" style="padding:10px 18px; font-size:0.9rem;">📅 Book a
+              Service</a>
+          </div>
+        </div>
+
+        <!-- Key Highlights Row -->
+        <div id="aboutHighlights"
+          style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:16px; margin-bottom:24px;">
+        </div>
+
+        <div class="module-two-col">
+          <!-- Left: Our Story, Mission, Vision & Brands -->
+          <div>
+            <div class="module-card">
+              <h3>⚡ Who We Are</h3>
+              <p id="aboutStory" style="color:#334155; line-height:1.7; font-size:0.95rem; margin:0 0 16px 0;"></p>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                <div style="background:#f8fafc; border-left:4px solid var(--primary); padding:14px; border-radius:6px;">
+                  <strong style="color:var(--primary); display:block; margin-bottom:4px;">🎯 Our Mission</strong>
+                  <span id="aboutMission" style="font-size:0.88rem; color:#475569; line-height:1.5;"></span>
+                </div>
+                <div style="background:#f8fafc; border-left:4px solid #f59e0b; padding:14px; border-radius:6px;">
+                  <strong style="color:#92400e; display:block; margin-bottom:4px;">🌟 Our Vision</strong>
+                  <span id="aboutVision" style="font-size:0.88rem; color:#475569; line-height:1.5;"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="module-card">
+              <h3>🏆 Certified Electrical Brands We Stock</h3>
+              <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:12px;">Every item sold carries genuine
+                manufacturer serial verification and KEBS safety compliance:</p>
+              <div id="aboutBrands" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+            </div>
+          </div>
+
+          <!-- Right: Shop Location, Hours & Contact Details -->
+          <div>
+            <div class="module-card">
+              <h3>📍 Showroom &amp; Warehouse Location</h3>
+              <div id="aboutLocationBox" style="font-size:0.92rem; color:#334155; line-height:1.7;"></div>
+              <div
+                style="margin-top:14px; border-radius:10px; overflow:hidden; border:1px solid #cbd5e1; background:#e2e8f0;">
+                <iframe title="Elight Electrical Shop Location Map - Meru Town, Meru County, Kenya"
+                  src="https://www.openstreetmap.org/export/embed.html?bbox=37.6430%2C0.0420%2C37.6565%2C0.0520&amp;layer=mapnik&amp;marker=0.0470%2C37.6498"
+                  style="width:100%; height:200px; border:0; display:block;" loading="lazy">
+                </iframe>
+              </div>
+            </div>
+
+            <div class="module-card">
+              <h3>🕒 Business Hours &amp; Direct Contacts</h3>
+              <div id="aboutHoursBox" style="margin-bottom:16px;"></div>
+              <div id="aboutContactsBox"
+                style="padding-top:14px; border-top:1px solid #e2e8f0; font-size:0.9rem; line-height:1.8; color:#1e293b;">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <p><strong>Elight Electrical Shop</strong> &copy; 2026. All rights reserved.</p>
+        <p>Location: Meru, Meru County, Kenya | Call / WhatsApp: +254 700 123 456 | Email: elightelectrical@ke.com
+        </p>
+      </footer>
+    </div>
+  </div>
+
+  <script src="js/site_nav.js"></script>
+  <script>
+    function escapeHTML(str) {
+      return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    async function loadAboutPage() {
+      try {
+        const res = await fetch('/api/about');
+        const data = await res.json();
+        if (!data.success) return;
+        const a = data.about;
+
+        document.getElementById('aboutTagline').textContent = a.tagline;
+        document.getElementById('aboutStory').textContent = a.story;
+        document.getElementById('aboutMission').textContent = a.mission;
+        document.getElementById('aboutVision').textContent = a.vision;
+
+        document.getElementById('aboutHighlights').innerHTML = (a.highlights || []).map(h => `
+          <div class="module-card" style="margin-bottom:0; text-align:center; padding:18px;">
+            <div style="font-size:1.5rem; font-weight:800; color:var(--primary);">${escapeHTML(h.value)}</div>
+            <div style="font-size:0.84rem; color:var(--text-muted); font-weight:600; margin-top:4px;">${escapeHTML(h.label)}</div>
+          </div>
+        `).join('');
+
+        document.getElementById('aboutBrands').innerHTML = (a.brands || []).map(b => `
+          <span style="background:#eff6ff; color:#1e3a8a; border:1px solid #bfdbfe; padding:7px 14px; border-radius:999px; font-size:0.86rem; font-weight:700;">✓ ${escapeHTML(b)}</span>
+        `).join('');
+
+        const loc = a.location || {};
+        document.getElementById('aboutLocationBox').innerHTML = `
+          <div><strong>Main Showroom:</strong> ${escapeHTML(loc.building)}</div>
+          <div><strong>Street:</strong> ${escapeHTML(loc.street)}, ${escapeHTML(loc.city)}</div>
+          <div><strong>Landmarks:</strong> ${escapeHTML(loc.landmarks)}</div>
+          <div><strong>Bulk Dispatch Hub:</strong> ${escapeHTML(loc.dispatch_hub)}</div>
+        `;
+
+        document.getElementById('aboutHoursBox').innerHTML = (a.hours || []).map(h => `
+          <div style="display:flex; justify-content:space-between; font-size:0.88rem; padding:5px 0; border-bottom:1px dashed #e2e8f0;">
+            <strong>${escapeHTML(h.days)}</strong>
+            <span style="color:#047857; font-weight:600;">${escapeHTML(h.time)}</span>
+          </div>
+        `).join('');
+
+        const c = a.contacts || {};
+        document.getElementById('aboutContactsBox').innerHTML = `
+          <div>📞 <strong>Sales Desk:</strong> <a href="tel:${escapeHTML(c.sales_phone)}" style="color:var(--primary); text-decoration:none;">${escapeHTML(c.sales_phone)}</a></div>
+          <div>💬 <strong>WhatsApp Orders:</strong> ${escapeHTML(c.whatsapp)}</div>
+          <div>🔧 <strong>Technical / Installations:</strong> ${escapeHTML(c.technical_desk)}</div>
+          <div>✉️ <strong>Email:</strong> <a href="mailto:${escapeHTML(c.sales_email)}" style="color:var(--primary); text-decoration:none;">${escapeHTML(c.sales_email)}</a></div>
+          <div>💳 <strong>Official M-Pesa Buy Goods Till:</strong> <span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:4px; font-weight:800;">${escapeHTML(c.mpesa_till)}</span></div>
+        `;
+      } catch (err) {
+        console.error('Failed to load About Us:', err);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAboutPage);
+  </script>
+</body>
+
+</html>

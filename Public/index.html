@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elight Electrical Shop - Leading Electrical Supplies in Kenya</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="/images/elight-favicon.svg?v=7">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo" style="width:60px;height:60px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Your one-stop destination for quality electrical fittings, lighting &amp; appliances</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="storefront-layout">
+    <!-- Left Vertical Navigation Sidebar -->
+    <nav>
+      <div class="nav-links">
+        <a href="/" class="active">🏠 Home</a>
+        <a href="/products">📦 Product Catalog</a>
+        <a href="/cart">
+          🛒 Cart <span class="cart-pill" id="cart-count">0</span>
+        </a>
+        <a href="/booking">📅 Book</a>
+        <a href="/contact">📞 Contact Us</a>
+        <a href="/help">❓ Help</a>
+        <a href="/feedback">💬 Feedback</a>
+        <a href="/about">ℹ️ About Us</a>
+      </div>
+      <div class="nav-auth-box">
+        <a href="/login" class="admin-link-btn" id="navAuthLink">🔐 Login</a>
+      </div>
+    </nav>
+
+    <div class="storefront-content">
+
+  <!-- Hero Landing Section -->
+  <section class="hero" id="home">
+    <h2>Brighten Your Space with Certified Electricals</h2>
+    <p>Premium chandeliers, LED panels, wiring cables, switches, and circuit breakers delivered across Meru County.</p>
+
+    <!-- Live Product Search Bar -->
+    <div class="hero-search-wrap" data-elight-search>
+      <div class="hero-search-box">
+        <span style="font-size:1.1rem;">🔎</span>
+        <input type="search" id="hero-search-input" placeholder="Search bulbs, cables, sockets, breakers, solar lights..." aria-label="Search catalog">
+        <button type="button" class="hero-search-btn" data-search-submit>Find Products</button>
+      </div>
+    </div>
+    
+    <div class="hero-btns">
+      <a href="/products" class="btn-hero-primary">
+        🛍️ Explore Full Catalog
+      </a>
+      <a href="#categories" class="btn-hero-outline">
+        📑 Browse Categories
+      </a>
+    </div>
+  </section>
+
+  <!-- Trust Badges & Highlights -->
+  <section class="trust-section">
+    <div class="trust-grid">
+      <div class="trust-card">
+        <div class="trust-icon">✔️</div>
+        <div class="trust-info">
+          <h4>Certified & Genuine</h4>
+          <p>Top brands: Philips, Schneider, Chint & more</p>
+        </div>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon">🇰🇪</div>
+        <div class="trust-info">
+          <h4>Fast Meru Delivery</h4>
+          <p>Same-day Meru Town delivery &amp; dispatch across Meru County</p>
+        </div>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon">💰</div>
+        <div class="trust-info">
+          <h4>Wholesale & Retail</h4>
+          <p>Best rates in KES for contractors & homeowners</p>
+        </div>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon">🔧</div>
+        <div class="trust-info">
+          <h4>Expert Support</h4>
+          <p>Technical advice on wiring and installations</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Shop by Category Section -->
+  <section class="category-section" id="categories">
+    <div class="section-header-row">
+      <h2>Shop By Category</h2>
+      <a href="/products" class="view-all-link">View All Products →</a>
+    </div>
+
+    <div class="category-grid">
+      <a href="/products?category=Lighting" class="category-card">
+        <div class="category-icon">💡</div>
+        <h3>Lighting</h3>
+        <span>Bulbs, Panels & Chandeliers</span>
+      </a>
+      <a href="/products?category=Switches+%26+Sockets" class="category-card">
+        <div class="category-icon">🔌</div>
+        <h3>Switches & Sockets</h3>
+        <span>1-Way, 2-Way & USB Wall Plates</span>
+      </a>
+      <a href="/products?category=Cables+%26+Wiring" class="category-card">
+        <div class="category-icon">⚡</div>
+        <h3>Cables & Wiring</h3>
+        <span>Twin & Earth, Conduit & Flex</span>
+      </a>
+      <a href="/products?category=Circuit+Protection" class="category-card">
+        <div class="category-icon">🛡️</div>
+        <h3>Circuit Protection</h3>
+        <span>MCBs, RCDs & Consumer Units</span>
+      </a>
+      <a href="/products?category=Appliances" class="category-card">
+        <div class="category-icon">🫖</div>
+        <h3>Appliances</h3>
+        <span>Kettles, Heaters & Accessories</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- Featured Best Sellers Showcase -->
+  <main>
+    <div class="section-header-row">
+      <h2>⭐ Featured Products</h2>
+      <a href="/products" class="view-all-link">Browse Full Catalog →</a>
+    </div>
+    <p id="status">Loading featured items...</p>
+    <div class="products" id="featured-product-list"></div>
+  </main>
+
+    <!-- Footer -->
+    <footer id="contact">
+      <p><strong>Elight Electrical Shop</strong> &copy; 2026. All rights reserved.</p>
+      <p>Location: Meru, Meru County, Kenya | Call / WhatsApp: +254 700 000 000 | Email: elightelectrical@ke.com</p>
+    </footer>
+    </div>
+  </div>
+
+  <!-- Home Page & Search Scripts -->
+  <script src="js/search_module.js"></script>
+  <script src="js/home.js"></script>
+  <script>
+    (function() {
+      try {
+        const u = localStorage.getItem('elight_user');
+        const link = document.getElementById('navAuthLink');
+        if (u && link) {
+          const user = JSON.parse(u);
+          const cleanName = String(user.full_name || 'Account').replace(/\s*\(customer\)\s*$/i, '');
+          link.innerHTML = `👤 ${cleanName}`;
+          link.href = user.role === 'customer' ? '/customer' : '/admin';
+        }
+      } catch(e) {}
+    })();
+  </script>
+</body>
+</html>

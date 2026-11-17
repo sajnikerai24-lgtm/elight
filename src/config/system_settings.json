@@ -1,0 +1,765 @@
+{
+  "settings": {
+    "shop_name": "Elight Electrical Shop",
+    "operating_region": "Meru County Only",
+    "official_email": "elightelectrical@ke.com",
+    "official_phone": "+254 700 123 456",
+    "mpesa_till": "5894210",
+    "meru_town_delivery_fee": 300,
+    "meru_subcounty_delivery_fee": 500,
+    "low_stock_threshold": 5,
+    "allow_customer_registration": true,
+    "enforce_suspended_block": true,
+    "treasury_accounts": {
+      "opening_cash": 15000,
+      "opening_mpesa": 65000,
+      "opening_bank": 350000,
+      "bank_name": "Equity Bank - Meru Branch",
+      "bank_account_no": "0140283940123",
+      "mpesa_till": "5894210"
+    }
+  },
+  "role_permissions": {
+    "cashier": [
+      "cashier",
+      "new_sale",
+      "feedback",
+      "help"
+    ],
+    "technician": [
+      "technicians",
+      "feedback",
+      "help"
+    ],
+    "inventory_manager": [
+      "inventory",
+      "feedback",
+      "help"
+    ],
+    "service_manager": [
+      "services",
+      "bookings",
+      "feedback",
+      "help"
+    ],
+    "finance_manager": [
+      "finance",
+      "reports",
+      "feedback",
+      "help"
+    ],
+    "dispatch_manager": [
+      "dispatch",
+      "bookings",
+      "feedback",
+      "help"
+    ],
+    "driver": [
+      "driver",
+      "feedback",
+      "help"
+    ]
+  },
+  "audit_log": [
+    {
+      "timestamp": "2026-11-16T08:13:54.153Z",
+      "department": "Admin & Security",
+      "actor": "Alice Muthoni (Finance Manager)",
+      "action": "User Sign-In",
+      "details": "Alice Muthoni (Finance Manager) signed in via Supabase Auth with role \"finance_manager\"."
+    },
+    {
+      "timestamp": "2026-11-16T08:10:09.654Z",
+      "department": "Admin & Security",
+      "actor": "Grace Kerubo (Inventory Manager)",
+      "action": "User Sign-In",
+      "details": "Grace Kerubo (Inventory Manager) signed in via Supabase Auth with role \"inventory_manager\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:31:33.207Z",
+      "department": "Admin & Security",
+      "actor": "mary",
+      "action": "User Sign-In",
+      "details": "mary signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:30:38.728Z",
+      "department": "Admin & Security",
+      "actor": "Dr. Anthony Njoroge (Customer)",
+      "action": "User Sign-In",
+      "details": "Dr. Anthony Njoroge (Customer) signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:30:38.075Z",
+      "department": "Admin & Security",
+      "actor": "mary",
+      "action": "User Sign-In",
+      "details": "mary signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:30:36.995Z",
+      "department": "Admin & Security",
+      "actor": "mary",
+      "action": "User Sign-In",
+      "details": "mary signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:30:36.323Z",
+      "department": "Admin & Security",
+      "actor": "Sajni Kerai",
+      "action": "User Sign-In",
+      "details": "Sajni Kerai signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:30:34.998Z",
+      "department": "Admin & Security",
+      "actor": "Dr. Anthony Njoroge (Customer)",
+      "action": "User Sign-In",
+      "details": "Dr. Anthony Njoroge (Customer) signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:30:34.226Z",
+      "department": "Admin & Security",
+      "actor": "Dr. Anthony Njoroge (Customer)",
+      "action": "User Sign-In",
+      "details": "Dr. Anthony Njoroge (Customer) signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:30:33.617Z",
+      "department": "Admin & Security",
+      "actor": "Sajni Kerai",
+      "action": "User Sign-In",
+      "details": "Sajni Kerai signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:30:32.996Z",
+      "department": "Admin & Security",
+      "actor": "sajni",
+      "action": "User Sign-In",
+      "details": "sajni signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:24:41.664Z",
+      "department": "Admin & Security",
+      "actor": "sajni",
+      "action": "User Sign-In",
+      "details": "sajni signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:24:40.947Z",
+      "department": "Admin & Security",
+      "actor": "Sajni Kerai",
+      "action": "User Sign-In",
+      "details": "Sajni Kerai signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:24:40.224Z",
+      "department": "Admin & Security",
+      "actor": "mary",
+      "action": "User Sign-In",
+      "details": "mary signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:24:39.206Z",
+      "department": "Admin & Security",
+      "actor": "jenu john",
+      "action": "User Sign-In",
+      "details": "jenu john signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:24:38.211Z",
+      "department": "Admin & Security",
+      "actor": "mukti",
+      "action": "User Sign-In",
+      "details": "mukti signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:24:37.577Z",
+      "department": "Admin & Security",
+      "actor": "Dr. Anthony Njoroge (Customer)",
+      "action": "User Sign-In",
+      "details": "Dr. Anthony Njoroge (Customer) signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:24:36.936Z",
+      "department": "Admin & Security",
+      "actor": "Dr. Anthony Njoroge (Customer)",
+      "action": "User Sign-In",
+      "details": "Dr. Anthony Njoroge (Customer) signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:24:35.726Z",
+      "department": "Admin & Security",
+      "actor": "Dr. Anthony Njoroge (Customer)",
+      "action": "User Sign-In",
+      "details": "Dr. Anthony Njoroge (Customer) signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:21:35.625Z",
+      "department": "Finance & Accounting",
+      "actor": "Alice Muthoni (Finance Manager)",
+      "action": "Service Fee Payment Confirmed",
+      "details": "Alice Muthoni (Finance Manager) confirmed KES 1,050 (Cash, Ref: cash101) for Service #SR-22 (mary). Receipt issued: RCP-SR-22-4693."
+    },
+    {
+      "timestamp": "2026-11-16T07:21:02.737Z",
+      "department": "Admin & Security",
+      "actor": "Alice Muthoni (Finance Manager)",
+      "action": "User Sign-In",
+      "details": "Alice Muthoni (Finance Manager) signed in via Supabase Auth with role \"finance_manager\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:19:59.557Z",
+      "department": "Admin & Security",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "User Sign-In",
+      "details": "Brian Kipchumba (Technician) signed in via Supabase Auth with role \"technician\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:19:00.896Z",
+      "department": "Service & Field Operations",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "Service Status Updated: completed",
+      "details": "Service Job #SR-22 marked completed. Materials: \"Issued (MR-2026-89705): 1x 100W Solar Street & Compound Floodlight with Remote\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:18:51.150Z",
+      "department": "Service & Field Operations",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "Service Status Updated: completed",
+      "details": "Service Job #SR-22 marked completed. Materials: \"Issued (MR-2026-89705): 1x 100W Solar Street & Compound Floodlight with Remote\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:18:44.413Z",
+      "department": "Admin & Security",
+      "actor": "Peter Otieno (Service Manager)",
+      "action": "User Sign-In",
+      "details": "Peter Otieno (Service Manager) signed in via Supabase Auth with role \"service_manager\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:17:52.800Z",
+      "department": "Service & Field Operations",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "Service Status Updated: awaiting_inspection",
+      "details": "Service Job #SR-22 marked awaiting_inspection. Materials: \"Issued (MR-2026-89705): 1x 100W Solar Street & Compound Floodlight with Remote\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:17:03.006Z",
+      "department": "Service & Field Operations",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "Service Status Updated: in_progress",
+      "details": "Service Job #SR-22 marked in_progress. Materials: \"Issued (MR-2026-89705): 1x 100W Solar Street & Compound Floodlight with Remote\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:16:53.050Z",
+      "department": "Admin & Security",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "User Sign-In",
+      "details": "Brian Kipchumba (Technician) signed in via Supabase Auth with role \"technician\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:16:01.783Z",
+      "department": "Inventory",
+      "actor": "Grace Kerubo (Inventory Manager)",
+      "action": "Service Materials Issued",
+      "details": "Grace Kerubo (Inventory Manager) issued materials [1x 100W Solar Street & Compound Floodlight with Remote] to Brian Kipchumba (Technician) (MR-2026-89705, #SR-22). Inventory deducted and stock movements logged."
+    },
+    {
+      "timestamp": "2026-11-16T07:15:51.197Z",
+      "department": "Inventory",
+      "actor": "Grace Kerubo (Inventory Manager)",
+      "action": "Material Request APPROVED",
+      "details": "Grace Kerubo (Inventory Manager) marked Material Request MR-2026-89705 (#SR-22) as approved. Notes: fully approved."
+    },
+    {
+      "timestamp": "2026-11-16T07:15:20.120Z",
+      "department": "Admin & Security",
+      "actor": "Grace Kerubo (Inventory Manager)",
+      "action": "User Sign-In",
+      "details": "Grace Kerubo (Inventory Manager) signed in via Supabase Auth with role \"inventory_manager\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:14:49.995Z",
+      "department": "Service & Field Operations",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "Material Request Submitted",
+      "details": "Technician Brian Kipchumba (Technician) submitted Material Request MR-2026-89705 for #SR-22 (1x 100W Solar Street & Compound Floodlight with Remote)."
+    },
+    {
+      "timestamp": "2026-11-16T07:14:26.247Z",
+      "department": "Admin & Security",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "User Sign-In",
+      "details": "Brian Kipchumba (Technician) signed in via Supabase Auth with role \"technician\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:13:57.266Z",
+      "department": "Service & Field Operations",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "Service Status Updated: pending",
+      "details": "Service Job #SR-22 marked pending. Materials: \"None\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:13:53.685Z",
+      "department": "Service & Field Operations",
+      "actor": "Service Manager",
+      "action": "Technician Job Assigned",
+      "details": "Assigned Brian Kipchumba (Technician) to Service Request #SR-22 (mary). Customer booking synchronized."
+    },
+    {
+      "timestamp": "2026-11-16T07:13:45.410Z",
+      "department": "Service & Field Operations",
+      "actor": "Service Manager",
+      "action": "Technician Job Assigned",
+      "details": "Assigned Peter Otieno (Service Manager) to Service Request #SR-22 (mary). Customer booking synchronized."
+    },
+    {
+      "timestamp": "2026-11-16T07:13:40.581Z",
+      "department": "Service & Field Operations",
+      "actor": "Peter Otieno (Service Manager)",
+      "action": "Arrival Time Assigned",
+      "details": "Assigned arrival time window \"08:00 AM - 10:00 AM\" to Service Request #SR-22 (mary). Customer booking synchronized."
+    },
+    {
+      "timestamp": "2026-11-16T07:13:24.516Z",
+      "department": "Admin & Security",
+      "actor": "Peter Otieno (Service Manager)",
+      "action": "User Sign-In",
+      "details": "Peter Otieno (Service Manager) signed in via Supabase Auth with role \"service_manager\"."
+    },
+    {
+      "timestamp": "2026-11-16T07:12:54.728Z",
+      "department": "Service & Field Operations",
+      "actor": "Booking Synchronization Engine",
+      "action": "Service Request Created",
+      "details": "Created Service Request #SR-22 for mary."
+    },
+    {
+      "timestamp": "2026-11-16T07:04:56.517Z",
+      "department": "Admin & Security",
+      "actor": "Alice Muthoni (Finance Manager)",
+      "action": "User Sign-In",
+      "details": "Alice Muthoni (Finance Manager) signed in via Supabase Auth with role \"finance_manager\"."
+    },
+    {
+      "timestamp": "2026-11-16T06:39:39.358Z",
+      "department": "Admin & Security",
+      "actor": "Grace Kerubo (Inventory Manager)",
+      "action": "User Sign-In",
+      "details": "Grace Kerubo (Inventory Manager) signed in via Supabase Auth with role \"inventory_manager\"."
+    },
+    {
+      "timestamp": "2026-11-16T06:39:14.027Z",
+      "department": "Service & Field Operations",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "Material Request Submitted",
+      "details": "Technician Brian Kipchumba (Technician) submitted Material Request MR-2026-53764 for #SR-10 (1x Electric Cordless Kettle 1.8L)."
+    },
+    {
+      "timestamp": "2026-11-16T06:38:52.499Z",
+      "department": "Admin & Security",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "User Sign-In",
+      "details": "Brian Kipchumba (Technician) signed in via Supabase Auth with role \"technician\"."
+    },
+    {
+      "timestamp": "2026-11-16T06:32:44.335Z",
+      "department": "Admin & Security",
+      "actor": "Grace Kerubo (Inventory Manager)",
+      "action": "User Sign-In",
+      "details": "Grace Kerubo (Inventory Manager) signed in via Supabase Auth with role \"inventory_manager\"."
+    },
+    {
+      "timestamp": "2026-11-16T06:30:54.052Z",
+      "department": "Admin & Security",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "User Sign-In",
+      "details": "Brian Kipchumba (Technician) signed in via Supabase Auth with role \"technician\"."
+    },
+    {
+      "timestamp": "2026-11-16T06:29:05.591Z",
+      "department": "Finance & Accounting",
+      "actor": "Alice Muthoni (Finance Manager)",
+      "action": "Service Fee Payment Confirmed",
+      "details": "Alice Muthoni (Finance Manager) confirmed KES 950 (M-Pesa, Ref: MPESA-SVC-524842) for Service #SR-21 (E2E Service Test Customer). Receipt issued: RCP-SR-21-2140."
+    },
+    {
+      "timestamp": "2026-11-16T06:29:00.585Z",
+      "department": "Service & Field Operations",
+      "actor": "Service Manager",
+      "action": "Service Completion Approved & Billed",
+      "details": "Service Manager Service Manager approved #SR-21 (E2E Service Test Customer). Service fee charged: KES 950 (pending_payment)."
+    },
+    {
+      "timestamp": "2026-11-16T06:28:59.614Z",
+      "department": "Service & Field Operations",
+      "actor": "Service Manager",
+      "action": "Service Status Updated: completed",
+      "details": "Service Job #SR-21 marked completed. Materials: \"Issued (MR-2026-26465): 2x Philips 9W LED Bulb, 1x Schneider 1-Way Light Switch\"."
+    },
+    {
+      "timestamp": "2026-11-16T06:28:58.923Z",
+      "department": "Service & Field Operations",
+      "actor": "Brian Kipchumba",
+      "action": "Service Status Updated: awaiting_inspection",
+      "details": "Service Job #SR-21 marked awaiting_inspection. Materials: \"Issued (MR-2026-26465): 2x Philips 9W LED Bulb, 1x Schneider 1-Way Light Switch\"."
+    },
+    {
+      "timestamp": "2026-11-16T06:28:58.896Z",
+      "department": "Service & Field Operations",
+      "actor": "Service Manager",
+      "action": "Service Job Returned for Further Work",
+      "details": "Service Manager Service Manager returned Service #SR-21 (E2E Service Test Customer) to technician Brian Kipchumba (Technician) for rework: \"Tighten faceplate alignment and verify continuity\"."
+    },
+    {
+      "timestamp": "2026-11-16T06:28:57.997Z",
+      "department": "Service & Field Operations",
+      "actor": "Brian Kipchumba",
+      "action": "Service Status Updated: awaiting_inspection",
+      "details": "Service Job #SR-21 marked awaiting_inspection. Materials: \"Issued (MR-2026-26465): 2x Philips 9W LED Bulb, 1x Schneider 1-Way Light Switch\"."
+    },
+    {
+      "timestamp": "2026-11-16T06:28:57.748Z",
+      "department": "Service & Field Operations",
+      "actor": "Brian Kipchumba",
+      "action": "Service Status Updated: in_progress",
+      "details": "Service Job #SR-21 marked in_progress. Materials: \"Issued (MR-2026-26465): 2x Philips 9W LED Bulb, 1x Schneider 1-Way Light Switch\"."
+    },
+    {
+      "timestamp": "2026-11-16T06:28:57.095Z",
+      "department": "Inventory",
+      "actor": "Inventory Manager",
+      "action": "Service Materials Issued",
+      "details": "Inventory Manager issued materials [2x Philips 9W LED Bulb, 1x Schneider 1-Way Light Switch] to Brian Kipchumba (Technician) (MR-2026-26465, #SR-21). Inventory deducted and stock movements logged."
+    },
+    {
+      "timestamp": "2026-11-16T06:28:54.186Z",
+      "department": "Inventory",
+      "actor": "Inventory Manager",
+      "action": "Material Request PARTIALLY APPROVED",
+      "details": "Inventory Manager marked Material Request MR-2026-26465 (#SR-21) as partially_approved. Notes: Approved exact job quantities."
+    },
+    {
+      "timestamp": "2026-11-16T06:28:50.723Z",
+      "department": "Inventory",
+      "actor": "Inventory Manager",
+      "action": "Material Request REJECTED",
+      "details": "Inventory Manager marked Material Request MR-2026-27487 (#SR-21) as rejected. Notes: Duplicate request not needed."
+    },
+    {
+      "timestamp": "2026-11-16T06:28:47.736Z",
+      "department": "Service & Field Operations",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "Material Request Submitted",
+      "details": "Technician Brian Kipchumba (Technician) submitted Material Request MR-2026-27487 for #SR-21 (1x Philips 9W LED Bulb)."
+    },
+    {
+      "timestamp": "2026-11-16T06:28:46.771Z",
+      "department": "Service & Field Operations",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "Material Request Submitted",
+      "details": "Technician Brian Kipchumba (Technician) submitted Material Request MR-2026-26465 for #SR-21 (3x Philips 9W LED Bulb, 2x Schneider 1-Way Light Switch)."
+    },
+    {
+      "timestamp": "2026-11-16T06:28:45.251Z",
+      "department": "Service & Field Operations",
+      "actor": "Service Manager",
+      "action": "Technician Job Assigned",
+      "details": "Assigned Brian Kipchumba (Technician) to Service Request #SR-21 (E2E Service Test Customer). Customer booking synchronized."
+    },
+    {
+      "timestamp": "2026-11-16T06:28:45.238Z",
+      "department": "Service & Field Operations",
+      "actor": "Booking Synchronization Engine",
+      "action": "Service Request Created",
+      "details": "Created Service Request #SR-21 for E2E Service Test Customer."
+    },
+    {
+      "timestamp": "2026-11-15T18:04:58.005Z",
+      "department": "Admin & Security",
+      "actor": "Grace Kerubo (Inventory Manager)",
+      "action": "User Sign-In",
+      "details": "Grace Kerubo (Inventory Manager) signed in via Supabase Auth with role \"inventory_manager\"."
+    },
+    {
+      "timestamp": "2026-11-15T18:01:46.774Z",
+      "department": "Admin & Security",
+      "actor": "Grace Kerubo (Inventory Manager)",
+      "action": "User Sign-In",
+      "details": "Grace Kerubo (Inventory Manager) signed in via Supabase Auth with role \"inventory_manager\"."
+    },
+    {
+      "timestamp": "2026-11-15T17:43:30.958Z",
+      "department": "Service & Field Operations",
+      "actor": "Booking Synchronization Engine",
+      "action": "Service Request Auto-Created",
+      "details": "Auto-created Service Request #SR-12 for Multi Service Valid Test from customer booking BK-ELIGHT-4593."
+    },
+    {
+      "timestamp": "2026-11-15T17:43:30.037Z",
+      "department": "Service & Field Operations",
+      "actor": "Booking Synchronization Engine",
+      "action": "Service Request Auto-Created",
+      "details": "Auto-created Service Request #SR-11 for Exact Cap Test from customer booking BK-ELIGHT-4316."
+    },
+    {
+      "timestamp": "2026-11-15T17:37:19.782Z",
+      "department": "Service & Field Operations",
+      "actor": "Booking Synchronization Engine",
+      "action": "Service Request Auto-Created",
+      "details": "Auto-created Service Request #SR-12 for Multi Service Valid Test from customer booking BK-ELIGHT-9186."
+    },
+    {
+      "timestamp": "2026-11-15T17:37:18.531Z",
+      "department": "Service & Field Operations",
+      "actor": "Booking Synchronization Engine",
+      "action": "Service Request Auto-Created",
+      "details": "Auto-created Service Request #SR-11 for Exact Cap Test from customer booking BK-ELIGHT-4907."
+    },
+    {
+      "timestamp": "2026-11-15T17:27:23.771Z",
+      "department": "Service & Field Operations",
+      "actor": "Booking Synchronization Engine",
+      "action": "Service Request Auto-Created",
+      "details": "Auto-created Service Request #SR-12 for Valid Boundary Test from customer booking BK-ELIGHT-6805."
+    },
+    {
+      "timestamp": "2026-11-15T17:27:21.869Z",
+      "department": "Service & Field Operations",
+      "actor": "Booking Synchronization Engine",
+      "action": "Service Request Auto-Created",
+      "details": "Auto-created Service Request #SR-11 for Valid Multi Test from customer booking BK-ELIGHT-7440."
+    },
+    {
+      "timestamp": "2026-11-15T17:23:43.838Z",
+      "department": "Service & Field Operations",
+      "actor": "Booking Synchronization Engine",
+      "action": "Service Request Auto-Created",
+      "details": "Auto-created Service Request #SR-12 for Valid Boundary Test from customer booking BK-ELIGHT-3491."
+    },
+    {
+      "timestamp": "2026-11-15T17:23:42.824Z",
+      "department": "Service & Field Operations",
+      "actor": "Booking Synchronization Engine",
+      "action": "Service Request Auto-Created",
+      "details": "Auto-created Service Request #SR-11 for Valid Multi Test from customer booking BK-ELIGHT-2283."
+    },
+    {
+      "timestamp": "2026-11-15T17:22:57.639Z",
+      "department": "Service & Field Operations",
+      "actor": "Booking Synchronization Engine",
+      "action": "Service Request Auto-Created",
+      "details": "Auto-created Service Request #SR-12 for Valid Boundary Test from customer booking BK-ELIGHT-8553."
+    },
+    {
+      "timestamp": "2026-11-15T17:22:55.931Z",
+      "department": "Service & Field Operations",
+      "actor": "Booking Synchronization Engine",
+      "action": "Service Request Auto-Created",
+      "details": "Auto-created Service Request #SR-11 for Valid Multi Test from customer booking BK-ELIGHT-5257."
+    },
+    {
+      "timestamp": "2026-11-13T08:27:17.371Z",
+      "department": "Admin & Security",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "User Sign-In",
+      "details": "Brian Kipchumba (Technician) signed in via Supabase Auth with role \"technician\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:26:42.884Z",
+      "department": "Service & Field Operations",
+      "actor": "Service Manager",
+      "action": "Technician Job Assigned",
+      "details": "Assigned Brian Kipchumba (Technician) to Service Request #SR-10 (jenu john). Customer booking synchronized."
+    },
+    {
+      "timestamp": "2026-11-13T08:26:27.867Z",
+      "department": "Admin & Security",
+      "actor": "Peter Otieno (Service Manager)",
+      "action": "User Sign-In",
+      "details": "Peter Otieno (Service Manager) signed in via Supabase Auth with role \"service_manager\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:25:23.064Z",
+      "department": "Service & Field Operations",
+      "actor": "Booking Synchronization Engine",
+      "action": "Service Request Auto-Created",
+      "details": "Auto-created Service Request #SR-10 for jenu john from customer booking BK-ELIGHT-7443."
+    },
+    {
+      "timestamp": "2026-11-13T08:24:04.238Z",
+      "department": "Admin & Security",
+      "actor": "jenu john",
+      "action": "User Sign-In",
+      "details": "jenu john signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:20:47.294Z",
+      "department": "Admin & Security",
+      "actor": "Alice Muthoni (Finance Manager)",
+      "action": "User Sign-In",
+      "details": "Alice Muthoni (Finance Manager) signed in via Supabase Auth with role \"finance_manager\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:19:34.995Z",
+      "department": "Admin & Security",
+      "actor": "Grace Kerubo (Inventory Manager)",
+      "action": "User Sign-In",
+      "details": "Grace Kerubo (Inventory Manager) signed in via Supabase Auth with role \"inventory_manager\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:17:40.092Z",
+      "department": "Admin & Security",
+      "actor": "Grace Kerubo (Inventory Manager)",
+      "action": "User Sign-In",
+      "details": "Grace Kerubo (Inventory Manager) signed in via Supabase Auth with role \"inventory_manager\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:16:05.685Z",
+      "department": "Admin & Security",
+      "actor": "Grace Kerubo (Inventory Manager)",
+      "action": "User Sign-In",
+      "details": "Grace Kerubo (Inventory Manager) signed in via Supabase Auth with role \"inventory_manager\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:13:08.749Z",
+      "department": "Admin & Security",
+      "actor": "Grace Kerubo (Inventory Manager)",
+      "action": "User Sign-In",
+      "details": "Grace Kerubo (Inventory Manager) signed in via Supabase Auth with role \"inventory_manager\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:03:37.725Z",
+      "department": "Admin & Security",
+      "actor": "Esther Karimi (Cashier)",
+      "action": "User Sign-In",
+      "details": "Esther Karimi (Cashier) signed in with role \"cashier\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:03:14.279Z",
+      "department": "Admin & Security",
+      "actor": "Administrator",
+      "action": "User Account Removed",
+      "details": "Deleted user #29 (Verify Test Staff - cashier)."
+    },
+    {
+      "timestamp": "2026-11-13T08:03:12.331Z",
+      "department": "Admin & Security",
+      "actor": "Administrator",
+      "action": "User Account / Role Updated",
+      "details": "Verify Test Staff (#29): status → suspended"
+    },
+    {
+      "timestamp": "2026-11-13T08:03:10.859Z",
+      "department": "Admin & Security",
+      "actor": "Verify Test Staff",
+      "action": "User Sign-In",
+      "details": "Verify Test Staff signed in via Supabase Auth with role \"cashier\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:03:10.097Z",
+      "department": "Admin & Security",
+      "actor": "Administrator",
+      "action": "User Account Created",
+      "details": "Created cashier account for Verify Test Staff (@verify_1794556988035) synced to Supabase Auth."
+    },
+    {
+      "timestamp": "2026-11-13T08:03:06.932Z",
+      "department": "Admin & Security",
+      "actor": "Esther Karimi (Cashier)",
+      "action": "User Sign-In",
+      "details": "Esther Karimi (Cashier) signed in via Supabase Auth with role \"cashier\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:03:06.115Z",
+      "department": "Admin & Security",
+      "actor": "Esther Karimi (Cashier)",
+      "action": "User Sign-In",
+      "details": "Esther Karimi (Cashier) signed in via Supabase Auth with role \"cashier\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:03:04.327Z",
+      "department": "Admin & Security",
+      "actor": "Dr. Anthony Njoroge (Customer)",
+      "action": "User Sign-In",
+      "details": "Dr. Anthony Njoroge (Customer) signed in via Supabase Auth with role \"customer\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:03:01.646Z",
+      "department": "Admin & Security",
+      "actor": "Grace Kerubo (Inventory Manager)",
+      "action": "User Sign-In",
+      "details": "Grace Kerubo (Inventory Manager) signed in via Supabase Auth with role \"inventory_manager\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:03:00.424Z",
+      "department": "Admin & Security",
+      "actor": "Francis Mutua (Driver)",
+      "action": "User Sign-In",
+      "details": "Francis Mutua (Driver) signed in via Supabase Auth with role \"driver\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:02:59.261Z",
+      "department": "Admin & Security",
+      "actor": "Dennis Ndwiga (Dispatch Manager)",
+      "action": "User Sign-In",
+      "details": "Dennis Ndwiga (Dispatch Manager) signed in via Supabase Auth with role \"dispatch_manager\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:02:57.684Z",
+      "department": "Admin & Security",
+      "actor": "Alice Muthoni (Finance Manager)",
+      "action": "User Sign-In",
+      "details": "Alice Muthoni (Finance Manager) signed in via Supabase Auth with role \"finance_manager\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:02:55.782Z",
+      "department": "Admin & Security",
+      "actor": "Samuel Mwangi (Technician)",
+      "action": "User Sign-In",
+      "details": "Samuel Mwangi (Technician) signed in via Supabase Auth with role \"technician\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:02:53.873Z",
+      "department": "Admin & Security",
+      "actor": "Brian Kipchumba (Technician)",
+      "action": "User Sign-In",
+      "details": "Brian Kipchumba (Technician) signed in via Supabase Auth with role \"technician\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:02:51.650Z",
+      "department": "Admin & Security",
+      "actor": "Peter Otieno (Service Manager)",
+      "action": "User Sign-In",
+      "details": "Peter Otieno (Service Manager) signed in via Supabase Auth with role \"service_manager\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:02:50.137Z",
+      "department": "Admin & Security",
+      "actor": "Esther Karimi (Cashier)",
+      "action": "User Sign-In",
+      "details": "Esther Karimi (Cashier) signed in via Supabase Auth with role \"cashier\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:02:48.365Z",
+      "department": "Admin & Security",
+      "actor": "Mercy Wanjiku (Admin)",
+      "action": "User Sign-In",
+      "details": "Mercy Wanjiku (Admin) signed in via Supabase Auth with role \"admin\"."
+    },
+    {
+      "timestamp": "2026-11-13T08:02:46.836Z",
+      "department": "Admin & Security",
+      "actor": "Joseph Kariuki (Owner)",
+      "action": "User Sign-In",
+      "details": "Joseph Kariuki (Owner) signed in via Supabase Auth with role \"owner\"."
+    },
+    {
+      "timestamp": "2026-11-13T07:47:18.724Z",
+      "department": "Finance & Treasury",
+      "actor": "Alice Muthoni (Finance)",
+      "action": "Customer Order Balance Payment Received",
+      "details": "Finance received KES 30,000 via Bank Transfer (BANK_EQUITY_8829) for Order EL-199120. Remaining balance: KES 0."
+    }
+  ]
+}
