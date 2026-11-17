@@ -8,9 +8,71 @@ const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 
 const BUCKET_NAME = 'supplier-documents';
 const MAX_DOC_BYTES = 5 * 1024 * 1024; // 5 MB
-const MAX_QUOTATION_UNIT_PRICE = 1500; // Maximum KSh 1,500 per unit for supplier quotations
+const DEFAULT_MIN_QUOTATION_UNIT_PRICE = 1;
+const MAX_QUOTATION_UNIT_PRICE = 1500; // Fallback cap only for legacy PO items without per-product limits
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'png', 'jpg', 'jpeg', 'webp', 'txt', 'csv', 'doc', 'docx']);
 const FINANCE_RECORDS_PATH = path.join(__dirname, '../config/finance_records.json');
+
+function formatKshNumber(val) {
+  return Number(val || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function resolvePurchaseItemBounds(poItem) {
+  const rawMin = poItem && poItem.min_unit_price !== null && poItem.min_unit_price !== undefined
+    ? Number(poItem.min_unit_price)
+    : null;
+  const rawMax = poItem && poItem.max_unit_price !== null && poItem.max_unit_price !== undefined
+    ? Number(poItem.max_unit_price)
+    : null;
+  const hasExplicitBounds = rawMin !== null && rawMax !== null && !Number.isNaN(rawMin) && !Number.isNaN(rawMax);
+  return {
+    min_unit_price: hasExplicitBounds ? Number(rawMin.toFixed(2)) : DEFAULT_MIN_QUOTATION_UNIT_PRICE,
+    max_unit_price: hasExplicitBounds ? Number(rawMax.toFixed(2)) : MAX_QUOTATION_UNIT_PRICE,
+    has_explicit_limits: hasExplicitBounds
+  };
+}
+
+function evaluateQuotationPrice(productName, unitPrice, minLimit, maxLimit) {
+  const price = Number(unitPrice);
+  const minVal = Number(minLimit);
+  const maxVal = Number(maxLimit);
+  if (Number.isNaN(price) || price <= 0) {
+    return {
+      valid: false,
+      status: 'invalid',
+      message: `Unit price for "${productName}" must be greater than KSh 0.`
+    };
+  }
+  if (!Number.isNaN(minVal) && price < minVal - 0.0001) {
+    return {
+      valid: false,
+      status: 'below_min',
+      message: `Unit price for "${productName}" (KSh ${formatKshNumber(price)}) is below the minimum acceptable limit of KSh ${formatKshNumber(minVal)}.`
+    };
+  }
+  if (!Number.isNaN(maxVal) && price > maxVal + 0.0001) {
+    return {
+      valid: false,
+      status: 'above_max',
+      message: `Unit price for "${productName}" (KSh ${formatKshNumber(price)}) exceeds the maximum acceptable limit of KSh ${formatKshNumber(maxVal)}.`
+    };
+  }
+  return {
+    valid: true,
+    status: 'within_range',
+    message: 'Within acceptable range'
+  };
+}
+
+function findMatchingPurchaseItem(poItems, candidate) {
+  if (!Array.isArray(poItems) || poItems.length === 0) return null;
+  const cid = candidate?.product_id ? Number(candidate.product_id) : null;
+  const cname = String(candidate?.product_name || '').trim().toLowerCase();
+  return poItems.find(pi =>
+    (cid && pi.product_id && Number(pi.product_id) === cid) ||
+    (cname && String(pi.product_name || '').trim().toLowerCase() === cname)
+  ) || null;
+}
 
 function genRef(prefix) {
   const year = new Date().getFullYear();
@@ -478,7 +540,12 @@ exports.getSupplierPurchaseOrders = async (req, res) => {
     for (const item of itemsRes.data || []) {
       const k = Number(item.po_id);
       if (!itemsByPo[k]) itemsByPo[k] = [];
-      itemsByPo[k].push(item);
+      const bounds = resolvePurchaseItemBounds(item);
+      itemsByPo[k].push({
+        ...item,
+        min_unit_price: bounds.min_unit_price,
+        max_unit_price: bounds.max_unit_price
+      });
     }
 
     const enriched = (posRes.data || []).map(po => ({
@@ -520,7 +587,14 @@ exports.getSupplierPurchaseOrderById = async (req, res) => {
       success: true,
       purchase_order: {
         ...po,
-        items: itemsRes.data || [],
+        items: (itemsRes.data || []).map(item => {
+          const bounds = resolvePurchaseItemBounds(item);
+          return {
+            ...item,
+            min_unit_price: bounds.min_unit_price,
+            max_unit_price: bounds.max_unit_price
+          };
+        }),
         quotations: quotesRes.data || [],
         deliveries: delRes.data || [],
         invoices: invRes.data || []
@@ -619,6 +693,7 @@ exports.submitSupplierQuotation = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please include at least one quoted product item.' });
     }
 
+    let poItemsForOrder = [];
     if (poId) {
       const { data: ownPo } = await db
         .from('purchase_orders')
@@ -631,37 +706,77 @@ exports.submitSupplierQuotation = async (req, res) => {
           message: 'Referenced Purchase Order does not belong to your supplier account.'
         });
       }
+      const { data: poItemRows, error: piFetchErr } = await db
+        .from('purchase_items')
+        .select('*')
+        .eq('po_id', poId);
+      if (piFetchErr) {
+        return res.status(500).json({ success: false, message: piFetchErr.message });
+      }
+      poItemsForOrder = poItemRows || [];
     }
 
     const normalizedItems = [];
+    const validationErrors = [];
     let totalAmount = 0;
+
     for (const item of rawItems) {
       const productName = String(item.product_name || '').trim();
       const requestedQty = Math.max(0, parseInt(item.requested_qty ?? item.quantity ?? item.available_qty ?? 0, 10) || 0);
       const availableQty = Math.max(1, parseInt(item.available_qty ?? item.quantity ?? 0, 10) || 0);
-      const unitPrice = Number(item.unit_price ?? item.quoted_unit_price ?? 0);
-      if (!productName || Number.isNaN(unitPrice) || unitPrice <= 0) {
+      const rawPrice = item.unit_price ?? item.quoted_unit_price;
+      const unitPrice = Number(rawPrice);
+
+      if (!productName) {
         return res.status(400).json({
           success: false,
-          message: 'Each quotation item requires a product name, valid available quantity (>=1), and a unit price greater than KSh 0.'
+          message: 'Each quotation item requires a product name.'
         });
       }
-      if (unitPrice > MAX_QUOTATION_UNIT_PRICE) {
+
+      // Strictly use DB price limits (never trust any min/max submitted by supplier client)
+      const matchedPoItem = poId ? findMatchingPurchaseItem(poItemsForOrder, item) : null;
+      if (poId && poItemsForOrder.length > 0 && !matchedPoItem) {
         return res.status(400).json({
           success: false,
-          message: `Unit price for "${productName}" cannot exceed KSh ${MAX_QUOTATION_UNIT_PRICE.toLocaleString()} per unit.`
+          message: `Product "${productName}" does not belong to Purchase Order #PO-${poId}.`
         });
       }
-      const lineTotal = Number((availableQty * unitPrice).toFixed(2));
+
+      const bounds = resolvePurchaseItemBounds(matchedPoItem);
+      if (rawPrice === undefined || rawPrice === null || String(rawPrice).trim() === '' || Number.isNaN(unitPrice)) {
+        validationErrors.push(`Enter a valid numeric unit price for "${productName}" (Allowed: KSh ${formatKshNumber(bounds.min_unit_price)} – KSh ${formatKshNumber(bounds.max_unit_price)}).`);
+        continue;
+      }
+
+      const check = evaluateQuotationPrice(productName, unitPrice, bounds.min_unit_price, bounds.max_unit_price);
+      if (!check.valid) {
+        validationErrors.push(check.message);
+        continue;
+      }
+
+      const cleanPrice = Number(unitPrice.toFixed(2));
+      const lineTotal = Number((availableQty * cleanPrice).toFixed(2));
       totalAmount += lineTotal;
       normalizedItems.push({
         supplier_id: req.supplierId,
-        product_id: item.product_id ? Number(item.product_id) : null,
-        product_name: productName,
-        requested_qty: requestedQty,
+        product_id: matchedPoItem?.product_id ? Number(matchedPoItem.product_id) : (item.product_id ? Number(item.product_id) : null),
+        product_name: matchedPoItem?.product_name || productName,
+        requested_qty: matchedPoItem ? Number(matchedPoItem.ordered_qty || requestedQty) : requestedQty,
         available_qty: availableQty,
-        unit_price: Number(unitPrice.toFixed(2)),
-        line_total: lineTotal
+        unit_price: cleanPrice,
+        line_total: lineTotal,
+        min_unit_price: bounds.min_unit_price,
+        max_unit_price: bounds.max_unit_price,
+        price_validation_status: check.status
+      });
+    }
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: validationErrors.join(' '),
+        validation_errors: validationErrors
       });
     }
 
@@ -1747,13 +1862,59 @@ exports.erpGetProcurementOverview = async (req, res) => {
       interModuleSync.getProducts()
     ]);
 
+    const purchaseItems = (piRes.data || []).map(pi => {
+      const bounds = resolvePurchaseItemBounds(pi);
+      return {
+        ...pi,
+        min_unit_price: bounds.min_unit_price,
+        max_unit_price: bounds.max_unit_price,
+        has_explicit_limits: bounds.has_explicit_limits
+      };
+    });
+
+    const quoteById = {};
+    for (const q of qRes.data || []) quoteById[Number(q.quotation_id)] = q;
+
+    const poItemsByPoId = {};
+    for (const pi of purchaseItems) {
+      const key = Number(pi.po_id);
+      if (!poItemsByPoId[key]) poItemsByPoId[key] = [];
+      poItemsByPoId[key].push(pi);
+    }
+
+    const enrichedQuotationItems = (qiRes.data || []).map(qi => {
+      const parentQuote = quoteById[Number(qi.quotation_id)];
+      const poItems = parentQuote?.po_id ? (poItemsByPoId[Number(parentQuote.po_id)] || []) : [];
+      const matchedPoItem = findMatchingPurchaseItem(poItems, qi);
+
+      const hasOwnMin = qi.min_unit_price !== null && qi.min_unit_price !== undefined;
+      const hasOwnMax = qi.max_unit_price !== null && qi.max_unit_price !== undefined;
+      const bounds = (hasOwnMin && hasOwnMax)
+        ? { min_unit_price: Number(qi.min_unit_price), max_unit_price: Number(qi.max_unit_price) }
+        : resolvePurchaseItemBounds(matchedPoItem);
+
+      const check = evaluateQuotationPrice(
+        qi.product_name,
+        qi.unit_price,
+        bounds.min_unit_price,
+        bounds.max_unit_price
+      );
+
+      return {
+        ...qi,
+        min_unit_price: bounds.min_unit_price,
+        max_unit_price: bounds.max_unit_price,
+        price_validation_status: qi.price_validation_status || check.status
+      };
+    });
+
     return res.json({
       success: true,
       suppliers: supRes.data || [],
       purchase_orders: posRes.data || [],
-      purchase_items: piRes.data || [],
+      purchase_items: purchaseItems,
       quotations: qRes.data || [],
-      quotation_items: qiRes.data || [],
+      quotation_items: enrichedQuotationItems,
       deliveries: delRes.data || [],
       purchases: purRes.data || [],
       invoices: invRes.data || [],
@@ -1792,11 +1953,36 @@ exports.erpCreatePurchaseOrder = async (req, res) => {
     const normalizedItems = [];
     for (const item of rawItems) {
       const productName = String(item.product_name || '').trim();
-      const orderedQty = Math.max(1, parseInt(item.ordered_qty ?? 0, 10) || 0);
+      const orderedQty = parseInt(item.ordered_qty ?? 0, 10);
       const unitCost = Math.max(0, Number(item.unit_cost ?? 0) || 0);
+      const minPrice = Number(item.min_unit_price);
+      const maxPrice = Number(item.max_unit_price);
+
       if (!productName) {
-        return res.status(400).json({ success: false, message: 'Invalid PO line item.' });
+        return res.status(400).json({ success: false, message: 'Each PO line item must specify a product name.' });
       }
+      if (Number.isNaN(orderedQty) || orderedQty < 1) {
+        return res.status(400).json({ success: false, message: `Requested quantity for "${productName}" must be at least 1.` });
+      }
+      if (item.min_unit_price === undefined || item.min_unit_price === null || String(item.min_unit_price).trim() === '' || Number.isNaN(minPrice) || minPrice <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Minimum acceptable unit price (KES) for "${productName}" must be greater than KSh 0.`
+        });
+      }
+      if (item.max_unit_price === undefined || item.max_unit_price === null || String(item.max_unit_price).trim() === '' || Number.isNaN(maxPrice) || maxPrice <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Maximum acceptable unit price (KES) for "${productName}" must be greater than KSh 0.`
+        });
+      }
+      if (maxPrice < minPrice) {
+        return res.status(400).json({
+          success: false,
+          message: `Maximum acceptable unit price (KSh ${formatKshNumber(maxPrice)}) cannot be less than minimum acceptable unit price (KSh ${formatKshNumber(minPrice)}) for "${productName}".`
+        });
+      }
+
       const lineTotal = Number((orderedQty * unitCost).toFixed(2));
       totalAmount += lineTotal;
       summaryParts.push(`${orderedQty}x ${productName}`);
@@ -1809,7 +1995,9 @@ exports.erpCreatePurchaseOrder = async (req, res) => {
         received_qty: 0,
         outstanding_qty: orderedQty,
         unit_cost: Number(unitCost.toFixed(2)),
-        line_total: lineTotal
+        line_total: lineTotal,
+        min_unit_price: Number(minPrice.toFixed(2)),
+        max_unit_price: Number(maxPrice.toFixed(2))
       });
     }
 
@@ -1843,7 +2031,7 @@ exports.erpCreatePurchaseOrder = async (req, res) => {
 
     await createSupplierNotification(supplierId, {
       title: `New Purchase Order ${po.po_number} Assigned`,
-      message: `Inventory Manager assigned ${po.po_number} (${po.items_summary}). Status: Pending Supplier Quotation — please submit your unit price and quotation.`,
+      message: `Inventory Manager assigned ${po.po_number} (${po.items_summary}). Status: Pending Supplier Quotation — submit unit prices within each product's specified limits.`,
       notification_type: 'po_assigned',
       related_type: 'purchase_order',
       related_id: po.po_id
@@ -1877,10 +2065,12 @@ exports.erpReviewQuotation = async (req, res) => {
 
     let preloadedQItems = null;
     if (action === 'approve') {
-      const { data: qItems } = await supabase
-        .from('quotation_items')
-        .select('*')
-        .eq('quotation_id', quotationId);
+      const [{ data: qItems }, { data: poItems }] = await Promise.all([
+        supabase.from('quotation_items').select('*').eq('quotation_id', quotationId),
+        quote.po_id
+          ? supabase.from('purchase_items').select('*').eq('po_id', quote.po_id)
+          : Promise.resolve({ data: [] })
+      ]);
       preloadedQItems = qItems || [];
 
       if (Number(quote.total_amount || 0) <= 0) {
@@ -1894,6 +2084,23 @@ exports.erpReviewQuotation = async (req, res) => {
           success: false,
           message: 'Cannot accept or approve a quotation containing an item with KSh 0 unit price.'
         });
+      }
+
+      for (const qi of preloadedQItems) {
+        const matchedPoItem = findMatchingPurchaseItem(poItems || [], qi);
+        const hasOwn = qi.min_unit_price !== null && qi.max_unit_price !== null;
+        if (matchedPoItem || hasOwn) {
+          const bounds = hasOwn
+            ? { min_unit_price: Number(qi.min_unit_price), max_unit_price: Number(qi.max_unit_price) }
+            : resolvePurchaseItemBounds(matchedPoItem);
+          const check = evaluateQuotationPrice(qi.product_name, qi.unit_price, bounds.min_unit_price, bounds.max_unit_price);
+          if (!check.valid) {
+            return res.status(400).json({
+              success: false,
+              message: `Cannot approve quotation: ${check.message}`
+            });
+          }
+        }
       }
     }
 

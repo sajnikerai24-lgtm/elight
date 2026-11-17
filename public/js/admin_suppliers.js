@@ -312,18 +312,28 @@
         <div style="background:#fff; border:1px solid #cbd5e1; border-radius:12px; padding:20px;">
           <div class="table-responsive">
             <table>
-              <thead><tr><th>PO #</th><th>Supplier</th><th>Items</th><th>Unit Cost (KES)</th><th>Total (KES)</th><th>Expected</th><th>GRN / Payment</th><th>Status / Delivery</th></tr></thead>
+              <thead><tr><th>PO #</th><th>Supplier</th><th>Items &amp; Price Limits (KES)</th><th>Quoted Cost (KES)</th><th>Total (KES)</th><th>Expected</th><th>GRN / Payment</th><th>Status / Delivery</th></tr></thead>
               <tbody>
                 ${data.purchase_orders.length === 0 ? '<tr><td colspan="8" style="text-align:center;">No purchase orders issued yet.</td></tr>' : data.purchase_orders.map(p => {
                   const items = poItemsByPo[Number(p.po_id)] || [];
                   const firstCost = items.length ? Number(items[0].unit_cost || 0) : 0;
                   const unitCostDisplay = firstCost > 0 ? fmtMoney(firstCost) : '<span style="color:#64748b;font-style:italic;">Awaiting Quote</span>';
                   const totalDisplay = Number(p.total_amount || 0) > 0 ? `<strong>${fmtMoney(p.total_amount)}</strong>` : '<span style="color:#64748b;font-style:italic;">Pending Quote</span>';
+                  const itemsWithBoundsHtml = items.length > 0
+                    ? items.map(it => {
+                        const minP = Number(it.min_unit_price || 0);
+                        const maxP = Number(it.max_unit_price || 0);
+                        const rangeTag = (minP > 0 && maxP > 0)
+                          ? `<div style="font-size:0.74rem; color:#1e40af; font-weight:600;">Limit: ${fmtMoney(minP)} – ${fmtMoney(maxP)} / unit</div>`
+                          : '';
+                        return `<div style="margin-bottom:4px;"><strong>${Number(it.ordered_qty || 1)}x ${esc(it.product_name)}</strong>${rangeTag}</div>`;
+                      }).join('')
+                    : esc(p.items_summary);
                   return `
                     <tr>
                       <td><strong>${esc(p.po_number || `PO-${p.po_id}`)}</strong></td>
                       <td>${esc(p.supplier_name || supMap[Number(p.supplier_id)]?.supplier_name)}</td>
-                      <td>${esc(p.items_summary)}</td>
+                      <td>${itemsWithBoundsHtml}</td>
                       <td>${unitCostDisplay}</td>
                       <td>${totalDisplay}</td>
                       <td>${esc(p.expected_date || '—')}</td>
@@ -362,34 +372,65 @@
         <div style="background:#fff; border:1px solid #cbd5e1; border-radius:12px; padding:20px;">
           <div class="table-responsive">
             <table>
-              <thead><tr><th>Quote #</th><th>PO #</th><th>Supplier</th><th>Quoted Items &amp; Unit Price</th><th>Total (KES)</th><th>Expected Date</th><th>Doc</th><th>Status</th><th>Action</th></tr></thead>
+              <thead><tr><th>Quote #</th><th>PO #</th><th>Supplier</th><th>Quoted Products, Price Limits &amp; Validation</th><th>Total (KES)</th><th>Expected Date</th><th>Doc</th><th>Status</th><th>Action</th></tr></thead>
               <tbody>
                 ${data.quotations.length === 0 ? '<tr><td colspan="9" style="text-align:center;">No quotations submitted yet.</td></tr>' : data.quotations.map(q => {
                   const qItems = qItemsByQ[Number(q.quotation_id)] || [];
                   const itemsSummary = qItems.length
-                    ? qItems.map(i => `${esc(i.product_name)} (${i.available_qty} @ ${fmtMoney(i.unit_price)})`).join('<br>')
+                    ? `<table style="width:100%; border-collapse:collapse; font-size:0.78rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
+                        <thead>
+                          <tr style="background:#f1f5f9; color:#334155;">
+                            <th style="padding:4px 6px; text-align:left;">Product</th>
+                            <th style="padding:4px 6px; text-align:right;">Min (KES)</th>
+                            <th style="padding:4px 6px; text-align:right;">Max (KES)</th>
+                            <th style="padding:4px 6px; text-align:right;">Quoted (KES)</th>
+                            <th style="padding:4px 6px; text-align:center;">Price Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${qItems.map(i => {
+                            const vStatus = String(i.price_validation_status || 'within_range').toLowerCase();
+                            const statusBadge = vStatus === 'within_range'
+                              ? '<span class="badge-tag" style="background:#dcfce7; color:#166534; font-size:0.7rem; font-weight:700;">✓ Valid</span>'
+                              : (vStatus === 'below_min'
+                                ? '<span class="badge-tag" style="background:#fee2e2; color:#991b1b; font-size:0.7rem; font-weight:700;">⚠ Below Min</span>'
+                                : '<span class="badge-tag" style="background:#fee2e2; color:#991b1b; font-size:0.7rem; font-weight:700;">⚠ Above Max</span>');
+                            return `
+                              <tr style="border-top:1px solid #e2e8f0;">
+                                <td style="padding:4px 6px;"><strong>${esc(i.product_name)}</strong> <small>(x${Number(i.available_qty || i.requested_qty || 1)})</small></td>
+                                <td style="padding:4px 6px; text-align:right;">${fmtMoney(i.min_unit_price)}</td>
+                                <td style="padding:4px 6px; text-align:right;">${fmtMoney(i.max_unit_price)}</td>
+                                <td style="padding:4px 6px; text-align:right; font-weight:800; color:#0f172a;">${fmtMoney(i.unit_price)}</td>
+                                <td style="padding:4px 6px; text-align:center;">${statusBadge}</td>
+                              </tr>
+                            `;
+                          }).join('')}
+                        </tbody>
+                      </table>`
                     : esc(q.title);
                   const poRef = q.po_id ? (poMap[Number(q.po_id)]?.po_number || `PO-${q.po_id}`) : 'Standalone';
                   const quoteTotal = Number(q.total_amount || 0);
                   const hasZeroItem = qItems.some(i => Number(i.unit_price || 0) <= 0);
+                  const hasOutOfRange = qItems.some(i => String(i.price_validation_status || 'within_range') !== 'within_range');
                   const isZeroQuote = quoteTotal <= 0 || hasZeroItem;
+                  const blockApprove = isZeroQuote || hasOutOfRange;
                   return `
                     <tr>
                       <td><strong>${esc(q.quotation_number)}</strong></td>
                       <td><strong>${esc(poRef)}</strong></td>
                       <td>${esc(supMap[Number(q.supplier_id)]?.supplier_name || `Supplier #${q.supplier_id}`)}</td>
-                      <td style="font-size:0.84rem;">${itemsSummary}</td>
+                      <td style="font-size:0.82rem; min-width:390px;">${itemsSummary}</td>
                       <td><strong>${fmtMoney(q.total_amount)}</strong></td>
                       <td>${esc(q.expected_delivery_date || '—')}</td>
                       <td>${q.document_path ? `<button class="btn-sm" onclick="downloadErpDocProxy('quotation', ${q.quotation_id}, '${esc(q.document_name)}')">📎 View</button>` : '—'}</td>
                       <td>${badge(q.status)}</td>
                       <td style="white-space:nowrap;">
                         ${String(q.status).toLowerCase() === 'submitted' ? `
-                          ${isZeroQuote
-                            ? `<button class="btn-sm" disabled style="background:#e2e8f0;color:#94a3b8;font-weight:700;cursor:not-allowed;" title="Cannot approve a quotation with KSh 0 amount">✓ Approve</button>`
+                          ${blockApprove
+                            ? `<button class="btn-sm" disabled style="background:#e2e8f0;color:#94a3b8;font-weight:700;cursor:not-allowed;" title="${isZeroQuote ? 'Cannot approve a quotation with KSh 0 amount' : 'Cannot approve out-of-range quoted price'}">✓ Approve</button>`
                             : `<button class="btn-sm" style="background:#dcfce7;color:#166534;font-weight:700;" onclick="reviewSupplierQuotation(${q.quotation_id}, 'approve', ${quoteTotal}, ${hasZeroItem})">✓ Approve</button>`}
                           <button class="btn-sm" style="background:#fee2e2;color:#991b1b;font-weight:700;" onclick="reviewSupplierQuotation(${q.quotation_id}, 'reject', ${quoteTotal}, ${hasZeroItem})">✕ Reject</button>
-                          ${isZeroQuote ? `<div style="color:#dc2626;font-size:0.74rem;font-weight:700;margin-top:3px;">⚠ KSh 0 quote cannot be accepted</div>` : ''}
+                          ${isZeroQuote ? `<div style="color:#dc2626;font-size:0.74rem;font-weight:700;margin-top:3px;">⚠ KSh 0 quote cannot be accepted</div>` : (hasOutOfRange ? `<div style="color:#dc2626;font-size:0.74rem;font-weight:700;margin-top:3px;">⚠ Out-of-range price</div>` : '')}
                         ` : `<small style="color:#64748b;">${esc(q.reviewed_by || 'Reviewed')}</small>`}
                       </td>
                     </tr>
@@ -508,6 +549,64 @@
 
   window.downloadErpDocProxy = downloadErpSupplierDoc;
 
+  function suggestProductPriceLimits(prod) {
+    const buy = Number(prod?.buying_price || 0);
+    const sell = Number(prod?.selling_price || 0);
+    const base = buy > 0 ? buy : (sell > 0 ? Math.round(sell * 0.72) : 200);
+    const minP = Math.max(10, Math.round(base * 0.8));
+    const maxP = Math.max(minP + 20, Math.round(base * 1.15));
+    return { minP, maxP };
+  }
+
+  window.onPOItemProductChange = function (selectEl) {
+    const row = selectEl?.closest('.po-create-item-row');
+    if (!row) return;
+    const opt = selectEl.options[selectEl.selectedIndex];
+    const minInput = row.querySelector('.po-item-min');
+    const maxInput = row.querySelector('.po-item-max');
+    if (opt && minInput && maxInput) {
+      minInput.value = Number(opt.dataset.min || 100);
+      maxInput.value = Number(opt.dataset.max || 1500);
+    }
+  };
+
+  window.addPOItemRow = function () {
+    const container = document.getElementById('po-create-items-rows');
+    if (!container) return;
+    const prods = procurementCache.products || (typeof allInventory !== 'undefined' ? allInventory : []);
+    const optsHtml = prods.map(p => {
+      const { minP, maxP } = suggestProductPriceLimits(p);
+      return `<option value="${p.product_id}" data-name="${esc(p.product_name)}" data-min="${minP}" data-max="${maxP}">${esc(p.product_name)} (Stock: ${p.quantity_in_stock})</option>`;
+    }).join('');
+
+    const firstProd = prods[0] ? suggestProductPriceLimits(prods[0]) : { minP: 100, maxP: 1500 };
+    const row = document.createElement('div');
+    row.className = 'po-create-item-row';
+    row.style.cssText = 'display:grid; grid-template-columns:2.2fr 0.85fr 1fr 1fr 34px; gap:8px; align-items:end; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px;';
+    row.innerHTML = `
+      <div>
+        <label style="font-size:0.72rem; font-weight:700; color:#475569; display:block; margin-bottom:2px;">Product *</label>
+        <select class="po-item-product" required onchange="onPOItemProductChange(this)" style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.83rem;">
+          ${optsHtml}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:0.72rem; font-weight:700; color:#475569; display:block; margin-bottom:2px;">Qty *</label>
+        <input type="number" class="po-item-qty" min="1" value="25" required style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.83rem;">
+      </div>
+      <div>
+        <label style="font-size:0.72rem; font-weight:700; color:#475569; display:block; margin-bottom:2px;">Min Price (KES) *</label>
+        <input type="number" class="po-item-min" min="1" step="0.01" value="${firstProd.minP}" required style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.83rem;">
+      </div>
+      <div>
+        <label style="font-size:0.72rem; font-weight:700; color:#475569; display:block; margin-bottom:2px;">Max Price (KES) *</label>
+        <input type="number" class="po-item-max" min="1" step="0.01" value="${firstProd.maxP}" required style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.83rem;">
+      </div>
+      <button type="button" class="btn-sm" title="Remove item" style="background:#fee2e2; color:#b91c1c; padding:7px 8px;" onclick="if(document.querySelectorAll('.po-create-item-row').length > 1) this.closest('.po-create-item-row').remove();">&times;</button>
+    `;
+    container.appendChild(row);
+  };
+
   window.openCreatePOModal = function () {
     const supSel = document.getElementById('po_create_supplier');
     if (supSel) {
@@ -516,20 +615,52 @@
         .map(s => `<option value="${s.supplier_id}">${esc(s.supplier_name)} (${esc(s.supplier_code || '')})</option>`)
         .join('');
     }
-    const prodSel = document.getElementById('po_create_product');
-    if (prodSel) {
-      const prods = procurementCache.products || (typeof allInventory !== 'undefined' ? allInventory : []);
-      prodSel.innerHTML = prods.map(p => `<option value="${p.product_id}" data-name="${esc(p.product_name)}" data-price="${Number(p.price || 0)}">${esc(p.product_name)} (Stock: ${p.quantity_in_stock})</option>`).join('');
+    const rowsHost = document.getElementById('po-create-items-rows');
+    if (rowsHost) {
+      rowsHost.innerHTML = '';
+      addPOItemRow();
     }
+    const notesEl = document.getElementById('po_create_notes');
+    if (notesEl) notesEl.value = '';
     openModal('create-po-modal');
   };
 
   window.handleCreatePurchaseOrder = async function (e) {
     e.preventDefault();
     const supId = document.getElementById('po_create_supplier').value;
-    const prodSel = document.getElementById('po_create_product');
-    const selectedOpt = prodSel.options[prodSel.selectedIndex];
-    const qty = Number(document.getElementById('po_create_qty').value);
+    const rows = Array.from(document.querySelectorAll('#po-create-items-rows .po-create-item-row'));
+    const items = [];
+
+    for (const row of rows) {
+      const prodSel = row.querySelector('.po-item-product');
+      const selectedOpt = prodSel?.options[prodSel.selectedIndex];
+      const productName = selectedOpt?.dataset?.name || selectedOpt?.text || 'Electrical Item';
+      const qty = parseInt(row.querySelector('.po-item-qty')?.value || 0, 10);
+      const minPrice = Number(row.querySelector('.po-item-min')?.value || 0);
+      const maxPrice = Number(row.querySelector('.po-item-max')?.value || 0);
+
+      if (Number.isNaN(qty) || qty < 1) {
+        return showToast(`Requested quantity for "${productName}" must be at least 1.`, 'error');
+      }
+      if (Number.isNaN(minPrice) || minPrice <= 0) {
+        return showToast(`Minimum acceptable unit price for "${productName}" must be greater than KSh 0.`, 'error');
+      }
+      if (Number.isNaN(maxPrice) || maxPrice < minPrice) {
+        return showToast(`Maximum acceptable price (KSh ${maxPrice}) cannot be less than Minimum acceptable price (KSh ${minPrice}) for "${productName}".`, 'error');
+      }
+
+      items.push({
+        product_id: Number(prodSel.value) || null,
+        product_name: productName,
+        ordered_qty: qty,
+        min_unit_price: Number(minPrice.toFixed(2)),
+        max_unit_price: Number(maxPrice.toFixed(2))
+      });
+    }
+
+    if (items.length === 0) {
+      return showToast('Please add at least one product to the Purchase Order.', 'error');
+    }
 
     try {
       const res = await erpFetch('/api/erp/suppliers/purchase-orders', {
@@ -538,11 +669,7 @@
           supplier_id: Number(supId),
           expected_date: document.getElementById('po_create_expected_date').value || null,
           notes: (document.getElementById('po_create_notes')?.value || '').trim(),
-          items: [{
-            product_id: Number(prodSel.value) || null,
-            product_name: selectedOpt?.dataset?.name || selectedOpt?.text || 'Electrical Item',
-            ordered_qty: qty
-          }]
+          items
         })
       });
       const data = await res.json();

@@ -148,24 +148,27 @@
       <section class="portal-card" style="margin-bottom:24px;">
         <div class="section-label">1. Quoted Product Prices for Restock</div>
         <p class="card-description">
-          Enter your quoted wholesale unit price (KSh) for each requested electrical item (maximum <strong>KSh 1,500.00</strong> per unit). Line totals and overall tender quotation will calculate automatically.
+          Enter your proposed wholesale unit price (KSh) for each requested item strictly within the <strong>Minimum</strong> and <strong>Maximum Acceptable Unit Price</strong> limits set by the Inventory Manager. Line totals and overall tender quotation calculate automatically.
         </p>
 
         <div class="table-responsive">
           <table class="custom-table">
             <thead>
               <tr>
-                <th style="width:18%;">Category</th>
-                <th style="width:36%;">Product &amp; Specification</th>
-                <th style="width:16%; text-align:center;">Requested Quantity</th>
-                <th style="width:15%; text-align:right;">Your Tender Unit Price (Max KSh 1,500)</th>
-                <th style="width:15%; text-align:right;">Line Total (KSh)</th>
+                <th style="width:14%;">Category</th>
+                <th style="width:26%;">Product &amp; Specification</th>
+                <th style="width:10%; text-align:center;">Qty</th>
+                <th style="width:12%; text-align:right;">Min Unit Price</th>
+                <th style="width:12%; text-align:right;">Max Unit Price</th>
+                <th style="width:14%; text-align:right;">Your Quoted Price (KES)</th>
+                <th style="width:12%; text-align:right;">Line Total</th>
               </tr>
             </thead>
             <tbody id="tenderItemsTableBody">
-              <tr><td colspan="5" style="text-align:center; padding:18px;">Loading items...</td></tr>
+              <tr><td colspan="7" style="text-align:center; padding:18px;">Loading items...</td></tr>
             </tbody>
           </table>
+          <div id="tenderValidationSummary" style="display:none; margin-top:12px; padding:10px 14px; border-radius:8px; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; font-size:0.86rem; font-weight:700;"></div>
           <div class="total-banner">
             <span class="total-banner-label">TOTAL TENDER QUOTATION:</span>
             <span class="total-banner-val" id="totalTenderQuotationDisplay">KSh 0.00</span>
@@ -237,8 +240,66 @@
 
   <script src="js/supplier_common.js"></script>
   <script>
-    const MAX_QUOTATION_UNIT_PRICE = 1500;
+    const FALLBACK_MIN_UNIT_PRICE = 1;
+    const FALLBACK_MAX_UNIT_PRICE = 1500;
     let activeTenderItems = [];
+
+    function getItemLimits(it) {
+      const minLimit = (it && it.min_unit_price !== null && it.min_unit_price !== undefined)
+        ? Number(it.min_unit_price)
+        : FALLBACK_MIN_UNIT_PRICE;
+      const maxLimit = (it && it.max_unit_price !== null && it.max_unit_price !== undefined)
+        ? Number(it.max_unit_price)
+        : FALLBACK_MAX_UNIT_PRICE;
+      return { minLimit, maxLimit };
+    }
+
+    function validateTenderItemPrice(idx) {
+      const it = activeTenderItems[idx];
+      const input = document.getElementById(`tender_price_${idx}`);
+      const hint = document.getElementById(`tender_price_hint_${idx}`);
+      const { minLimit, maxLimit } = getItemLimits(it);
+      const rawVal = input ? input.value.trim() : '';
+      const val = Number(rawVal);
+
+      if (!rawVal || Number.isNaN(val) || val <= 0) {
+        if (input) input.style.borderColor = '#dc2626';
+        if (hint) {
+          hint.style.display = 'block';
+          hint.style.color = '#dc2626';
+          hint.textContent = `Enter price (${formatKES(minLimit)} – ${formatKES(maxLimit)})`;
+        }
+        return { valid: false, message: `Enter a valid unit price for "${it.product_name}" (${formatKES(minLimit)} – ${formatKES(maxLimit)}).` };
+      }
+
+      if (val < minLimit) {
+        if (input) input.style.borderColor = '#dc2626';
+        if (hint) {
+          hint.style.display = 'block';
+          hint.style.color = '#dc2626';
+          hint.textContent = `Below minimum! Min: ${formatKES(minLimit)}`;
+        }
+        return { valid: false, message: `Unit price for "${it.product_name}" (${formatKES(val)}) is below minimum ${formatKES(minLimit)}.` };
+      }
+
+      if (val > maxLimit) {
+        if (input) input.style.borderColor = '#dc2626';
+        if (hint) {
+          hint.style.display = 'block';
+          hint.style.color = '#dc2626';
+          hint.textContent = `Exceeds maximum! Max: ${formatKES(maxLimit)}`;
+        }
+        return { valid: false, message: `Unit price for "${it.product_name}" (${formatKES(val)}) exceeds maximum ${formatKES(maxLimit)}.` };
+      }
+
+      if (input) input.style.borderColor = '#087443';
+      if (hint) {
+        hint.style.display = 'block';
+        hint.style.color = '#087443';
+        hint.textContent = '✓ Within acceptable range';
+      }
+      return { valid: true, value: val };
+    }
 
     function handlePaymentMethodChange() {
       const method = document.getElementById('tender_pay_method').value;
@@ -304,7 +365,7 @@
 
         if (!targetPO) {
           document.getElementById('tenderPoSubtext').textContent = 'No restock purchase order found. Please return to the tenders page.';
-          document.getElementById('tenderItemsTableBody').innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No purchase order found. <a href="/supplier-tenders">Go back</a></td></tr>';
+          document.getElementById('tenderItemsTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No purchase order found. <a href="/supplier-tenders">Go back</a></td></tr>';
           return;
         }
 
@@ -318,6 +379,8 @@
           product_name: 'Electrical Item',
           category_name: 'Electricals',
           ordered_qty: 10,
+          min_unit_price: FALLBACK_MIN_UNIT_PRICE,
+          max_unit_price: FALLBACK_MAX_UNIT_PRICE,
           unit_cost: 0
         }];
 
@@ -325,26 +388,31 @@
         tbody.innerHTML = activeTenderItems.map((it, idx) => {
           const cat = it.category_name || it.category || 'General';
           const qty = it.ordered_qty || it.quantity || 1;
+          const { minLimit, maxLimit } = getItemLimits(it);
           const rawInitial = Number(it.unit_cost || 0);
-          const initialPrice = rawInitial > MAX_QUOTATION_UNIT_PRICE ? MAX_QUOTATION_UNIT_PRICE : rawInitial;
-          const lineTotal = qty * initialPrice;
+          const initialPrice = (rawInitial >= minLimit && rawInitial <= maxLimit) ? rawInitial : '';
+          const lineTotal = initialPrice ? (qty * initialPrice) : 0;
           return `
             <tr>
               <td><strong>${escapeHtml(cat)}</strong></td>
-              <td>${escapeHtml(it.product_name)}</td>
+              <td><strong>${escapeHtml(it.product_name)}</strong></td>
               <td style="text-align:center; font-weight:700;">${qty} units</td>
+              <td style="text-align:right; font-weight:700; color:#1e40af; background:#eff6ff;" title="Set by Inventory Manager (read-only)">
+                ${formatKES(minLimit)}
+              </td>
+              <td style="text-align:right; font-weight:700; color:#9a3412; background:#fff7ed;" title="Set by Inventory Manager (read-only)">
+                ${formatKES(maxLimit)}
+              </td>
               <td style="text-align:right;">
-                <input type="number" step="0.01" min="1" max="${MAX_QUOTATION_UNIT_PRICE}"
+                <input type="number" step="0.01" min="${minLimit}" max="${maxLimit}"
                   class="price-input"
                   id="tender_price_${idx}"
-                  value="${initialPrice > 0 ? initialPrice : ''}"
-                  placeholder="Max 1,500.00"
-                  title="Maximum unit price is KSh ${MAX_QUOTATION_UNIT_PRICE.toLocaleString()}"
+                  value="${initialPrice}"
+                  placeholder="${minLimit} – ${maxLimit}"
+                  title="Enter unit price between ${formatKES(minLimit)} and ${formatKES(maxLimit)}"
                   required
                   oninput="handleTenderPriceInput(${idx})">
-                <div id="tender_price_hint_${idx}" style="font-size:0.74rem; color:#dc2626; font-weight:700; margin-top:4px; display:none;">
-                  Max allowed: KSh 1,500.00
-                </div>
+                <div id="tender_price_hint_${idx}" style="font-size:0.74rem; color:#64748b; font-weight:700; margin-top:4px; display:none;"></div>
               </td>
               <td style="text-align:right; font-weight:800;" id="tender_line_total_${idx}">
                 ${formatKES(lineTotal)}
@@ -360,31 +428,37 @@
     }
 
     function handleTenderPriceInput(idx) {
-      const input = document.getElementById(`tender_price_${idx}`);
-      const hint = document.getElementById(`tender_price_hint_${idx}`);
-      if (input) {
-        const val = Number(input.value);
-        if (val > MAX_QUOTATION_UNIT_PRICE) {
-          input.value = MAX_QUOTATION_UNIT_PRICE;
-          input.style.borderColor = '#dc2626';
-          if (hint) hint.style.display = 'block';
-          showToast(`Maximum unit price allowed is KSh ${MAX_QUOTATION_UNIT_PRICE.toLocaleString()} per unit.`);
-        } else {
-          input.style.borderColor = '#cbd5e1';
-          if (hint) hint.style.display = 'none';
-        }
-      }
+      validateTenderItemPrice(idx);
       recalculateTenderTotals();
+      updateValidationSummaryBanner();
+    }
+
+    function updateValidationSummaryBanner() {
+      const box = document.getElementById('tenderValidationSummary');
+      if (!box) return [];
+      const errs = [];
+      activeTenderItems.forEach((it, idx) => {
+        const input = document.getElementById(`tender_price_${idx}`);
+        if (input && input.value.trim() !== '') {
+          const check = validateTenderItemPrice(idx);
+          if (!check.valid) errs.push(check.message);
+        }
+      });
+      if (errs.length > 0) {
+        box.style.display = 'block';
+        box.innerHTML = errs.map(e => `• ${escapeHtml(e)}`).join('<br>');
+      } else {
+        box.style.display = 'none';
+        box.textContent = '';
+      }
+      return errs;
     }
 
     function recalculateTenderTotals() {
       let grandTotal = 0;
       activeTenderItems.forEach((it, idx) => {
         const input = document.getElementById(`tender_price_${idx}`);
-        let unitPrice = input ? Number(input.value || 0) : 0;
-        if (unitPrice > MAX_QUOTATION_UNIT_PRICE) {
-          unitPrice = MAX_QUOTATION_UNIT_PRICE;
-        }
+        const unitPrice = input && Number(input.value) > 0 ? Number(input.value) : 0;
         const qty = it.ordered_qty || it.quantity || 1;
         const lineTotal = unitPrice * qty;
         grandTotal += lineTotal;
@@ -403,15 +477,15 @@
       }
 
       let grandTotal = 0;
-      let priceExceededItem = null;
+      const submitErrors = [];
       const quotedItems = activeTenderItems.map((it, idx) => {
-        const input = document.getElementById(`tender_price_${idx}`);
-        const unitPrice = Number(input?.value || 0);
-        if (unitPrice > MAX_QUOTATION_UNIT_PRICE) {
-          priceExceededItem = it.product_name || `Item #${idx + 1}`;
+        const check = validateTenderItemPrice(idx);
+        const unitPrice = check.valid ? check.value : Number(document.getElementById(`tender_price_${idx}`)?.value || 0);
+        if (!check.valid) {
+          submitErrors.push(check.message);
         }
         const qty = it.ordered_qty || it.quantity || 1;
-        grandTotal += unitPrice * qty;
+        grandTotal += (unitPrice > 0 ? unitPrice : 0) * qty;
         return {
           product_id: it.product_id,
           product_name: it.product_name,
@@ -425,13 +499,19 @@
         };
       });
 
-      if (priceExceededItem) {
-        showToast(`Unit price for "${priceExceededItem}" cannot exceed KSh ${MAX_QUOTATION_UNIT_PRICE.toLocaleString()} per unit.`);
+      const summaryBox = document.getElementById('tenderValidationSummary');
+      if (submitErrors.length > 0) {
+        if (summaryBox) {
+          summaryBox.style.display = 'block';
+          summaryBox.innerHTML = submitErrors.map(e => `• ${escapeHtml(e)}`).join('<br>');
+        }
+        showToast(submitErrors[0]);
         return;
       }
+      if (summaryBox) summaryBox.style.display = 'none';
 
       if (grandTotal <= 0) {
-        showToast('Please enter your quoted unit prices for the requested products.');
+        showToast('Please enter valid unit prices within acceptable limits for all products.');
         return;
       }
 
