@@ -2,27 +2,17 @@ const fs = require('fs');
 const path = require('path');
 const supabase = require('../config/supabase');
 const interModuleSync = require('../utils/interModuleSync');
+const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 
 const FEEDBACK_DATA_PATH = path.join(__dirname, '../config/feedback_data.json');
 
 function readLocalFeedback() {
-  try {
-    if (fs.existsSync(FEEDBACK_DATA_PATH)) {
-      const parsed = JSON.parse(fs.readFileSync(FEEDBACK_DATA_PATH, 'utf8'));
-      return Array.isArray(parsed) ? parsed : [];
-    }
-  } catch (err) {
-    console.error('Error reading feedback_data.json:', err.message);
-  }
-  return [];
+  const parsed = readJsonFile(FEEDBACK_DATA_PATH, []);
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 function writeLocalFeedback(list) {
-  try {
-    fs.writeFileSync(FEEDBACK_DATA_PATH, JSON.stringify(list, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error writing feedback_data.json:', err.message);
-  }
+  writeJsonFile(FEEDBACK_DATA_PATH, list);
 }
 
 // Static structured content for Help Module & About Us Module
@@ -424,9 +414,7 @@ const engagementController = {
       const localBookings = await interModuleSync.getBookings();
       localBookings.unshift(savedBooking);
       const BOOKINGS_PATH = path.join(__dirname, '../config/bookings_data.json');
-      try {
-        fs.writeFileSync(BOOKINGS_PATH, JSON.stringify(localBookings, null, 2), 'utf8');
-      } catch (e) {}
+      writeJsonFile(BOOKINGS_PATH, localBookings);
 
       // ========================================================
       // INTER-MODULE CONNECTION 1: Customer Service Booking -> Service Requests
@@ -486,9 +474,7 @@ const engagementController = {
         if (status) b.status = status;
         if (confirmation_note !== undefined) b.confirmation_note = confirmation_note;
         const BOOKINGS_PATH = path.join(__dirname, '../config/bookings_data.json');
-        try {
-          fs.writeFileSync(BOOKINGS_PATH, JSON.stringify(localBookings, null, 2), 'utf8');
-        } catch (e) {}
+        writeJsonFile(BOOKINGS_PATH, localBookings);
         if (!updatedBooking) updatedBooking = b;
       }
 

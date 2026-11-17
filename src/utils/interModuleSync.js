@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const supabase = require('../config/supabase');
+const { readJsonFile, writeJsonFile } = require('./jsonStore');
 
 // File paths for resilient local storage and offline ERP operations
 const CONFIG_DIR = path.join(__dirname, '../config');
@@ -253,42 +254,24 @@ const DEFAULT_MOVEMENTS = [
   }
 ];
 
-// Helper read & write functions
+// Helper read & write functions (Vercel /tmp fallback aware)
 function readJson(filePath, defaultData) {
-  try {
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, 'utf8');
-      const parsed = JSON.parse(content);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      if (parsed && typeof parsed === 'object') return parsed;
-    }
-  } catch (err) {
-    console.error(`Error reading ${path.basename(filePath)}:`, err.message);
-  }
-  // If file doesn't exist or is empty, write default data and return it
-  try {
-    fs.writeFileSync(filePath, JSON.stringify(defaultData, null, 2), 'utf8');
-  } catch (e) {}
+  const parsed = readJsonFile(filePath, null);
+  if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+  writeJsonFile(filePath, defaultData);
   return defaultData;
 }
 
 function writeJson(filePath, data) {
-  try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
-    return true;
-  } catch (err) {
-    console.error(`Error writing ${path.basename(filePath)}:`, err.message);
-    return false;
-  }
+  return writeJsonFile(filePath, data);
 }
 
 // Append an activity to audit log
 function appendSystemAudit(department, actor, action, details) {
   try {
-    let cfg = {};
-    if (fs.existsSync(SYSTEM_SETTINGS_PATH)) {
-      cfg = JSON.parse(fs.readFileSync(SYSTEM_SETTINGS_PATH, 'utf8'));
-    }
+    let cfg = readJsonFile(SYSTEM_SETTINGS_PATH, {});
+    if (!cfg || typeof cfg !== 'object') cfg = {};
     if (!Array.isArray(cfg.audit_log)) cfg.audit_log = [];
     cfg.audit_log.unshift({
       timestamp: new Date().toISOString(),
@@ -298,7 +281,7 @@ function appendSystemAudit(department, actor, action, details) {
       details: details || ''
     });
     if (cfg.audit_log.length > 500) cfg.audit_log = cfg.audit_log.slice(0, 500);
-    fs.writeFileSync(SYSTEM_SETTINGS_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+    writeJsonFile(SYSTEM_SETTINGS_PATH, cfg);
   } catch (e) {}
 }
 

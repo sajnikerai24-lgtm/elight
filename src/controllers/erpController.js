@@ -3,6 +3,7 @@ const path = require('path');
 const supabase = require('../config/supabase');
 const interModuleSync = require('../utils/interModuleSync');
 const { buildOfficialReceiptPdf } = require('../utils/pdfReceiptGenerator');
+const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 
 const SETTINGS_PATH = path.join(__dirname, '../config/system_settings.json');
 const CASHIER_ORDERS_PATH = path.join(__dirname, '../config/cashier_orders.json');
@@ -12,23 +13,12 @@ const BOOKINGS_PATH = path.join(__dirname, '../config/bookings_data.json');
 const DISPATCHES_PATH = path.join(__dirname, '../config/dispatches.json');
 
 function readDispatches() {
-  try {
-    if (fs.existsSync(DISPATCHES_PATH)) {
-      const parsed = JSON.parse(fs.readFileSync(DISPATCHES_PATH, 'utf8'));
-      return Array.isArray(parsed) ? parsed : [];
-    }
-  } catch (err) {
-    console.error('Error reading dispatches.json:', err.message);
-  }
-  return [];
+  const parsed = readJsonFile(DISPATCHES_PATH, []);
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 function writeDispatches(dispatches) {
-  try {
-    fs.writeFileSync(DISPATCHES_PATH, JSON.stringify(dispatches, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error writing dispatches.json:', err.message);
-  }
+  writeJsonFile(DISPATCHES_PATH, dispatches);
 }
 
 async function findSupabaseAuthUserByEmail(email) {
@@ -105,23 +95,12 @@ async function ensureSupabaseAuthUser(userRecord, rawPassword) {
 }
 
 function readFinanceRecords() {
-  try {
-    if (fs.existsSync(FINANCE_RECORDS_PATH)) {
-      const parsed = JSON.parse(fs.readFileSync(FINANCE_RECORDS_PATH, 'utf8'));
-      return Array.isArray(parsed) ? parsed : [];
-    }
-  } catch (err) {
-    console.error('Error reading finance_records.json:', err.message);
-  }
-  return [];
+  const parsed = readJsonFile(FINANCE_RECORDS_PATH, []);
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 function writeFinanceRecords(records) {
-  try {
-    fs.writeFileSync(FINANCE_RECORDS_PATH, JSON.stringify(records, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error writing finance_records.json:', err.message);
-  }
+  writeJsonFile(FINANCE_RECORDS_PATH, records);
 }
 
 function normalizeKenyanPhone(rawPhone) {
@@ -142,53 +121,26 @@ function generateMpesaReceiptCode() {
 }
 
 function readCashierOrders() {
-  try {
-    if (fs.existsSync(CASHIER_ORDERS_PATH)) {
-      const parsed = JSON.parse(fs.readFileSync(CASHIER_ORDERS_PATH, 'utf8'));
-      return Array.isArray(parsed) ? parsed : [];
-    }
-  } catch (err) {
-    console.error('Error reading cashier_orders.json:', err.message);
-  }
-  return [];
+  const parsed = readJsonFile(CASHIER_ORDERS_PATH, []);
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 function writeCashierOrders(orders) {
-  try {
-    fs.writeFileSync(CASHIER_ORDERS_PATH, JSON.stringify(orders, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error writing cashier_orders.json:', err.message);
-  }
+  writeJsonFile(CASHIER_ORDERS_PATH, orders);
 }
 
 function readServiceRequests() {
-  try {
-    if (fs.existsSync(SERVICE_REQUESTS_PATH)) {
-      const parsed = JSON.parse(fs.readFileSync(SERVICE_REQUESTS_PATH, 'utf8'));
-      return Array.isArray(parsed) ? parsed : [];
-    }
-  } catch (err) {
-    console.error('Error reading service_requests.json:', err.message);
-  }
-  return [];
+  const parsed = readJsonFile(SERVICE_REQUESTS_PATH, []);
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 function writeServiceRequests(requests) {
-  try {
-    fs.writeFileSync(SERVICE_REQUESTS_PATH, JSON.stringify(requests, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error writing service_requests.json:', err.message);
-  }
+  writeJsonFile(SERVICE_REQUESTS_PATH, requests);
 }
 
 function readSystemConfig() {
-  try {
-    if (fs.existsSync(SETTINGS_PATH)) {
-      return JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8'));
-    }
-  } catch (err) {
-    console.error('Error reading system_settings.json:', err.message);
-  }
+  const parsed = readJsonFile(SETTINGS_PATH, null);
+  if (parsed && typeof parsed === 'object') return parsed;
   return {
     settings: {
       shop_name: 'Elight Electrical Shop',
@@ -216,11 +168,7 @@ function readSystemConfig() {
 }
 
 function writeSystemConfig(cfg) {
-  try {
-    fs.writeFileSync(SETTINGS_PATH, JSON.stringify(cfg, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error writing system_settings.json:', err.message);
-  }
+  writeJsonFile(SETTINGS_PATH, cfg);
 }
 
 function appendAuditLog(action, details, actor = 'System Administrator', department = 'Admin & Security') {
@@ -3186,8 +3134,7 @@ const erpController = {
           if (b) {
             b.status = 'completed';
             b.confirmation_note = `Payment confirmed by Cashier ${cleanCashier} (Ref: ${refCode}). Handed over to customer.`;
-            const BOOKINGS_PATH = path.join(__dirname, '../config/bookings_data.json');
-            fs.writeFileSync(BOOKINGS_PATH, JSON.stringify(bookings, null, 2), 'utf8');
+            writeJsonFile(BOOKINGS_PATH, bookings);
           }
         } catch (e) {}
 

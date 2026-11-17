@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const supabase = require('../config/supabase');
 const interModuleSync = require('../utils/interModuleSync');
 const { buildOfficialReceiptPdf } = require('../utils/pdfReceiptGenerator');
+const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 
 const BUCKET_NAME = 'supplier-documents';
 const MAX_DOC_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -86,13 +87,10 @@ async function createSupplierNotification(supplierId, payload) {
 
 function appendFinanceRecordLocal(entry) {
   try {
-    let records = [];
-    if (fs.existsSync(FINANCE_RECORDS_PATH)) {
-      records = JSON.parse(fs.readFileSync(FINANCE_RECORDS_PATH, 'utf8'));
-      if (!Array.isArray(records)) records = [];
-    }
+    let records = readJsonFile(FINANCE_RECORDS_PATH, []);
+    if (!Array.isArray(records)) records = [];
     records.unshift(entry);
-    fs.writeFileSync(FINANCE_RECORDS_PATH, JSON.stringify(records, null, 2), 'utf8');
+    writeJsonFile(FINANCE_RECORDS_PATH, records);
   } catch (err) {
     console.warn('finance_records.json sync warning:', err.message);
   }
@@ -1206,13 +1204,11 @@ exports.confirmSupplierPaymentReceived = async (req, res) => {
 
     // Also update local finance_records if matching
     try {
-      if (fs.existsSync(FINANCE_RECORDS_PATH)) {
-        const finRecs = JSON.parse(fs.readFileSync(FINANCE_RECORDS_PATH, 'utf8'));
-        const match = finRecs.find(f => f.reference_no === payment.transaction_ref || f.reference_no === `PAY-${paymentId}`);
-        if (match) {
-          match.description = `${match.description || ''} ${noteAdd}`.trim();
-          fs.writeFileSync(FINANCE_RECORDS_PATH, JSON.stringify(finRecs, null, 2), 'utf8');
-        }
+      const finRecs = readJsonFile(FINANCE_RECORDS_PATH, []);
+      const match = finRecs.find(f => f.reference_no === payment.transaction_ref || f.reference_no === `PAY-${paymentId}`);
+      if (match) {
+        match.description = `${match.description || ''} ${noteAdd}`.trim();
+        writeJsonFile(FINANCE_RECORDS_PATH, finRecs);
       }
     } catch (e) {}
 

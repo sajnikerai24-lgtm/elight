@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const supabase = require('../config/supabase');
 const interModuleSync = require('../utils/interModuleSync');
+const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 
 const CASHIER_ORDERS_PATH = path.join(__dirname, '../config/cashier_orders.json');
 const FINANCE_RECORDS_PATH = path.join(__dirname, '../config/finance_records.json');
@@ -545,9 +546,7 @@ const reportsController = {
 
       // 1. Save full itemized order into Cashier queue
       try {
-        const existingOrders = fs.existsSync(CASHIER_ORDERS_PATH)
-          ? JSON.parse(fs.readFileSync(CASHIER_ORDERS_PATH, 'utf8'))
-          : [];
+        const existingOrders = readJsonFile(CASHIER_ORDERS_PATH, []);
         const normalizedItems = Array.isArray(items)
           ? items.map(it => ({
               product_id: it.product_id ? Number(it.product_id) : null,
@@ -598,7 +597,7 @@ const reportsController = {
           created_at: nowIso,
           paid_at: isPaid ? nowIso : null
         });
-        fs.writeFileSync(CASHIER_ORDERS_PATH, JSON.stringify(existingOrders, null, 2), 'utf8');
+        writeJsonFile(CASHIER_ORDERS_PATH, existingOrders);
       } catch (qErr) {
         console.warn('Cashier queue sync warning:', qErr.message);
       }
@@ -606,9 +605,7 @@ const reportsController = {
       // 2. Record sale in finance_records (both local and Supabase)
       const finDesc = `Online Order ${refNo} by ${customer_name || 'Customer'} (${Array.isArray(items) ? items.length : 1} item(s))${isPaid ? ' [M-Pesa Direct]' : ''}`;
       try {
-        const localFin = fs.existsSync(FINANCE_RECORDS_PATH)
-          ? JSON.parse(fs.readFileSync(FINANCE_RECORDS_PATH, 'utf8'))
-          : [];
+        const localFin = readJsonFile(FINANCE_RECORDS_PATH, []);
         localFin.unshift({
           record_id: Date.now(),
           type: 'sale',
@@ -620,7 +617,7 @@ const reportsController = {
           status: isPaid ? 'confirmed' : 'pending',
           created_at: nowIso
         });
-        fs.writeFileSync(FINANCE_RECORDS_PATH, JSON.stringify(localFin, null, 2), 'utf8');
+        writeJsonFile(FINANCE_RECORDS_PATH, localFin);
       } catch (fErr) {}
 
       try {

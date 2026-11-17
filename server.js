@@ -1,4 +1,5 @@
 require('dotenv').config();
+const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const inventoryRoutes = require('./src/routes/inventoryRoutes');
@@ -8,13 +9,16 @@ const supplierRoutes = require('./src/routes/supplierRoutes');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
+const publicDir = fs.existsSync(path.join(__dirname, 'public'))
+  ? path.join(__dirname, 'public')
+  : path.join(__dirname, 'Public');
 
 // Middleware (10mb JSON limit supports base64 supplier document uploads)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static frontend assets from public directory
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(publicDir));
 
 // API Routes
 app.use('/api', inventoryRoutes);
@@ -32,82 +36,82 @@ app.use('/api', (req, res) => {
 
 // Root route - serve index.html (Home Landing Page)
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(publicDir, 'index.html'));
 });
 
 // Products route - serve dedicated catalog page
 app.get('/products', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'products.html'));
+  res.sendFile(path.join(publicDir, 'products.html'));
 });
 
 // Cart route - serve dedicated shopping cart & checkout page
 app.get('/cart', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'cart.html'));
+  res.sendFile(path.join(publicDir, 'cart.html'));
 });
 
 // Login route - serve user authentication page
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+  res.sendFile(path.join(publicDir, 'login.html'));
 });
 
 // Customer Portal route - dedicated customer-only interface
 app.get('/customer', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'customer.html'));
+  res.sendFile(path.join(publicDir, 'customer.html'));
 });
 
 // Booking Module route
 app.get('/booking', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'booking.html'));
+  res.sendFile(path.join(publicDir, 'booking.html'));
 });
 
 // Help Module route
 app.get('/help', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'help.html'));
+  res.sendFile(path.join(publicDir, 'help.html'));
 });
 
 // About Us Module route
 app.get('/about', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'about.html'));
+  res.sendFile(path.join(publicDir, 'about.html'));
 });
 
 // Feedback Module route
 app.get('/feedback', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'feedback.html'));
+  res.sendFile(path.join(publicDir, 'feedback.html'));
 });
 
 // Contact Us Module route
 app.get('/contact', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'contact.html'));
+  res.sendFile(path.join(publicDir, 'contact.html'));
 });
 
 // Admin route
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  res.sendFile(path.join(publicDir, 'admin.html'));
 });
 
 // Dedicated Supplier Portal routes (Separate pages for each stage)
 app.get('/supplier-login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'supplier-login.html'));
+  res.sendFile(path.join(publicDir, 'supplier-login.html'));
 });
 
 app.get(['/supplier-portal', '/supplier-dashboard'], (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'supplier-portal.html'));
+  res.sendFile(path.join(publicDir, 'supplier-portal.html'));
 });
 
 app.get('/supplier-tenders', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'supplier-tenders.html'));
+  res.sendFile(path.join(publicDir, 'supplier-tenders.html'));
 });
 
 app.get('/supplier-quote', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'supplier-quote.html'));
+  res.sendFile(path.join(publicDir, 'supplier-quote.html'));
 });
 
 app.get(['/supplier-orders', '/supplier-deliveries'], (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'supplier-orders.html'));
+  res.sendFile(path.join(publicDir, 'supplier-orders.html'));
 });
 
 app.get('/supplier-payments', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'supplier-payments.html'));
+  res.sendFile(path.join(publicDir, 'supplier-payments.html'));
 });
 
 // Centralized error handling middleware
@@ -120,18 +124,22 @@ app.use((err, req, res, next) => {
   });
 });
 
-const server = app.listen(port, () => {
-  console.log(`⚡ Elight Electrical Shop running at: http://localhost:${port}`);
-  console.log(`📦 Admin Dashboard available at:     http://localhost:${port}/admin`);
-});
+module.exports = app;
 
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`\n❌ Error: Port ${port} is already in use by another running instance of the server.`);
-    console.error(`👉 To free port ${port} on Windows PowerShell, run:`);
-    console.error(`   Get-NetTCPConnection -LocalPort ${port} | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }\n`);
-  } else {
-    console.error('Server error:', err.message);
-  }
-  process.exit(1);
-});
+if (require.main === module && !process.env.VERCEL) {
+  const server = app.listen(port, () => {
+    console.log(`⚡ Elight Electrical Shop running at: http://localhost:${port}`);
+    console.log(`📦 Admin Dashboard available at:     http://localhost:${port}/admin`);
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`\n❌ Error: Port ${port} is already in use by another running instance of the server.`);
+      console.error(`👉 To free port ${port} on Windows PowerShell, run:`);
+      console.error(`   Get-NetTCPConnection -LocalPort ${port} | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }\n`);
+    } else {
+      console.error('Server error:', err.message);
+    }
+    process.exit(1);
+  });
+}
