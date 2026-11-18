@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const supabase = require('../config/supabase');
 const { readJsonFile, writeJsonFile } = require('./jsonStore');
+const { validatePaymentReference } = require('./paymentValidation');
 
 // File paths for resilient local storage and offline ERP operations
 const CONFIG_DIR = path.join(__dirname, '../config');
@@ -1379,10 +1380,11 @@ const interModuleSync = {
       throw new Error('A valid positive service fee amount is required.');
     }
     const cleanMethod = String(payment_method || 'M-Pesa').trim();
-    const cleanRef = String(transaction_ref || '').trim();
-    if (!cleanRef) {
-      throw new Error('A payment reference / M-Pesa code or cash voucher number is required.');
+    const refCheck = validatePaymentReference(cleanMethod, transaction_ref, { required: true, label: 'Transaction reference' });
+    if (!refCheck.valid) {
+      throw new Error(refCheck.message);
     }
+    const cleanRef = refCheck.value;
 
     const actorName = String(actor || 'Finance Manager').trim();
     const receiptNo = `RCP-SR-${srId}-${String(Date.now()).slice(-4)}`;

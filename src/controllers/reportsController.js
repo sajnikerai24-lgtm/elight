@@ -3,6 +3,7 @@ const path = require('path');
 const supabase = require('../config/supabase');
 const interModuleSync = require('../utils/interModuleSync');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
+const { validatePaymentReference } = require('../utils/paymentValidation');
 
 const CASHIER_ORDERS_PATH = path.join(__dirname, '../config/cashier_orders.json');
 const FINANCE_RECORDS_PATH = path.join(__dirname, '../config/finance_records.json');
@@ -540,7 +541,11 @@ const reportsController = {
       const cleanAmount = Number(total_amount || 0);
       const refNo = order_no || ('EL-' + Math.floor(100000 + Math.random() * 900000));
       const cleanMethod = payment_method || 'M-Pesa';
-      const cleanReceipt = mpesa_receipt ? String(mpesa_receipt).trim().toUpperCase() : '';
+      const refCheck = validatePaymentReference(cleanMethod, mpesa_receipt, { required: false, label: 'M-Pesa transaction code' });
+      if (!refCheck.valid) {
+        return res.status(400).json({ success: false, message: refCheck.message });
+      }
+      const cleanReceipt = refCheck.value;
       const isPaid = Boolean(cleanReceipt);
       const isPickup = /pickup|collection/i.test(String(delivery_address || ''));
 

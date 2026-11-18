@@ -737,7 +737,7 @@
                 </div>
                 <div class="form-group" id="pos_standard_ref_group">
                   <label id="pos_ref_label">M-Pesa Transaction / Reference Code</label>
-                  <input type="text" id="pos_payment_ref" placeholder="e.g. SLK884290Q">
+                  <input type="text" id="pos_payment_ref" maxlength="10" placeholder="e.g. SLK884290Q" style="text-transform:uppercase;">
                 </div>
                 <div class="form-group" id="pos_cash_tendered_group" style="display:none;">
                   <label>Cash Tendered by Customer (KES)</label>
@@ -791,8 +791,8 @@
                   </div>
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
-                  <label>M-Pesa Transaction / Reference Code *</label>
-                  <input type="text" id="pos_split_payment_ref" placeholder="e.g. SLK884290Q">
+                  <label>M-Pesa Transaction / Reference Code * (Max 10 chars)</label>
+                  <input type="text" id="pos_split_payment_ref" maxlength="10" placeholder="e.g. SLK884290Q" style="text-transform:uppercase;" oninput="this.value=this.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase().slice(0,10)">
                 </div>
               </div>
             </div>
@@ -2007,8 +2007,8 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Bank Account Number</label>
-          <input type="text" id="bank_account_no_input" value="0140283940123">
+          <label>Bank Account Number (Max 12 Digits)</label>
+          <input type="text" id="bank_account_no_input" maxlength="12" inputmode="numeric" pattern="[0-9]{1,12}" value="014028394012" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,12)">
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
           <button type="button" class="btn-sm" onclick="closeModal('adjust-balances-modal')">Cancel</button>
@@ -2059,7 +2059,7 @@
           </div>
           <div class="form-group">
             <label>Payment Method</label>
-            <select id="fin_payment">
+            <select id="fin_payment" onchange="syncFinanceEntryRefRules()">
               <option value="M-Pesa">M-Pesa</option>
               <option value="Cash">Cash</option>
               <option value="Bank Transfer">Bank Transfer</option>
@@ -2067,8 +2067,8 @@
           </div>
         </div>
         <div class="form-group">
-          <label>M-Pesa / Reference Code</label>
-          <input type="text" id="fin_ref" placeholder="e.g. SLK881290Q">
+          <label id="fin_ref_label">M-Pesa Reference Code (Max 10 chars)</label>
+          <input type="text" id="fin_ref" maxlength="10" placeholder="e.g. SLK881290Q" style="text-transform:uppercase;">
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
           <button type="button" class="btn-sm" onclick="closeModal('finance-modal')">Cancel</button>
@@ -2240,7 +2240,7 @@
         <div id="confirm_standard_fields">
           <div class="form-group">
             <label id="confirm_ref_label">Verified M-Pesa / Payment Reference *</label>
-            <input type="text" id="confirm_payment_ref" placeholder="e.g. SLK991042P">
+            <input type="text" id="confirm_payment_ref" maxlength="10" placeholder="e.g. SLK991042P" style="text-transform:uppercase;">
           </div>
           <div class="form-group" id="confirm_cash_group" style="display:none;">
             <label>Cash Received (KES)</label>
@@ -2271,8 +2271,8 @@
             <div id="confirm_split_cash_change" style="margin-top:4px; font-size:0.8rem; font-weight:700; color:#087443; display:none;"></div>
           </div>
           <div class="form-group" style="margin-bottom:0;">
-            <label>M-Pesa Transaction Reference *</label>
-            <input type="text" id="confirm_split_payment_ref" placeholder="e.g. SLK991042P">
+            <label>M-Pesa Transaction Reference * (Max 10 chars)</label>
+            <input type="text" id="confirm_split_payment_ref" maxlength="10" placeholder="e.g. SLK991042P" style="text-transform:uppercase;" oninput="this.value=this.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase().slice(0,10)">
           </div>
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
@@ -2583,8 +2583,8 @@
               <input type="text" id="pay_sup_dest_payee" placeholder="Supplier account name" style="background:#fff;">
             </div>
             <div class="form-group" style="margin-bottom:0;">
-              <label style="font-size:0.76rem;">Account / Till / Paybill / Phone #</label>
-              <input type="text" id="pay_sup_dest_account" placeholder="e.g. 0700... / Till / Account #" style="background:#fff; font-weight:700;">
+              <label id="pay_sup_dest_account_label" style="font-size:0.76rem;">Account / Till / Paybill / Phone #</label>
+              <input type="text" id="pay_sup_dest_account" placeholder="e.g. 0700... / Till / Account #" style="background:#fff; font-weight:700;" oninput="syncPaySupplierDestAccountInput()">
             </div>
           </div>
           <div class="form-group" style="margin-bottom:0;">
@@ -2606,7 +2606,7 @@
         <div class="form-row">
           <div class="form-group">
             <label>Payment Method *</label>
-            <select id="pay_sup_method">
+            <select id="pay_sup_method" onchange="syncPaySupplierRefRules()">
               <option value="M-Pesa Paybill">M-Pesa Paybill</option>
               <option value="M-Pesa Buy Goods Till">M-Pesa Buy Goods Till</option>
               <option value="M-Pesa Send Money">M-Pesa Send Money</option>
@@ -2616,8 +2616,8 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Transaction Ref # *</label>
-            <input type="text" id="pay_sup_ref" required placeholder="e.g. EQT-2026-9910">
+            <label id="pay_sup_ref_label">Transaction Ref # *</label>
+            <input type="text" id="pay_sup_ref" required maxlength="10" placeholder="e.g. SLK884290Q" style="text-transform:uppercase;">
           </div>
         </div>
         <div class="form-group">
@@ -2675,7 +2675,7 @@
             </div>
             <div class="form-group" style="margin-bottom:8px;">
               <label style="font-size:0.82rem;">Payment Channel *</label>
-              <select id="fin_balance_method">
+              <select id="fin_balance_method" onchange="syncFinanceBalanceRefRules()">
                 <option value="M-Pesa">M-Pesa (Till 5894210)</option>
                 <option value="Cash">Cash in Hand</option>
                 <option value="Bank Transfer">Bank Transfer (Equity Meru)</option>
@@ -2683,8 +2683,8 @@
             </div>
           </div>
           <div class="form-group" style="margin-bottom:0;">
-            <label style="font-size:0.82rem;">Transaction / Reference Code *</label>
-            <input type="text" id="fin_balance_ref" placeholder="e.g. SLK892019Q">
+            <label id="fin_balance_ref_label" style="font-size:0.82rem;">M-Pesa Reference Code * (Max 10 chars)</label>
+            <input type="text" id="fin_balance_ref" maxlength="10" placeholder="e.g. SLK892019Q" style="text-transform:uppercase;">
           </div>
         </div>
 
@@ -2908,7 +2908,7 @@
           </div>
           <div class="form-group">
             <label>Payment Method *</label>
-            <select id="fin_svc_pay_method" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            <select id="fin_svc_pay_method" onchange="syncServicePayRefRules()" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
               <option value="M-Pesa">M-Pesa</option>
               <option value="Cash">Cash</option>
               <option value="Bank Transfer">Bank Transfer</option>
@@ -2916,8 +2916,8 @@
           </div>
         </div>
         <div class="form-group" style="margin-bottom:14px;">
-          <label>Transaction / M-Pesa / Receipt Reference # *</label>
-          <input type="text" id="fin_svc_pay_ref" required placeholder="e.g. UJK89XY12P or CASH-SRV-101" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+          <label id="fin_svc_pay_ref_label">Transaction / M-Pesa Reference # *</label>
+          <input type="text" id="fin_svc_pay_ref" required maxlength="10" placeholder="e.g. UJK89XY12P" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; text-transform:uppercase;">
         </div>
         <div style="display:flex; justify-content:flex-end; gap:8px;">
           <button type="button" class="btn-sm" onclick="closeModal('finance-service-pay-modal')">Cancel</button>

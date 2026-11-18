@@ -198,7 +198,7 @@
           </div>
           <div class="form-group">
             <label id="lblPayAccount">Payment Account / Till / Phone Number</label>
-            <input type="text" id="tender_pay_account" class="form-control" placeholder="e.g. 0700203672" required>
+            <input type="text" id="tender_pay_account" class="form-control" placeholder="e.g. 0700203672" oninput="handlePayAccountInput()" required>
           </div>
         </div>
 
@@ -302,6 +302,15 @@
       return { valid: true, value: val };
     }
 
+    function handlePayAccountInput() {
+      const method = document.getElementById('tender_pay_method')?.value || '';
+      const input = document.getElementById('tender_pay_account');
+      if (!input) return;
+      if (/bank|eft|wire/i.test(method)) {
+        input.value = input.value.replace(/[^0-9]/g, '').slice(0, 12);
+      }
+    }
+
     function handlePaymentMethodChange() {
       const method = document.getElementById('tender_pay_method').value;
       const lbl = document.getElementById('lblPayAccount');
@@ -310,19 +319,32 @@
 
       if (method.includes('Phone')) {
         lbl.textContent = 'M-Pesa Phone Number';
+        input.removeAttribute('pattern');
+        input.maxLength = 15;
+        input.inputMode = 'tel';
         input.placeholder = 'e.g. 0700203672';
         bank.value = 'Safaricom M-Pesa';
       } else if (method.includes('Till')) {
         lbl.textContent = 'Buy Goods Till Number';
+        input.removeAttribute('pattern');
+        input.maxLength = 15;
+        input.inputMode = 'numeric';
         input.placeholder = 'e.g. 987654';
         bank.value = 'Safaricom M-Pesa Till';
       } else if (method.includes('Paybill')) {
         lbl.textContent = 'Paybill Business & Account #';
+        input.removeAttribute('pattern');
+        input.maxLength = 30;
+        input.inputMode = 'text';
         input.placeholder = 'e.g. Paybill: 247247, Acc: 123456';
         bank.value = 'Safaricom M-Pesa Paybill';
       } else {
-        lbl.textContent = 'Bank Account Number';
-        input.placeholder = 'e.g. 01109012345600';
+        lbl.textContent = 'Bank Account Number (Max 12 Digits)';
+        input.maxLength = 12;
+        input.inputMode = 'numeric';
+        input.setAttribute('pattern', '[0-9]{1,12}');
+        input.value = input.value.replace(/[^0-9]/g, '').slice(0, 12);
+        input.placeholder = 'e.g. 011090123456 (max 12 digits)';
         bank.value = 'Equity Bank Kenya';
       }
     }
@@ -522,6 +544,11 @@
       const paymentMethod = document.getElementById('tender_pay_method').value;
       const payeeName = document.getElementById('tender_pay_name').value.trim();
       const accountNumber = document.getElementById('tender_pay_account').value.trim();
+      if (/bank|eft|wire/i.test(paymentMethod) && !/^[0-9]{1,12}$/.test(accountNumber)) {
+        showToast('Bank account number must contain numbers only (0–9), up to 12 digits max.');
+        document.getElementById('tender_pay_account')?.focus();
+        return;
+      }
       const bankName = document.getElementById('tender_pay_bank').value.trim();
       const expectedDate = document.getElementById('tender_expected_date').value;
       const supplierNotes = document.getElementById('tender_notes').value.trim();

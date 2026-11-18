@@ -316,6 +316,11 @@ async function handleCheckout(e) {
 
   if (paymentVal === 'mpesa') {
     const mpesaCode = (document.getElementById('cust_mpesa_code')?.value || '').trim().toUpperCase();
+    if (mpesaCode && !/^[A-Z0-9]{1,10}$/.test(mpesaCode)) {
+      showToast('M-Pesa reference must be up to 10 alphanumeric characters (letters & numbers only).', 'error');
+      document.getElementById('cust_mpesa_code')?.focus();
+      return;
+    }
     showToast(`✅ Order ${orderNumber} placed via M-Pesa!`, 'success');
     finalizeOrderPlacement(orderCtx, mpesaCode);
     return;

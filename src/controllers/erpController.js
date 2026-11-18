@@ -4,6 +4,7 @@ const supabase = require('../config/supabase');
 const interModuleSync = require('../utils/interModuleSync');
 const { buildOfficialReceiptPdf } = require('../utils/pdfReceiptGenerator');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
+const { validatePaymentReference, validateBankAccountNumber } = require('../utils/paymentValidation');
 
 const SETTINGS_PATH = path.join(__dirname, '../config/system_settings.json');
 const CASHIER_ORDERS_PATH = path.join(__dirname, '../config/cashier_orders.json');
@@ -193,7 +194,7 @@ function calculateTreasuryBalances(records, customSettings) {
     opening_mpesa: 65000,
     opening_bank: 350000,
     bank_name: 'Equity Bank - Meru Branch',
-    bank_account_no: '0140283940123',
+    bank_account_no: '014028394012',
     mpesa_till: '5894210'
   };
 
@@ -252,9 +253,9 @@ function calculateTreasuryBalances(records, customSettings) {
     },
     bank: {
       account_name: treasury.bank_name || 'Equity Bank - Meru Branch',
-      account_desc: `Current Operating Account #${treasury.bank_account_no || '0140283940123'}`,
+      account_desc: `Current Operating Account #${treasury.bank_account_no || '014028394012'}`,
       bank_name: treasury.bank_name || 'Equity Bank - Meru Branch',
-      account_number: treasury.bank_account_no || '0140283940123',
+      account_number: treasury.bank_account_no || '014028394012',
       payment_method_tag: 'Bank Transfer',
       opening: bankOpening,
       inflow: bankInflow,
@@ -1487,10 +1488,18 @@ const erpController = {
         });
       }
 
+      const refCheck = validatePaymentReference(req.body.payment_method || 'M-Pesa', req.body.transaction_ref, {
+        required: true,
+        label: 'Transaction reference'
+      });
+      if (!refCheck.valid) {
+        return res.status(400).json({ success: false, message: refCheck.message });
+      }
+
       const updated = await interModuleSync.confirmServiceFeePayment(req.params.id, {
         amount_paid: req.body.amount_paid,
         payment_method: req.body.payment_method,
-        transaction_ref: req.body.transaction_ref,
+        transaction_ref: refCheck.value,
         actor: req.body.actor || 'Finance Manager'
       });
       res.json({
@@ -1626,14 +1635,20 @@ const erpController = {
         ? `${cleanDesc} [Cashier: ${String(cashier_name).trim()}]`
         : cleanDesc;
 
+      const payMethod = payment_method || 'M-Pesa';
+      const refCheck = validatePaymentReference(payMethod, reference_no, { required: false, label: 'Payment reference' });
+      if (!refCheck.valid) {
+        return res.status(400).json({ success: false, message: refCheck.message });
+      }
+
       const newRec = {
         record_id: Date.now(),
         type: cleanType || 'expense',
         category: category || 'General Expense',
         description: taggedDesc,
         amount: Number(amount) || 0,
-        payment_method: payment_method || 'M-Pesa',
-        reference_no: reference_no || 'MANUAL-' + Date.now().toString().slice(-6),
+        payment_method: payMethod,
+        reference_no: refCheck.value || 'MANUAL-' + Date.now().toString().slice(-6),
         status: 'confirmed',
         created_at: new Date().toISOString()
       };
@@ -1752,7 +1767,13 @@ const erpController = {
       if (opening_mpesa !== undefined) t.opening_mpesa = Math.max(0, Number(opening_mpesa));
       if (opening_bank !== undefined) t.opening_bank = Math.max(0, Number(opening_bank));
       if (bank_name) t.bank_name = String(bank_name).trim();
-      if (bank_account_no) t.bank_account_no = String(bank_account_no).trim();
+      if (bank_account_no !== undefined && String(bank_account_no).trim() !== '') {
+        const bankAccCheck = validateBankAccountNumber(bank_account_no, 'Bank', { required: false });
+        if (!bankAccCheck.valid) {
+          return res.status(400).json({ success: false, message: bankAccCheck.message });
+        }
+        t.bank_account_no = bankAccCheck.value;
+      }
       if (mpesa_till) t.mpesa_till = String(mpesa_till).trim();
 
       writeSystemConfig(cfg);
@@ -1944,6 +1965,12 @@ const erpController = {
         if (amt <= 0) {
           return res.status(400).json({ success: false, message: 'Please specify a valid payment amount greater than KES 0.' });
         }
+        const payMethod = payment_method || 'M-Pesa';
+        const rawPayRef = payment_ref || reference_no || '';
+        const refCheck = validatePaymentReference(payMethod, rawPayRef, { required: false, label: 'Transaction reference' });
+        if (!refCheck.valid) {
+          return res.status(400).json({ success: false, message: refCheck.message });
+        }
         paid += amt;
         balance = Math.max(0, total - paid);
         order.amount_paid = paid;
@@ -1957,8 +1984,7 @@ const erpController = {
           order.payment_status = 'partially_paid';
         }
 
-        const payMethod = payment_method || 'M-Pesa';
-        const payRef = payment_ref || reference_no || `FIN-${Date.now().toString().slice(-6)}`;
+        const payRef = refCheck.value || `FIN-${Date.now().toString().slice(-6)}`;
         const localFin = readFinanceRecords();
         localFin.unshift({
           record_id: Date.now(),
@@ -2623,6 +2649,11 @@ const erpController = {
         });
       }
 
+      const posRefCheck = validatePaymentReference(cleanMethod, payment_ref, { required: false, label: 'Payment reference' });
+      if (!posRefCheck.valid) {
+        return res.status(400).json({ success: false, message: posRefCheck.message });
+      }
+
       // Extract fulfillment type according to the 5 business workflows:
       // 1. Product only: Cashier -> Finance -> Delivery
       // 2. Product + installation: Cashier -> Finance -> Delivery -> Installation
@@ -2682,8 +2713,8 @@ const erpController = {
       const stamp = Math.floor(100000 + Math.random() * 900000);
       const orderNo = `EL-${stamp}`;
       const receiptNo = `RCP-${stamp}`;
-      const refCode = payment_ref && String(payment_ref).trim()
-        ? String(payment_ref).trim().toUpperCase()
+      const refCode = posRefCheck.value
+        ? posRefCheck.value
         : (cleanMethod === 'Cash' ? `CASH-${stamp}` : `MPESA-${stamp}`);
 
       const finalMethodLabel = isSplit ? 'Split (Cash + M-Pesa)' : cleanMethod;
@@ -2960,6 +2991,10 @@ const erpController = {
           message: 'Cannot accept a KSh 0 payment amount. Payment amount must be greater than KSh 0.'
         });
       }
+      const confirmRefCheck = validatePaymentReference(cleanMethod, payment_ref, { required: false, label: 'Payment reference' });
+      if (!confirmRefCheck.valid) {
+        return res.status(400).json({ success: false, message: confirmRefCheck.message });
+      }
       const amountPaid = rawPaid;
       const balanceDue = Math.max(0, totalAmount - amountPaid);
       const hasUnpaid = balanceDue > 0;
@@ -2980,8 +3015,8 @@ const erpController = {
         : (isSplit ? Math.max(0, tendered - splitCash) : 0);
 
       const stamp = Math.floor(100000 + Math.random() * 900000);
-      const refCode = payment_ref && String(payment_ref).trim()
-        ? String(payment_ref).trim().toUpperCase()
+      const refCode = confirmRefCheck.value
+        ? confirmRefCheck.value
         : (cleanMethod === 'Cash' ? `CASH-${stamp}` : `MPESA-${stamp}`);
 
       const finalMethodLabel = isSplit ? 'Split (Cash + M-Pesa)' : cleanMethod;

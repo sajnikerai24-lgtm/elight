@@ -5,6 +5,7 @@ const supabase = require('../config/supabase');
 const interModuleSync = require('../utils/interModuleSync');
 const { buildOfficialReceiptPdf } = require('../utils/pdfReceiptGenerator');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
+const { validatePaymentReference, validateBankAccountNumber } = require('../utils/paymentValidation');
 
 const BUCKET_NAME = 'supplier-documents';
 const MAX_DOC_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -781,7 +782,12 @@ exports.submitSupplierQuotation = async (req, res) => {
     const paymentAccount = String(req.body.payment_account || req.body.account_number || paymentCreds.account_number || req.supplier?.phone || '').trim();
     const bankProvider = String(req.body.bank_provider || req.body.bank_name || paymentCreds.bank_name || 'Safaricom M-Pesa').trim();
 
-    const credNote = `Payment Credentials: [Method: ${preferredMethod} | Payee: ${payeeName} | Acc: ${paymentAccount} | Provider: ${bankProvider}]`;
+    const bankAccCheck = validateBankAccountNumber(paymentAccount, preferredMethod, { required: true, label: 'Bank account number' });
+    if (!bankAccCheck.valid) {
+      return res.status(400).json({ success: false, message: bankAccCheck.message });
+    }
+
+    const credNote = `Payment Credentials: [Method: ${preferredMethod} | Payee: ${payeeName} | Acc: ${bankAccCheck.value} | Provider: ${bankProvider}]`;
     const fullNotes = [notes, credNote].filter(Boolean).join(' | ');
 
     let docMeta = { document_name: null, document_path: null };
@@ -2624,17 +2630,22 @@ exports.erpPaySupplierInvoice = async (req, res) => {
     const invoiceId = Number(req.params.invoiceId);
     const amountPaidNow = Number(req.body.amount_paid ?? 0);
     const paymentMethod = String(req.body.payment_method || 'Bank Transfer').trim();
-    const transactionRef = String(req.body.transaction_ref || '').trim();
+    const rawRef = String(req.body.transaction_ref || '').trim();
     const paymentDate = req.body.payment_date || new Date().toISOString().split('T')[0];
     const notes = String(req.body.notes || '').trim();
     const actorName = req.erpActor?.name || 'Finance Manager';
 
-    if (Number.isNaN(amountPaidNow) || amountPaidNow <= 0 || !transactionRef) {
+    if (Number.isNaN(amountPaidNow) || amountPaidNow <= 0 || !rawRef) {
       return res.status(400).json({
         success: false,
         message: 'A positive payment amount and bank/M-Pesa transaction reference are required.'
       });
     }
+    const refCheck = validatePaymentReference(paymentMethod, rawRef, { required: true, label: 'Transaction reference' });
+    if (!refCheck.valid) {
+      return res.status(400).json({ success: false, message: refCheck.message });
+    }
+    const transactionRef = refCheck.value;
 
     const { data: inv } = await supabase
       .from('supplier_invoices')
@@ -2775,17 +2786,22 @@ exports.erpPayForwardedPO = async (req, res) => {
     const poId = Number(req.params.poId);
     const amountPaidNow = Number(req.body.amount_paid ?? 0);
     const paymentMethod = String(req.body.payment_method || 'Bank Transfer').trim();
-    const transactionRef = String(req.body.transaction_ref || '').trim();
+    const rawRef = String(req.body.transaction_ref || '').trim();
     const paymentDate = req.body.payment_date || new Date().toISOString().split('T')[0];
     const notes = String(req.body.notes || '').trim();
     const actorName = req.erpActor?.name || 'Finance Manager';
 
-    if (!poId || Number.isNaN(amountPaidNow) || amountPaidNow <= 0 || !transactionRef) {
+    if (!poId || Number.isNaN(amountPaidNow) || amountPaidNow <= 0 || !rawRef) {
       return res.status(400).json({
         success: false,
         message: 'Valid Purchase Order, positive payment amount, and transaction reference are required.'
       });
     }
+    const refCheck = validatePaymentReference(paymentMethod, rawRef, { required: true, label: 'Transaction reference' });
+    if (!refCheck.valid) {
+      return res.status(400).json({ success: false, message: refCheck.message });
+    }
+    const transactionRef = refCheck.value;
 
     const { data: po } = await supabase
       .from('purchase_orders')

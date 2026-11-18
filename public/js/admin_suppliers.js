@@ -936,6 +936,38 @@
     return 'Bank Transfer';
   }
 
+  window.syncPaySupplierDestAccountInput = function () {
+    const method = document.getElementById('pay_sup_method')?.value || '';
+    const accEl = document.getElementById('pay_sup_dest_account');
+    if (!accEl) return;
+    if (/bank|eft|wire|rtgs/i.test(method)) {
+      accEl.maxLength = 12;
+      accEl.inputMode = 'numeric';
+      accEl.value = accEl.value.replace(/[^0-9]/g, '').slice(0, 12);
+    } else {
+      accEl.maxLength = 30;
+      accEl.inputMode = 'text';
+    }
+  };
+
+  window.syncPaySupplierRefRules = function () {
+    const method = document.getElementById('pay_sup_method')?.value || 'M-Pesa Paybill';
+    if (typeof window.applyPaymentRefInputRules === 'function') {
+      window.applyPaymentRefInputRules('pay_sup_ref', method, 'pay_sup_ref_label', {
+        mpesa: 'M-Pesa Reference # * (Max 10 chars)',
+        bank: 'Bank Transfer Ref # * (Max 12 digits)',
+        cash: 'Transaction Ref # *'
+      });
+    }
+    const accLbl = document.getElementById('pay_sup_dest_account_label');
+    if (accLbl) {
+      accLbl.textContent = /bank|eft|wire|rtgs/i.test(method)
+        ? 'Bank Account # (Max 12 digits)'
+        : 'Account / Till / Paybill / Phone #';
+    }
+    window.syncPaySupplierDestAccountInput();
+  };
+
   window.openPaySupplierModal = function (invoiceId, balanceDue, invoiceNumber, poId = 0, supplierId = 0) {
     document.getElementById('pay_sup_invoice_id').value = invoiceId || 0;
     const poInput = document.getElementById('pay_sup_po_id');
@@ -995,6 +1027,7 @@
       if (notesEl) notesEl.value = '';
     }
 
+    window.syncPaySupplierRefRules();
     openModal('pay-supplier-modal');
   };
 
@@ -1005,8 +1038,23 @@
     const endpoint = invoiceId > 0
       ? `/api/erp/suppliers/invoices/${invoiceId}/pay`
       : `/api/erp/suppliers/purchase-orders/${poId}/pay`;
+    const payMethod = document.getElementById('pay_sup_method').value;
+    const rawSupRef = document.getElementById('pay_sup_ref').value.trim();
+    if (typeof window.validatePaymentRefClient === 'function') {
+      const refCheck = window.validatePaymentRefClient(payMethod, rawSupRef, { required: true, label: 'Transaction reference' });
+      if (!refCheck.valid) {
+        showToast(refCheck.message, 'error');
+        document.getElementById('pay_sup_ref')?.focus();
+        return;
+      }
+    }
     const destPayee = document.getElementById('pay_sup_dest_payee')?.value.trim() || '';
     const destAcc = document.getElementById('pay_sup_dest_account')?.value.trim() || '';
+    if (/bank|eft|wire|rtgs/i.test(payMethod) && destAcc && !/^[0-9]{1,12}$/.test(destAcc)) {
+      showToast('Bank account number must contain numbers only (0–9), up to 12 digits max.', 'error');
+      document.getElementById('pay_sup_dest_account')?.focus();
+      return;
+    }
     const destProv = document.getElementById('pay_sup_dest_provider')?.value.trim() || '';
     const rawNotes = document.getElementById('pay_sup_notes').value.trim();
     const fullNotes = rawNotes || [destPayee ? `To: ${destPayee}` : '', destAcc ? `Acc: ${destAcc}` : '', destProv ? `(${destProv})` : ''].filter(Boolean).join(' • ');
@@ -1015,8 +1063,8 @@
         method: 'POST',
         body: JSON.stringify({
           amount_paid: Number(document.getElementById('pay_sup_amount').value),
-          payment_method: document.getElementById('pay_sup_method').value,
-          transaction_ref: document.getElementById('pay_sup_ref').value.trim(),
+          payment_method: payMethod,
+          transaction_ref: rawSupRef,
           payment_date: document.getElementById('pay_sup_date').value,
           notes: fullNotes
         })

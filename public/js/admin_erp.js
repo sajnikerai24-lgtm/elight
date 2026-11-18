@@ -15,6 +15,114 @@ function formatKES(val) {
   });
 }
 
+function isMpesaMethodClient(method) {
+  return /m-pesa|mpesa|paybill|till|buy\s*goods|send\s*money|split/i.test(String(method || ''));
+}
+
+function isBankMethodClient(method) {
+  return /bank|eft|wire|rtgs/i.test(String(method || ''));
+}
+
+function applyPaymentRefInputRules(inputOrId, method, labelOrId = null, customLabels = {}) {
+  const input = typeof inputOrId === 'string' ? document.getElementById(inputOrId) : inputOrId;
+  const label = labelOrId
+    ? (typeof labelOrId === 'string' ? document.getElementById(labelOrId) : labelOrId)
+    : null;
+  if (!input) return;
+
+  if (isMpesaMethodClient(method)) {
+    input.maxLength = 10;
+    input.inputMode = 'text';
+    input.setAttribute('pattern', '[A-Za-z0-9]{1,10}');
+    input.style.textTransform = 'uppercase';
+    input.placeholder = 'e.g. SLK884290Q (max 10 chars)';
+    input.oninput = () => {
+      input.value = input.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
+    };
+    input.value = String(input.value || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
+    if (label && customLabels.mpesa) label.textContent = customLabels.mpesa;
+  } else if (isBankMethodClient(method)) {
+    input.maxLength = 12;
+    input.inputMode = 'numeric';
+    input.setAttribute('pattern', '[0-9]{1,12}');
+    input.style.textTransform = 'none';
+    input.placeholder = 'e.g. 123456789012 (max 12 digits)';
+    input.oninput = () => {
+      input.value = input.value.replace(/[^0-9]/g, '').slice(0, 12);
+    };
+    input.value = String(input.value || '').replace(/[^0-9]/g, '').slice(0, 12);
+    if (label && customLabels.bank) label.textContent = customLabels.bank;
+  } else {
+    input.maxLength = 40;
+    input.inputMode = 'text';
+    input.removeAttribute('pattern');
+    input.style.textTransform = 'none';
+    input.placeholder = 'Optional receipt / cheque reference';
+    input.oninput = null;
+    if (label && customLabels.cash) label.textContent = customLabels.cash;
+  }
+}
+
+function validatePaymentRefClient(method, rawRef, { required = false, label = 'Transaction reference' } = {}) {
+  const val = String(rawRef === undefined || rawRef === null ? '' : rawRef).trim();
+  if (!val) {
+    if (required) return { valid: false, value: '', message: `${label} is required.` };
+    return { valid: true, value: '' };
+  }
+  if (isMpesaMethodClient(method)) {
+    const upper = val.toUpperCase();
+    if (!/^[A-Z0-9]{1,10}$/.test(upper)) {
+      return {
+        valid: false,
+        value: upper,
+        message: 'M-Pesa reference must be up to 10 alphanumeric characters (letters & numbers only, e.g. SLK884290Q).'
+      };
+    }
+    return { valid: true, value: upper };
+  }
+  if (isBankMethodClient(method)) {
+    if (!/^[0-9]{1,12}$/.test(val)) {
+      return {
+        valid: false,
+        value: val,
+        message: 'Bank reference must contain numbers only (0–9), up to 12 digits max.'
+      };
+    }
+    return { valid: true, value: val };
+  }
+  return { valid: true, value: val };
+}
+
+window.applyPaymentRefInputRules = applyPaymentRefInputRules;
+window.validatePaymentRefClient = validatePaymentRefClient;
+
+window.syncFinanceEntryRefRules = function () {
+  const method = document.getElementById('fin_payment')?.value || 'M-Pesa';
+  applyPaymentRefInputRules('fin_ref', method, 'fin_ref_label', {
+    mpesa: 'M-Pesa Reference Code (Max 10 chars)',
+    bank: 'Bank Transfer Reference (Max 12 digits)',
+    cash: 'Cash Receipt / Voucher Reference'
+  });
+};
+
+window.syncFinanceBalanceRefRules = function () {
+  const method = document.getElementById('fin_balance_method')?.value || 'M-Pesa';
+  applyPaymentRefInputRules('fin_balance_ref', method, 'fin_balance_ref_label', {
+    mpesa: 'M-Pesa Reference Code * (Max 10 chars)',
+    bank: 'Bank Transfer Reference * (Max 12 digits)',
+    cash: 'Cash Receipt / Reference Code *'
+  });
+};
+
+window.syncServicePayRefRules = function () {
+  const method = document.getElementById('fin_svc_pay_method')?.value || 'M-Pesa';
+  applyPaymentRefInputRules('fin_svc_pay_ref', method, 'fin_svc_pay_ref_label', {
+    mpesa: 'M-Pesa Reference # * (Max 10 chars)',
+    bank: 'Bank Transfer Reference # * (Max 12 digits)',
+    cash: 'Cash Receipt Reference # *'
+  });
+};
+
 function escapeHTML(str) {
   return String(str ?? '').replace(/[&<>"']/g, c => ({
     '&': '&amp;',
@@ -1886,10 +1994,13 @@ function togglePOSCashFields() {
     if (phoneGrp) phoneGrp.style.display = method === 'M-Pesa' ? '' : 'none';
     if (cashGrp) cashGrp.style.display = method === 'Cash' ? '' : 'none';
     if (refLbl) {
-      refLbl.textContent = method === 'Cash'
-        ? 'Cash Receipt Note (Optional)'
-        : (method === 'M-Pesa' ? 'M-Pesa Transaction Code' : 'Bank Transfer Reference');
+      applyPaymentRefInputRules('pos_payment_ref', method, refLbl, {
+        mpesa: 'M-Pesa Transaction Code (Max 10 chars)',
+        bank: 'Bank Transfer Reference (Max 12 digits)',
+        cash: 'Cash Receipt Note (Optional)'
+      });
     }
+    applyPaymentRefInputRules('pos_split_payment_ref', 'M-Pesa');
   }
   recalculatePOSTotals();
 }
@@ -2188,12 +2299,31 @@ async function handleRecordCashierSale(e) {
       return;
     }
 
+    const splitRefCheck = validatePaymentRefClient('M-Pesa', splitRef, { required: splitMpesa > 0, label: 'M-Pesa reference' });
+    if (!splitRefCheck.valid) {
+      showToast(splitRefCheck.message, 'error');
+      document.getElementById('pos_split_payment_ref')?.focus();
+      return;
+    }
+    splitRef = splitRefCheck.value;
+
     if (splitTenderedRaw > 0 && splitTenderedRaw < splitCash) {
       showToast('Cash tendered cannot be less than the cash portion amount.', 'error');
       return;
     }
 
     finalCashTendered = splitTenderedRaw || splitCash;
+  }
+
+  let stdPaymentRef = (document.getElementById('pos_payment_ref')?.value.trim() || '');
+  if (method !== 'Split') {
+    const stdCheck = validatePaymentRefClient(method, stdPaymentRef, { required: false, label: 'Payment reference' });
+    if (!stdCheck.valid) {
+      showToast(stdCheck.message, 'error');
+      document.getElementById('pos_payment_ref')?.focus();
+      return;
+    }
+    stdPaymentRef = stdCheck.value;
   }
 
   const payload = {
@@ -2203,7 +2333,7 @@ async function handleRecordCashierSale(e) {
     items: posCartItems,
     delivery_fee: fee,
     payment_method: method,
-    payment_ref: method === 'Split' ? splitRef : (document.getElementById('pos_payment_ref')?.value.trim() || ''),
+    payment_ref: method === 'Split' ? splitRef : stdPaymentRef,
     cash_tendered: method === 'Cash' ? (tenderedRaw || amountPaid) : finalCashTendered,
     split_cash_amount: splitCash,
     split_mpesa_amount: splitMpesa,
@@ -2257,8 +2387,15 @@ function openConfirmPaymentModal(orderNo) {
 
   document.getElementById('confirm_order_no').value = order.order_no;
   document.getElementById('confirm_order_amount').value = order.total_amount;
-  document.getElementById('confirm_payment_method').value = order.payment_method === 'Cash' ? 'Cash' : (order.payment_method === 'Split' ? 'Split' : 'M-Pesa');
-  document.getElementById('confirm_payment_ref').value = order.payment_method === 'Cash' ? 'CASH-COUNTER' : (order.payment_ref || '');
+  const confirmMethod = order.payment_method === 'Cash'
+    ? 'Cash'
+    : (order.payment_method === 'Split' ? 'Split' : (/bank/i.test(order.payment_method || '') ? 'Bank Transfer' : 'M-Pesa'));
+  document.getElementById('confirm_payment_method').value = confirmMethod;
+  const rawOrderRef = String(order.payment_ref || '').trim();
+  const safeInitialRef = confirmMethod === 'Cash'
+    ? 'CASH-COUNTER'
+    : (/pending|awaiting|pay on/i.test(rawOrderRef) ? '' : rawOrderRef);
+  document.getElementById('confirm_payment_ref').value = safeInitialRef;
   document.getElementById('confirm_cash_tendered').value = order.total_amount;
 
   const splitCashInput = document.getElementById('confirm_split_cash_amount');
@@ -2304,10 +2441,13 @@ function toggleConfirmCashFields() {
     if (splitPanel) splitPanel.style.display = 'none';
     if (cashGrp) cashGrp.style.display = method === 'Cash' ? '' : 'none';
     if (refLbl) {
-      refLbl.textContent = method === 'Cash'
-        ? 'Cash Receipt Note (Optional)'
-        : (method === 'M-Pesa' ? 'Verified M-Pesa Reference *' : 'Bank Transfer Reference *');
+      applyPaymentRefInputRules('confirm_payment_ref', method, refLbl, {
+        mpesa: 'Verified M-Pesa Reference * (Max 10 chars)',
+        bank: 'Bank Transfer Reference * (Max 12 digits)',
+        cash: 'Cash Receipt Note (Optional)'
+      });
     }
+    applyPaymentRefInputRules('confirm_split_payment_ref', 'M-Pesa');
   }
   updateConfirmChangePreview();
 }
@@ -2448,11 +2588,29 @@ async function handleConfirmCustomerPayment(e) {
       document.getElementById('confirm_split_payment_ref')?.focus();
       return;
     }
+    const splitRefCheck = validatePaymentRefClient('M-Pesa', splitRef, { required: splitMpesa > 0, label: 'M-Pesa reference' });
+    if (!splitRefCheck.valid) {
+      showToast(splitRefCheck.message, 'error');
+      document.getElementById('confirm_split_payment_ref')?.focus();
+      return;
+    }
+    splitRef = splitRefCheck.value;
     if (splitTenderedRaw > 0 && splitTenderedRaw < splitCash) {
       showToast('Cash tendered cannot be less than the cash portion.', 'error');
       return;
     }
     finalTendered = splitTenderedRaw || splitCash;
+  }
+
+  let validatedRef = ref;
+  if (method !== 'Split') {
+    const stdRefCheck = validatePaymentRefClient(method, ref, { required: false, label: 'Payment reference' });
+    if (!stdRefCheck.valid) {
+      showToast(stdRefCheck.message, 'error');
+      document.getElementById('confirm_payment_ref')?.focus();
+      return;
+    }
+    validatedRef = stdRefCheck.value;
   }
 
   try {
@@ -2464,7 +2622,7 @@ async function handleConfirmCustomerPayment(e) {
       },
       body: JSON.stringify({
         payment_method: method,
-        payment_ref: method === 'Split' ? splitRef : ref,
+        payment_ref: method === 'Split' ? splitRef : validatedRef,
         cash_tendered: finalTendered,
         split_cash_amount: splitCash,
         split_mpesa_amount: splitMpesa,
@@ -2998,7 +3156,10 @@ function openAdjustBalancesModal() {
   if (bankInput) bankInput.value = treasury.opening_bank ?? 350000;
   if (tillInput) tillInput.value = treasury.mpesa_till || '5894210';
   if (bankNameInput) bankNameInput.value = treasury.bank_name || 'Equity Bank - Meru Branch';
-  if (bankAccInput) bankAccInput.value = treasury.bank_account_no || '0140283940123';
+  if (bankAccInput) {
+    const cleanAcc = String(treasury.bank_account_no || '014028394012').replace(/[^0-9]/g, '').slice(0, 12);
+    bankAccInput.value = cleanAcc || '014028394012';
+  }
 
   openModal('adjust-balances-modal');
 }
@@ -3011,13 +3172,20 @@ async function handleSaveOpeningBalances(e) {
     return;
   }
 
+  const bankAccRaw = document.getElementById('bank_account_no_input')?.value.trim() || '014028394012';
+  if (!/^[0-9]{1,12}$/.test(bankAccRaw)) {
+    showToast('Bank account number must contain numbers only (0–9), up to 12 digits max.', 'error');
+    document.getElementById('bank_account_no_input')?.focus();
+    return;
+  }
+
   const payload = {
     opening_cash: Number(document.getElementById('opening_cash_input')?.value || 0),
     opening_mpesa: Number(document.getElementById('opening_mpesa_input')?.value || 0),
     opening_bank: Number(document.getElementById('opening_bank_input')?.value || 0),
     mpesa_till: document.getElementById('mpesa_till_input')?.value.trim() || '5894210',
     bank_name: document.getElementById('bank_name_input')?.value.trim() || 'Equity Bank - Meru Branch',
-    bank_account_no: document.getElementById('bank_account_no_input')?.value.trim() || '0140283940123',
+    bank_account_no: bankAccRaw,
     user_role: currentUser?.role || 'admin',
     actor: currentUser?.full_name || 'Administrator'
   };
@@ -3103,13 +3271,22 @@ async function handleCreateFinanceRecord(e) {
     return;
   }
 
+  const payMethod = document.getElementById('fin_payment').value;
+  const rawRef = document.getElementById('fin_ref').value.trim();
+  const refCheck = validatePaymentRefClient(payMethod, rawRef, { required: false, label: 'Reference code' });
+  if (!refCheck.valid) {
+    showToast(refCheck.message, 'error');
+    document.getElementById('fin_ref')?.focus();
+    return;
+  }
+
   const payload = {
     type: rawType || 'expense',
     category: document.getElementById('fin_category').value,
     description: document.getElementById('fin_desc').value.trim(),
     amount: document.getElementById('fin_amount').value,
-    payment_method: document.getElementById('fin_payment').value,
-    reference_no: document.getElementById('fin_ref').value.trim(),
+    payment_method: payMethod,
+    reference_no: refCheck.value,
     cashier_name: (currentUser && currentUser.full_name) ? currentUser.full_name : 'Alice Muthoni',
     user_role: currentUser?.role || 'finance_manager'
   };
@@ -3120,7 +3297,8 @@ async function handleCreateFinanceRecord(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    if (!res.ok) throw new Error('Failed to record financial entry');
+    const resData = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(resData.message || 'Failed to record financial entry');
     closeModal('finance-modal');
     showToast('Financial record saved', 'success');
     loadFinanceRecords();
@@ -3363,6 +3541,7 @@ function openCreditReviewModal(orderNo, mode = 'credit') {
     balPanel.style.display = 'block';
     document.getElementById('fin_balance_amount').value = Math.max(0, order.balance_due || 0);
     document.getElementById('fin_balance_ref').value = '';
+    syncFinanceBalanceRefRules();
     submitBtn.textContent = '💵 Record Payment & Release Order';
     submitBtn.style.background = '#047857';
   } else {
@@ -3401,11 +3580,18 @@ async function handleFinanceReleaseSubmit(e) {
     }
     if (!ref) {
       showToast('Please enter transaction reference code', 'error');
+      document.getElementById('fin_balance_ref')?.focus();
+      return;
+    }
+    const balRefCheck = validatePaymentRefClient(method, ref, { required: true, label: 'Transaction reference' });
+    if (!balRefCheck.valid) {
+      showToast(balRefCheck.message, 'error');
+      document.getElementById('fin_balance_ref')?.focus();
       return;
     }
     payload.amount = amount;
     payload.payment_method = method;
-    payload.reference_no = ref;
+    payload.reference_no = balRefCheck.value;
   } else {
     // Release with credit policy
     const policyType = document.getElementById('fin_credit_policy_type').value;
@@ -4401,6 +4587,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const preferred = isAdminRole(role) ? 'overview' : (ROLE_DEFAULT_MODULE[role] || allowed[0] || 'overview');
   const initialModule = allowed.includes(preferred) ? preferred : (allowed[0] || 'overview');
   switchModule(initialModule);
+  togglePOSCashFields();
+  syncFinanceEntryRefRules();
 });
 
 
@@ -6499,6 +6687,7 @@ function openFinanceServicePayModal(requestId) {
   document.getElementById('fin_svc_pay_id').value = s.request_id;
   document.getElementById('fin_svc_pay_amount').value = Number(s.service_fee || 0).toFixed(2);
   document.getElementById('fin_svc_pay_ref').value = '';
+  syncServicePayRefRules();
   document.getElementById('fin-svc-pay-summary').innerHTML = `
     <strong>Service #SR-${s.request_id}: ${escapeHTML(s.service_type)}</strong><br>
     Customer: <strong>${escapeHTML(s.customer_name)}</strong> (${escapeHTML(s.phone || '')})
@@ -6511,7 +6700,14 @@ async function handleConfirmServiceFeePaymentSubmit(e) {
   const requestId = Number(document.getElementById('fin_svc_pay_id').value);
   const amountPaid = Number(document.getElementById('fin_svc_pay_amount').value);
   const method = document.getElementById('fin_svc_pay_method').value;
-  const ref = document.getElementById('fin_svc_pay_ref').value.trim();
+  const rawRef = document.getElementById('fin_svc_pay_ref').value.trim();
+  const svcRefCheck = validatePaymentRefClient(method, rawRef, { required: true, label: 'Transaction reference' });
+  if (!svcRefCheck.valid) {
+    showToast(svcRefCheck.message, 'error');
+    document.getElementById('fin_svc_pay_ref')?.focus();
+    return;
+  }
+  const ref = svcRefCheck.value;
   const role = normalizeRole(currentUser?.role);
 
   try {
