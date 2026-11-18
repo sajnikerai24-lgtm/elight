@@ -321,10 +321,9 @@
                   const totalDisplay = Number(p.total_amount || 0) > 0 ? `<strong>${fmtMoney(p.total_amount)}</strong>` : '<span style="color:#64748b;font-style:italic;">Pending Quote</span>';
                   const itemsWithBoundsHtml = items.length > 0
                     ? items.map(it => {
-                        const minP = Number(it.min_unit_price || 0);
                         const maxP = Number(it.max_unit_price || 0);
-                        const rangeTag = (minP > 0 && maxP > 0)
-                          ? `<div style="font-size:0.74rem; color:#1e40af; font-weight:600;">Limit: ${fmtMoney(minP)} – ${fmtMoney(maxP)} / unit</div>`
+                        const rangeTag = maxP > 0
+                          ? `<div style="font-size:0.74rem; color:#1e40af; font-weight:600;">Max Price: ${fmtMoney(maxP)} / unit</div>`
                           : '';
                         return `<div style="margin-bottom:4px;"><strong>${Number(it.ordered_qty || 1)}x ${esc(it.product_name)}</strong>${rangeTag}</div>`;
                       }).join('')
@@ -381,8 +380,7 @@
                         <thead>
                           <tr style="background:#f1f5f9; color:#334155;">
                             <th style="padding:4px 6px; text-align:left;">Product</th>
-                            <th style="padding:4px 6px; text-align:right;">Min (KES)</th>
-                            <th style="padding:4px 6px; text-align:right;">Max (KES)</th>
+                            <th style="padding:4px 6px; text-align:right;">Max Unit Price (KES)</th>
                             <th style="padding:4px 6px; text-align:right;">Quoted (KES)</th>
                             <th style="padding:4px 6px; text-align:center;">Price Status</th>
                           </tr>
@@ -391,14 +389,11 @@
                           ${qItems.map(i => {
                             const vStatus = String(i.price_validation_status || 'within_range').toLowerCase();
                             const statusBadge = vStatus === 'within_range'
-                              ? '<span class="badge-tag" style="background:#dcfce7; color:#166534; font-size:0.7rem; font-weight:700;">✓ Valid</span>'
-                              : (vStatus === 'below_min'
-                                ? '<span class="badge-tag" style="background:#fee2e2; color:#991b1b; font-size:0.7rem; font-weight:700;">⚠ Below Min</span>'
-                                : '<span class="badge-tag" style="background:#fee2e2; color:#991b1b; font-size:0.7rem; font-weight:700;">⚠ Above Max</span>');
+                              ? '<span class="badge-tag" style="background:#dcfce7; color:#166534; font-size:0.7rem; font-weight:700;">✓ Accepted</span>'
+                              : '<span class="badge-tag" style="background:#fee2e2; color:#991b1b; font-size:0.7rem; font-weight:700;">⚠ Exceeds Max</span>';
                             return `
                               <tr style="border-top:1px solid #e2e8f0;">
                                 <td style="padding:4px 6px;"><strong>${esc(i.product_name)}</strong> <small>(x${Number(i.available_qty || i.requested_qty || 1)})</small></td>
-                                <td style="padding:4px 6px; text-align:right;">${fmtMoney(i.min_unit_price)}</td>
                                 <td style="padding:4px 6px; text-align:right;">${fmtMoney(i.max_unit_price)}</td>
                                 <td style="padding:4px 6px; text-align:right; font-weight:800; color:#0f172a;">${fmtMoney(i.unit_price)}</td>
                                 <td style="padding:4px 6px; text-align:center;">${statusBadge}</td>
@@ -549,23 +544,19 @@
 
   window.downloadErpDocProxy = downloadErpSupplierDoc;
 
-  function suggestProductPriceLimits(prod) {
+  function suggestProductMaxPrice(prod) {
     const buy = Number(prod?.buying_price || 0);
     const sell = Number(prod?.selling_price || 0);
     const base = buy > 0 ? buy : (sell > 0 ? Math.round(sell * 0.72) : 200);
-    const minP = Math.max(10, Math.round(base * 0.8));
-    const maxP = Math.max(minP + 20, Math.round(base * 1.15));
-    return { minP, maxP };
+    return Math.max(10, Math.round(base * 1.15));
   }
 
   window.onPOItemProductChange = function (selectEl) {
     const row = selectEl?.closest('.po-create-item-row');
     if (!row) return;
     const opt = selectEl.options[selectEl.selectedIndex];
-    const minInput = row.querySelector('.po-item-min');
     const maxInput = row.querySelector('.po-item-max');
-    if (opt && minInput && maxInput) {
-      minInput.value = Number(opt.dataset.min || 100);
+    if (opt && maxInput) {
       maxInput.value = Number(opt.dataset.max || 1500);
     }
   };
@@ -575,14 +566,14 @@
     if (!container) return;
     const prods = procurementCache.products || (typeof allInventory !== 'undefined' ? allInventory : []);
     const optsHtml = prods.map(p => {
-      const { minP, maxP } = suggestProductPriceLimits(p);
-      return `<option value="${p.product_id}" data-name="${esc(p.product_name)}" data-min="${minP}" data-max="${maxP}">${esc(p.product_name)} (Stock: ${p.quantity_in_stock})</option>`;
+      const maxP = suggestProductMaxPrice(p);
+      return `<option value="${p.product_id}" data-name="${esc(p.product_name)}" data-max="${maxP}">${esc(p.product_name)} (Stock: ${p.quantity_in_stock})</option>`;
     }).join('');
 
-    const firstProd = prods[0] ? suggestProductPriceLimits(prods[0]) : { minP: 100, maxP: 1500 };
+    const firstMax = prods[0] ? suggestProductMaxPrice(prods[0]) : 1500;
     const row = document.createElement('div');
     row.className = 'po-create-item-row';
-    row.style.cssText = 'display:grid; grid-template-columns:2.2fr 0.85fr 1fr 1fr 34px; gap:8px; align-items:end; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px;';
+    row.style.cssText = 'display:grid; grid-template-columns:2.4fr 0.9fr 1.2fr 34px; gap:8px; align-items:end; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px;';
     row.innerHTML = `
       <div>
         <label style="font-size:0.72rem; font-weight:700; color:#475569; display:block; margin-bottom:2px;">Product *</label>
@@ -595,12 +586,8 @@
         <input type="number" class="po-item-qty" min="1" value="25" required style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.83rem;">
       </div>
       <div>
-        <label style="font-size:0.72rem; font-weight:700; color:#475569; display:block; margin-bottom:2px;">Min Price (KES) *</label>
-        <input type="number" class="po-item-min" min="1" step="0.01" value="${firstProd.minP}" required style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.83rem;">
-      </div>
-      <div>
-        <label style="font-size:0.72rem; font-weight:700; color:#475569; display:block; margin-bottom:2px;">Max Price (KES) *</label>
-        <input type="number" class="po-item-max" min="1" step="0.01" value="${firstProd.maxP}" required style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.83rem;">
+        <label style="font-size:0.72rem; font-weight:700; color:#475569; display:block; margin-bottom:2px;">Max Unit Price (KES) *</label>
+        <input type="number" class="po-item-max" min="1" step="0.01" value="${firstMax}" required style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.83rem;">
       </div>
       <button type="button" class="btn-sm" title="Remove item" style="background:#fee2e2; color:#b91c1c; padding:7px 8px;" onclick="if(document.querySelectorAll('.po-create-item-row').length > 1) this.closest('.po-create-item-row').remove();">&times;</button>
     `;
@@ -636,24 +623,19 @@
       const selectedOpt = prodSel?.options[prodSel.selectedIndex];
       const productName = selectedOpt?.dataset?.name || selectedOpt?.text || 'Electrical Item';
       const qty = parseInt(row.querySelector('.po-item-qty')?.value || 0, 10);
-      const minPrice = Number(row.querySelector('.po-item-min')?.value || 0);
       const maxPrice = Number(row.querySelector('.po-item-max')?.value || 0);
 
       if (Number.isNaN(qty) || qty < 1) {
         return showToast(`Requested quantity for "${productName}" must be at least 1.`, 'error');
       }
-      if (Number.isNaN(minPrice) || minPrice <= 0) {
-        return showToast(`Minimum acceptable unit price for "${productName}" must be greater than KSh 0.`, 'error');
-      }
-      if (Number.isNaN(maxPrice) || maxPrice < minPrice) {
-        return showToast(`Maximum acceptable price (KSh ${maxPrice}) cannot be less than Minimum acceptable price (KSh ${minPrice}) for "${productName}".`, 'error');
+      if (Number.isNaN(maxPrice) || maxPrice <= 0) {
+        return showToast(`Maximum acceptable unit price for "${productName}" must be greater than KSh 0.`, 'error');
       }
 
       items.push({
         product_id: Number(prodSel.value) || null,
         product_name: productName,
         ordered_qty: qty,
-        min_unit_price: Number(minPrice.toFixed(2)),
         max_unit_price: Number(maxPrice.toFixed(2))
       });
     }

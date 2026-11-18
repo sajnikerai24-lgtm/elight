@@ -8,8 +8,7 @@ const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 
 const BUCKET_NAME = 'supplier-documents';
 const MAX_DOC_BYTES = 5 * 1024 * 1024; // 5 MB
-const DEFAULT_MIN_QUOTATION_UNIT_PRICE = 1;
-const MAX_QUOTATION_UNIT_PRICE = 1500; // Fallback cap only for legacy PO items without per-product limits
+const MAX_QUOTATION_UNIT_PRICE = 1500; // Fallback cap only for legacy PO items without an explicit max_unit_price
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'png', 'jpg', 'jpeg', 'webp', 'txt', 'csv', 'doc', 'docx']);
 const FINANCE_RECORDS_PATH = path.join(__dirname, '../config/finance_records.json');
 
@@ -18,23 +17,19 @@ function formatKshNumber(val) {
 }
 
 function resolvePurchaseItemBounds(poItem) {
-  const rawMin = poItem && poItem.min_unit_price !== null && poItem.min_unit_price !== undefined
-    ? Number(poItem.min_unit_price)
-    : null;
   const rawMax = poItem && poItem.max_unit_price !== null && poItem.max_unit_price !== undefined
     ? Number(poItem.max_unit_price)
     : null;
-  const hasExplicitBounds = rawMin !== null && rawMax !== null && !Number.isNaN(rawMin) && !Number.isNaN(rawMax);
+  const hasExplicitMax = rawMax !== null && !Number.isNaN(rawMax) && rawMax > 0;
   return {
-    min_unit_price: hasExplicitBounds ? Number(rawMin.toFixed(2)) : DEFAULT_MIN_QUOTATION_UNIT_PRICE,
-    max_unit_price: hasExplicitBounds ? Number(rawMax.toFixed(2)) : MAX_QUOTATION_UNIT_PRICE,
-    has_explicit_limits: hasExplicitBounds
+    min_unit_price: null,
+    max_unit_price: hasExplicitMax ? Number(rawMax.toFixed(2)) : MAX_QUOTATION_UNIT_PRICE,
+    has_explicit_limits: hasExplicitMax
   };
 }
 
-function evaluateQuotationPrice(productName, unitPrice, minLimit, maxLimit) {
+function evaluateQuotationPrice(productName, unitPrice, maxLimit) {
   const price = Number(unitPrice);
-  const minVal = Number(minLimit);
   const maxVal = Number(maxLimit);
   if (Number.isNaN(price) || price <= 0) {
     return {
@@ -43,24 +38,17 @@ function evaluateQuotationPrice(productName, unitPrice, minLimit, maxLimit) {
       message: `Unit price for "${productName}" must be greater than KSh 0.`
     };
   }
-  if (!Number.isNaN(minVal) && price < minVal - 0.0001) {
-    return {
-      valid: false,
-      status: 'below_min',
-      message: `Unit price for "${productName}" (KSh ${formatKshNumber(price)}) is below the minimum acceptable limit of KSh ${formatKshNumber(minVal)}.`
-    };
-  }
-  if (!Number.isNaN(maxVal) && price > maxVal + 0.0001) {
+  if (!Number.isNaN(maxVal) && maxVal > 0 && price > maxVal + 0.0001) {
     return {
       valid: false,
       status: 'above_max',
-      message: `Unit price for "${productName}" (KSh ${formatKshNumber(price)}) exceeds the maximum acceptable limit of KSh ${formatKshNumber(maxVal)}.`
+      message: `Unit price for "${productName}" (KSh ${formatKshNumber(price)}) exceeds the maximum permitted price of KSh ${formatKshNumber(maxVal)}.`
     };
   }
   return {
     valid: true,
     status: 'within_range',
-    message: 'Within acceptable range'
+    message: price === maxVal ? 'Accepted (at maximum limit)' : 'Accepted (below maximum limit)'
   };
 }
 
@@ -734,7 +722,7 @@ exports.submitSupplierQuotation = async (req, res) => {
         });
       }
 
-      // Strictly use DB price limits (never trust any min/max submitted by supplier client)
+      // Strictly use DB maximum price limit (never trust any limits submitted by supplier client)
       const matchedPoItem = poId ? findMatchingPurchaseItem(poItemsForOrder, item) : null;
       if (poId && poItemsForOrder.length > 0 && !matchedPoItem) {
         return res.status(400).json({
@@ -745,11 +733,11 @@ exports.submitSupplierQuotation = async (req, res) => {
 
       const bounds = resolvePurchaseItemBounds(matchedPoItem);
       if (rawPrice === undefined || rawPrice === null || String(rawPrice).trim() === '' || Number.isNaN(unitPrice)) {
-        validationErrors.push(`Enter a valid numeric unit price for "${productName}" (Allowed: KSh ${formatKshNumber(bounds.min_unit_price)} – KSh ${formatKshNumber(bounds.max_unit_price)}).`);
+        validationErrors.push(`Enter a valid numeric unit price for "${productName}" (Maximum permitted: KSh ${formatKshNumber(bounds.max_unit_price)}).`);
         continue;
       }
 
-      const check = evaluateQuotationPrice(productName, unitPrice, bounds.min_unit_price, bounds.max_unit_price);
+      const check = evaluateQuotationPrice(productName, unitPrice, bounds.max_unit_price);
       if (!check.valid) {
         validationErrors.push(check.message);
         continue;
@@ -766,7 +754,7 @@ exports.submitSupplierQuotation = async (req, res) => {
         available_qty: availableQty,
         unit_price: cleanPrice,
         line_total: lineTotal,
-        min_unit_price: bounds.min_unit_price,
+        min_unit_price: null,
         max_unit_price: bounds.max_unit_price,
         price_validation_status: check.status
       });
@@ -1887,24 +1875,22 @@ exports.erpGetProcurementOverview = async (req, res) => {
       const poItems = parentQuote?.po_id ? (poItemsByPoId[Number(parentQuote.po_id)] || []) : [];
       const matchedPoItem = findMatchingPurchaseItem(poItems, qi);
 
-      const hasOwnMin = qi.min_unit_price !== null && qi.min_unit_price !== undefined;
-      const hasOwnMax = qi.max_unit_price !== null && qi.max_unit_price !== undefined;
-      const bounds = (hasOwnMin && hasOwnMax)
-        ? { min_unit_price: Number(qi.min_unit_price), max_unit_price: Number(qi.max_unit_price) }
+      const hasOwnMax = qi.max_unit_price !== null && qi.max_unit_price !== undefined && Number(qi.max_unit_price) > 0;
+      const bounds = hasOwnMax
+        ? { min_unit_price: null, max_unit_price: Number(qi.max_unit_price) }
         : resolvePurchaseItemBounds(matchedPoItem);
 
       const check = evaluateQuotationPrice(
         qi.product_name,
         qi.unit_price,
-        bounds.min_unit_price,
         bounds.max_unit_price
       );
 
       return {
         ...qi,
-        min_unit_price: bounds.min_unit_price,
+        min_unit_price: null,
         max_unit_price: bounds.max_unit_price,
-        price_validation_status: qi.price_validation_status || check.status
+        price_validation_status: check.status
       };
     });
 
@@ -1955,7 +1941,6 @@ exports.erpCreatePurchaseOrder = async (req, res) => {
       const productName = String(item.product_name || '').trim();
       const orderedQty = parseInt(item.ordered_qty ?? 0, 10);
       const unitCost = Math.max(0, Number(item.unit_cost ?? 0) || 0);
-      const minPrice = Number(item.min_unit_price);
       const maxPrice = Number(item.max_unit_price);
 
       if (!productName) {
@@ -1964,22 +1949,10 @@ exports.erpCreatePurchaseOrder = async (req, res) => {
       if (Number.isNaN(orderedQty) || orderedQty < 1) {
         return res.status(400).json({ success: false, message: `Requested quantity for "${productName}" must be at least 1.` });
       }
-      if (item.min_unit_price === undefined || item.min_unit_price === null || String(item.min_unit_price).trim() === '' || Number.isNaN(minPrice) || minPrice <= 0) {
-        return res.status(400).json({
-          success: false,
-          message: `Minimum acceptable unit price (KES) for "${productName}" must be greater than KSh 0.`
-        });
-      }
       if (item.max_unit_price === undefined || item.max_unit_price === null || String(item.max_unit_price).trim() === '' || Number.isNaN(maxPrice) || maxPrice <= 0) {
         return res.status(400).json({
           success: false,
           message: `Maximum acceptable unit price (KES) for "${productName}" must be greater than KSh 0.`
-        });
-      }
-      if (maxPrice < minPrice) {
-        return res.status(400).json({
-          success: false,
-          message: `Maximum acceptable unit price (KSh ${formatKshNumber(maxPrice)}) cannot be less than minimum acceptable unit price (KSh ${formatKshNumber(minPrice)}) for "${productName}".`
         });
       }
 
@@ -1996,7 +1969,7 @@ exports.erpCreatePurchaseOrder = async (req, res) => {
         outstanding_qty: orderedQty,
         unit_cost: Number(unitCost.toFixed(2)),
         line_total: lineTotal,
-        min_unit_price: Number(minPrice.toFixed(2)),
+        min_unit_price: null,
         max_unit_price: Number(maxPrice.toFixed(2))
       });
     }
@@ -2088,12 +2061,12 @@ exports.erpReviewQuotation = async (req, res) => {
 
       for (const qi of preloadedQItems) {
         const matchedPoItem = findMatchingPurchaseItem(poItems || [], qi);
-        const hasOwn = qi.min_unit_price !== null && qi.max_unit_price !== null;
-        if (matchedPoItem || hasOwn) {
-          const bounds = hasOwn
-            ? { min_unit_price: Number(qi.min_unit_price), max_unit_price: Number(qi.max_unit_price) }
+        const hasOwnMax = qi.max_unit_price !== null && qi.max_unit_price !== undefined && Number(qi.max_unit_price) > 0;
+        if (matchedPoItem || hasOwnMax) {
+          const bounds = hasOwnMax
+            ? { max_unit_price: Number(qi.max_unit_price) }
             : resolvePurchaseItemBounds(matchedPoItem);
-          const check = evaluateQuotationPrice(qi.product_name, qi.unit_price, bounds.min_unit_price, bounds.max_unit_price);
+          const check = evaluateQuotationPrice(qi.product_name, qi.unit_price, bounds.max_unit_price);
           if (!check.valid) {
             return res.status(400).json({
               success: false,
