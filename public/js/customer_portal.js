@@ -16,7 +16,8 @@ const CUSTOMER_ACCOUNT_MENU_ITEMS = [
   { href: '/customer-deliveries', label: '🚚 My Scheduled Deliveries' },
   { href: '/customer-bookings', label: '📅 My Scheduled Bookings' },
   { href: '/customer-services', label: '🛠️ My Electrical Service Jobs, Service Fees & Receipts' },
-  { href: '/customer-warranties', label: '🛡️ My Product Warranties' }
+  { href: '/customer-warranties', label: '🛡️ My Product Warranties' },
+  { href: '/customer-feedback', label: '💬 My Feedback & Product Reviews' }
 ];
 
 function toggleCustomerAccountMenu(forceState) {

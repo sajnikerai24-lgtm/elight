@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Feedback &amp; Product Reviews - Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="/images/elight-favicon.svg?v=7">
+</head>
+<body style="visibility:hidden;" id="customerPageBody">
+
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo" style="width:60px;height:60px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Your one-stop destination for quality electrical fittings, lighting &amp; appliances</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="storefront-layout">
+    <nav>
+      <div class="nav-links">
+        <a href="/">🏠 Home</a>
+        <a href="/products">📦 Product Catalog</a>
+        <a href="/cart">
+          🛒 Cart <span class="cart-pill" id="cart-count">0</span>
+        </a>
+        <a href="/booking">📅 Book</a>
+        <a href="/contact">📞 Contact Us</a>
+        <a href="/help">❓ Help</a>
+        <a href="/feedback">💬 Feedback</a>
+        <a href="/about">ℹ️ About Us</a>
+        <div class="nav-dropdown open" id="customerAccountDropdown">
+          <button type="button" class="nav-dropdown-toggle" aria-expanded="true" onclick="toggleCustomerAccountMenu()">
+            <span>👤 My Account</span>
+            <span class="nav-dropdown-arrow">▾</span>
+          </button>
+          <div class="nav-dropdown-menu" id="customerAccountDropdownMenu"></div>
+        </div>
+      </div>
+      <div class="nav-auth-box">
+        <a id="adminReturnPortalBtn" href="/admin" style="display:none; background:#f59e0b; color:#0f172a; text-decoration:none; border-radius:6px; padding:8px 12px; font-size:0.82rem; font-weight:800; justify-content:center;">
+          👑 Back to Admin ERP
+        </a>
+        <span id="navCustomerBadge" style="color:#e2e8f0; font-size:0.85rem; font-weight:600; padding:0 4px;">👤 Customer</span>
+        <button type="button" onclick="logoutCustomer()" style="width:100%; background:#ef4444; color:#ffffff; border:none; border-radius:6px; padding:8px 14px; font-size:0.84rem; font-weight:700; cursor:pointer;">
+          Logout
+        </button>
+      </div>
+    </nav>
+
+    <div class="storefront-content">
+      <div class="customer-shell">
+        <div class="customer-welcome-banner">
+          <div>
+            <h2>💬 My Feedback &amp; Product Reviews</h2>
+            <p>View your submitted product reviews, service feedback, and management replies.</p>
+          </div>
+          <a href="/feedback" class="btn-sm" style="background:var(--accent); color:var(--primary); text-decoration:none; padding:10px 16px; font-weight:700; border-radius:6px;">
+            + Submit Feedback / Review
+          </a>
+        </div>
+
+        <section class="customer-panel">
+          <div class="customer-panel-header">
+            <h3>💬 Submitted Feedback &amp; Reviews</h3>
+            <a href="/customer" style="font-size:0.85rem; color:var(--primary); font-weight:700; text-decoration:none;">← Account Overview</a>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Type</th>
+                  <th>Rating</th>
+                  <th>Subject &amp; Message</th>
+                  <th>Status</th>
+                  <th>Management Reply</th>
+                </tr>
+              </thead>
+              <tbody id="cust-feedback-tbody">
+                <tr><td colspan="6" style="text-align:center; padding:18px;">Loading your feedback...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <footer>
+        <p><strong>Elight Electrical Shop</strong> &copy; 2026. All rights reserved.</p>
+        <p>Location: Meru, Meru County, Kenya | Call / WhatsApp: +254 700 000 000 | Email: elightelectrical@ke.com</p>
+      </footer>
+    </div>
+  </div>
+
+  <script src="js/customer_portal.js"></script>
+</body>
+</html>

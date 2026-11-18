@@ -87,6 +87,10 @@ app.get('/customer-warranties', (req, res) => {
   res.sendFile(path.join(publicDir, 'customer-warranties.html'));
 });
 
+app.get('/customer-feedback', (req, res) => {
+  res.sendFile(path.join(publicDir, 'customer-feedback.html'));
+});
+
 // Booking Module route
 app.get('/booking', (req, res) => {
   res.sendFile(path.join(publicDir, 'booking.html'));
