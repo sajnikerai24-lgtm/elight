@@ -6,88 +6,9 @@
   <title>My Customer Account - Elight Electrical Shop</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" type="image/svg+xml" href="/images/elight-favicon.svg?v=7">
-  <style>
-    .customer-shell {
-      max-width: 1120px;
-      margin: 28px auto 48px auto;
-      padding: 0 20px;
-      width: 100%;
-    }
-    .customer-welcome-banner {
-      background: linear-gradient(135deg, #102b46 0%, #1d4e7a 100%);
-      color: #ffffff;
-      border-radius: 12px;
-      padding: 24px 28px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 16px;
-      margin-bottom: 24px;
-      box-shadow: var(--shadow);
-    }
-    .customer-welcome-banner h2 {
-      font-size: 1.45rem;
-      margin-bottom: 4px;
-      color: #ffffff;
-    }
-    .customer-welcome-banner p {
-      color: #cbd5e1;
-      font-size: 0.9rem;
-    }
-    .customer-kpis {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 26px;
-    }
-    .customer-panel {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 22px;
-      margin-bottom: 24px;
-      box-shadow: var(--shadow);
-    }
-    .customer-panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #f1f5f9;
-    }
-    .customer-panel-header h3 {
-      color: var(--primary);
-      font-size: 1.1rem;
-      margin: 0;
-    }
-    .profile-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-    }
-    .profile-field label {
-      display: block;
-      font-size: 0.76rem;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      color: var(--text-muted);
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .profile-field div {
-      font-size: 0.96rem;
-      font-weight: 600;
-      color: var(--text);
-    }
-  </style>
 </head>
 <body style="visibility:hidden;" id="customerPageBody">
 
-  <!-- Header -->
   <header>
     <div class="storefront-header-bar">
       <img src="/images/elight-logo.svg?v=7" alt="Elight Logo" style="width:60px;height:60px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
@@ -99,7 +20,6 @@
   </header>
 
   <div class="storefront-layout">
-    <!-- Customer-Only Left Vertical Sidebar -->
     <nav>
       <div class="nav-links">
         <a href="/">🏠 Home</a>
@@ -112,7 +32,13 @@
         <a href="/help">❓ Help</a>
         <a href="/feedback">💬 Feedback</a>
         <a href="/about">ℹ️ About Us</a>
-        <a href="/customer" class="active">👤 My Account</a>
+        <div class="nav-dropdown open" id="customerAccountDropdown">
+          <button type="button" class="nav-dropdown-toggle" aria-expanded="true" onclick="toggleCustomerAccountMenu()">
+            <span>👤 My Account</span>
+            <span class="nav-dropdown-arrow">▾</span>
+          </button>
+          <div class="nav-dropdown-menu" id="customerAccountDropdownMenu"></div>
+        </div>
       </div>
       <div class="nav-auth-box">
         <a id="adminReturnPortalBtn" href="/admin" style="display:none; background:#f59e0b; color:#0f172a; text-decoration:none; border-radius:6px; padding:8px 12px; font-size:0.82rem; font-weight:800; justify-content:center;">
@@ -126,315 +52,101 @@
     </nav>
 
     <div class="storefront-content">
+      <div class="customer-shell">
 
-  <!-- Customer Main Content -->
-  <div class="customer-shell">
-
-    <!-- Welcome Banner -->
-    <div class="customer-welcome-banner">
-      <div>
-        <h2 id="custWelcomeTitle">Welcome back!</h2>
-        <p>Manage your customer profile, contact information, purchase history, and product warranty details.</p>
-      </div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <a href="/booking" class="btn-sm" style="background:var(--accent); color:var(--primary); text-decoration:none; padding:10px 16px; font-weight:700; border-radius:6px;">
-          📅 Book Service / Product
-        </a>
-        <a href="/products" class="btn-sm" style="background:rgba(255,255,255,0.16); color:#fff; border:1px solid rgba(255,255,255,0.3); text-decoration:none; padding:10px 16px; font-weight:700; border-radius:6px;">
-          🛍️ Shop Products
-        </a>
-      </div>
-    </div>
-
-    <!-- Personal KPIs -->
-    <div class="customer-kpis" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:24px;">
-      <div class="metric-card">
-        <h4>My Purchases / Orders</h4>
-        <div class="value" id="cust-kpi-orders" style="color:var(--primary);">0</div>
-      </div>
-      <div class="metric-card">
-        <h4>My Total Payments</h4>
-        <div class="value" id="cust-kpi-payments" style="color:#087443;">KES 0</div>
-      </div>
-      <div class="metric-card">
-        <h4>My Deliveries</h4>
-        <div class="value" id="cust-kpi-deliveries" style="color:#2563eb;">0</div>
-      </div>
-      <div class="metric-card">
-        <h4>My Bookings</h4>
-        <div class="value" id="cust-kpi-bookings" style="color:#d97706;">0</div>
-      </div>
-      <div class="metric-card">
-        <h4>Active Warranties</h4>
-        <div class="value" id="cust-kpi-warranties" style="color:#7c3aed;">0</div>
-      </div>
-    </div>
-
-    <!-- 1. Personal Profile & Contacts -->
-    <section class="customer-panel">
-      <div class="customer-panel-header">
-        <h3>👤 My Profile &amp; Contact Details</h3>
-        <button type="button" class="btn-sm btn-primary" onclick="openEditProfileModal()">✎ Edit My Details</button>
-      </div>
-      <div class="profile-grid">
-        <div class="profile-field">
-          <label>Full Name</label>
-          <div id="prof-name">—</div>
+        <div class="customer-welcome-banner">
+          <div>
+            <h2 id="custWelcomeTitle">Welcome back!</h2>
+            <p>Select any section from your <strong>My Account</strong> dropdown menu or cards below to view details.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="/booking" class="btn-sm" style="background:var(--accent); color:var(--primary); text-decoration:none; padding:10px 16px; font-weight:700; border-radius:6px;">
+              📅 Book Service / Product
+            </a>
+            <a href="/products" class="btn-sm" style="background:rgba(255,255,255,0.16); color:#fff; border:1px solid rgba(255,255,255,0.3); text-decoration:none; padding:10px 16px; font-weight:700; border-radius:6px;">
+              🛍️ Shop Products
+            </a>
+          </div>
         </div>
-        <div class="profile-field">
-          <label>Phone Number</label>
-          <div id="prof-phone">—</div>
-        </div>
-        <div class="profile-field">
-          <label>Email Address</label>
-          <div id="prof-email">—</div>
-        </div>
-        <div class="profile-field">
-          <label>Delivery Address</label>
-          <div id="prof-location">—</div>
-        </div>
-      </div>
-    </section>
 
-    <!-- 2. My Orders & Purchases -->
-    <section class="customer-panel">
-      <div class="customer-panel-header">
-        <h3>🛍️ My Orders &amp; Purchases</h3>
-        <a href="/products" style="font-size:0.85rem; color:var(--primary); font-weight:700; text-decoration:none;">+ Shop More Items →</a>
-      </div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Order #</th>
-              <th>Items Purchased</th>
-              <th>Total Amount</th>
-              <th>Payment Status</th>
-              <th>Payment Method</th>
-              <th>Fulfillment Status</th>
-            </tr>
-          </thead>
-          <tbody id="cust-orders-tbody">
-            <tr><td colspan="6" style="text-align:center; padding:18px;">Loading your purchase history...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- 3. My Payments & Receipts -->
-    <section class="customer-panel">
-      <div class="customer-panel-header">
-        <h3>💳 My Payments &amp; Official Receipts</h3>
-      </div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Receipt #</th>
-              <th>Order #</th>
-              <th>Amount Paid</th>
-              <th>Payment Method</th>
-              <th>Reference #</th>
-              <th>Payment Date</th>
-              <th>Served By</th>
-              <th>Receipt</th>
-            </tr>
-          </thead>
-          <tbody id="cust-payments-tbody">
-            <tr><td colspan="8" style="text-align:center; padding:18px;">Loading your payment receipts...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- 4. My Deliveries & Dispatches -->
-    <section class="customer-panel">
-      <div class="customer-panel-header">
-        <h3>🚚 My Scheduled Deliveries</h3>
-      </div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Order #</th>
-              <th>Delivery Destination</th>
-              <th>Assigned Driver</th>
-              <th>Scheduled Date</th>
-              <th>Delivery Status</th>
-              <th>Driver Notes</th>
-            </tr>
-          </thead>
-          <tbody id="cust-deliveries-tbody">
-            <tr><td colspan="6" style="text-align:center; padding:18px;">Loading your deliveries...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- 5. My Scheduled Bookings -->
-    <section class="customer-panel">
-      <div class="customer-panel-header">
-        <h3>📅 My Scheduled Bookings</h3>
-        <a href="/booking" style="font-size:0.85rem; color:var(--primary); font-weight:700; text-decoration:none;">+ New Booking →</a>
-      </div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Booking Ref</th>
-              <th>Type</th>
-              <th>Booked Item / Service</th>
-              <th>Scheduled Date &amp; Time</th>
-              <th>Est. Amount</th>
-              <th>Confirmation Status</th>
-            </tr>
-          </thead>
-          <tbody id="cust-bookings-tbody">
-            <tr><td colspan="6" style="text-align:center; padding:18px;">Loading your bookings...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- 5B. My Electrical Service Jobs, Service Fees & Receipts -->
-    <section class="customer-panel">
-      <div class="customer-panel-header">
-        <h3>🛠️ My Electrical Service Jobs, Service Fees &amp; Receipts</h3>
-        <a href="/booking" style="font-size:0.85rem; color:var(--primary); font-weight:700; text-decoration:none;">+ Book a Service →</a>
-      </div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Job #</th>
-              <th>Service &amp; Technician</th>
-              <th>Completion Status</th>
-              <th>Service Fee</th>
-              <th>Payment Status</th>
-              <th>Receipt &amp; Feedback</th>
-            </tr>
-          </thead>
-          <tbody id="cust-services-tbody">
-            <tr><td colspan="6" style="text-align:center; padding:18px;">Loading your service jobs...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- 6. My Product Warranties -->
-    <section class="customer-panel">
-      <div class="customer-panel-header">
-        <h3>🛡️ My Product Warranties</h3>
-      </div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Certificate #</th>
-              <th>Product Name</th>
-              <th>Serial Number</th>
-              <th>Start Date</th>
-              <th>Expiry Date</th>
-              <th>Warranty Status</th>
-            </tr>
-          </thead>
-          <tbody id="cust-warranties-tbody">
-            <tr><td colspan="6" style="text-align:center; padding:18px;">Loading your warranties...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- 7. My Feedback & Product Reviews -->
-    <section class="customer-panel">
-      <div class="customer-panel-header">
-        <h3>💬 My Feedback &amp; Product Reviews</h3>
-        <a href="/feedback" style="font-size:0.85rem; color:var(--primary); font-weight:700; text-decoration:none;">+ Submit Feedback / Leave Review →</a>
-      </div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Type</th>
-              <th>Rating</th>
-              <th>Subject &amp; Message</th>
-              <th>Status</th>
-              <th>Management Reply</th>
-            </tr>
-          </thead>
-          <tbody id="cust-feedback-tbody">
-            <tr><td colspan="6" style="text-align:center; padding:18px;">Loading your feedback...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-  </div>
-
-  <!-- Service Feedback Modal -->
-  <div class="modal-overlay" id="cust-service-feedback-modal">
-    <div class="modal">
-      <h3>💬 Give Feedback on Your Service</h3>
-      <form id="custServiceFeedbackForm">
-        <input type="hidden" id="fb_service_request_id">
-        <div id="fb-service-summary" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:10px 12px; font-size:0.85rem; margin-bottom:12px;"></div>
-        <div class="form-group">
-          <label>Rating *</label>
-          <select id="fb_service_rating" class="form-control" required>
-            <option value="5">★★★★★ (5/5 - Excellent Service)</option>
-            <option value="4">★★★★☆ (4/5 - Good Service)</option>
-            <option value="3">★★★☆☆ (3/5 - Average)</option>
-            <option value="2">★★☆☆☆ (2/5 - Needs Improvement)</option>
-            <option value="1">★☆☆☆☆ (1/5 - Poor)</option>
-          </select>
+        <div class="customer-kpis">
+          <a href="/customer-orders" class="customer-kpi-link">
+            <div class="metric-card">
+              <h4>🛍️ My Purchases / Orders</h4>
+              <div class="value" id="cust-kpi-orders" style="color:var(--primary);">0</div>
+            </div>
+          </a>
+          <a href="/customer-payments" class="customer-kpi-link">
+            <div class="metric-card">
+              <h4>💳 My Total Payments</h4>
+              <div class="value" id="cust-kpi-payments" style="color:#087443;">KES 0</div>
+            </div>
+          </a>
+          <a href="/customer-deliveries" class="customer-kpi-link">
+            <div class="metric-card">
+              <h4>🚚 My Deliveries</h4>
+              <div class="value" id="cust-kpi-deliveries" style="color:#2563eb;">0</div>
+            </div>
+          </a>
+          <a href="/customer-bookings" class="customer-kpi-link">
+            <div class="metric-card">
+              <h4>📅 My Bookings</h4>
+              <div class="value" id="cust-kpi-bookings" style="color:#d97706;">0</div>
+            </div>
+          </a>
+          <a href="/customer-warranties" class="customer-kpi-link">
+            <div class="metric-card">
+              <h4>🛡️ Active Warranties</h4>
+              <div class="value" id="cust-kpi-warranties" style="color:#7c3aed;">0</div>
+            </div>
+          </a>
         </div>
-        <div class="form-group">
-          <label>Subject *</label>
-          <input type="text" id="fb_service_subject" class="form-control" required>
-        </div>
-        <div class="form-group">
-          <label>Your Feedback / Comments *</label>
-          <textarea id="fb_service_message" class="form-control" rows="3" placeholder="Tell us about the technician's work, timeliness, and overall experience..." required></textarea>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-sm" onclick="closeCustModal('cust-service-feedback-modal')">Cancel</button>
-          <button type="submit" class="btn-sm btn-primary">Submit Feedback</button>
-        </div>
-      </form>
-    </div>
-  </div>
 
-  <!-- Edit Profile Modal -->
-  <div class="modal-overlay" id="cust-profile-modal">
-    <div class="modal">
-      <h3>Edit My Profile &amp; Contact</h3>
-      <form id="custProfileForm">
-        <div class="form-group">
-          <label>Full Name</label>
-          <input type="text" id="edit_cust_name" class="form-control" required>
-        </div>
-        <div class="form-group">
-          <label>Phone Number (10 Digits)</label>
-          <input type="tel" id="edit_cust_phone" class="form-control" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" placeholder="07XXXXXXXX or 01XXXXXXXX" required>
-        </div>
-        <div class="form-group">
-          <label>Delivery Location / Address</label>
-          <input type="text" id="edit_cust_location" class="form-control" placeholder="e.g. Makutano, Meru" required>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-sm" onclick="closeCustModal('cust-profile-modal')">Cancel</button>
-          <button type="submit" class="btn-sm btn-primary">Save Changes</button>
-        </div>
-      </form>
-    </div>
-  </div>
+        <section class="customer-panel">
+          <div class="customer-panel-header">
+            <h3>⚡ Quick Access Under My Account</h3>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+            <a href="/customer-profile" class="btn-sm" style="display:block; text-decoration:none; padding:12px 14px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; color:var(--primary); font-weight:700;">👤 My Profile &amp; Contact Details →</a>
+            <a href="/customer-orders" class="btn-sm" style="display:block; text-decoration:none; padding:12px 14px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; color:var(--primary); font-weight:700;">🛍️ My Orders &amp; Purchases →</a>
+            <a href="/customer-payments" class="btn-sm" style="display:block; text-decoration:none; padding:12px 14px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; color:var(--primary); font-weight:700;">💳 My Payments &amp; Official Receipts →</a>
+            <a href="/customer-deliveries" class="btn-sm" style="display:block; text-decoration:none; padding:12px 14px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; color:var(--primary); font-weight:700;">🚚 My Scheduled Deliveries →</a>
+            <a href="/customer-bookings" class="btn-sm" style="display:block; text-decoration:none; padding:12px 14px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; color:var(--primary); font-weight:700;">📅 My Scheduled Bookings →</a>
+            <a href="/customer-services" class="btn-sm" style="display:block; text-decoration:none; padding:12px 14px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; color:var(--primary); font-weight:700;">🛠️ My Electrical Service Jobs &amp; Receipts →</a>
+            <a href="/customer-warranties" class="btn-sm" style="display:block; text-decoration:none; padding:12px 14px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; color:var(--primary); font-weight:700;">🛡️ My Product Warranties →</a>
+          </div>
+        </section>
 
-    <!-- Footer -->
-    <footer>
-      <p><strong>Elight Electrical Shop</strong> &copy; 2026. All rights reserved.</p>
-      <p>Location: Meru, Meru County, Kenya | Call / WhatsApp: +254 700 000 000 | Email: elightelectrical@ke.com</p>
-    </footer>
+        <section class="customer-panel">
+          <div class="customer-panel-header">
+            <h3>💬 My Feedback &amp; Product Reviews</h3>
+            <a href="/feedback" style="font-size:0.85rem; color:var(--primary); font-weight:700; text-decoration:none;">+ Submit Feedback / Leave Review →</a>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Type</th>
+                  <th>Rating</th>
+                  <th>Subject &amp; Message</th>
+                  <th>Status</th>
+                  <th>Management Reply</th>
+                </tr>
+              </thead>
+              <tbody id="cust-feedback-tbody">
+                <tr><td colspan="6" style="text-align:center; padding:18px;">Loading your feedback...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+
+      <footer>
+        <p><strong>Elight Electrical Shop</strong> &copy; 2026. All rights reserved.</p>
+        <p>Location: Meru, Meru County, Kenya | Call / WhatsApp: +254 700 000 000 | Email: elightelectrical@ke.com</p>
+      </footer>
     </div>
   </div>
 

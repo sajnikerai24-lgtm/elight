@@ -54,9 +54,37 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(publicDir, 'login.html'));
 });
 
-// Customer Portal route - dedicated customer-only interface
+// Customer Portal routes - Overview + 7 dedicated My Account sub-pages
 app.get('/customer', (req, res) => {
   res.sendFile(path.join(publicDir, 'customer.html'));
+});
+
+app.get('/customer-profile', (req, res) => {
+  res.sendFile(path.join(publicDir, 'customer-profile.html'));
+});
+
+app.get('/customer-orders', (req, res) => {
+  res.sendFile(path.join(publicDir, 'customer-orders.html'));
+});
+
+app.get('/customer-payments', (req, res) => {
+  res.sendFile(path.join(publicDir, 'customer-payments.html'));
+});
+
+app.get('/customer-deliveries', (req, res) => {
+  res.sendFile(path.join(publicDir, 'customer-deliveries.html'));
+});
+
+app.get('/customer-bookings', (req, res) => {
+  res.sendFile(path.join(publicDir, 'customer-bookings.html'));
+});
+
+app.get('/customer-services', (req, res) => {
+  res.sendFile(path.join(publicDir, 'customer-services.html'));
+});
+
+app.get('/customer-warranties', (req, res) => {
+  res.sendFile(path.join(publicDir, 'customer-warranties.html'));
 });
 
 // Booking Module route

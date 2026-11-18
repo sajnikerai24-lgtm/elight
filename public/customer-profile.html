@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile &amp; Contact Details - Elight Electrical Shop</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="/images/elight-favicon.svg?v=7">
+</head>
+<body style="visibility:hidden;" id="customerPageBody">
+
+  <header>
+    <div class="storefront-header-bar">
+      <img src="/images/elight-logo.svg?v=7" alt="Elight Logo" style="width:60px;height:60px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,224,51,0.35));">
+      <div class="header-title-center">
+        <h1>ELIGHT ELECTRICAL SHOP</h1>
+        <p>Your one-stop destination for quality electrical fittings, lighting &amp; appliances</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="storefront-layout">
+    <nav>
+      <div class="nav-links">
+        <a href="/">🏠 Home</a>
+        <a href="/products">📦 Product Catalog</a>
+        <a href="/cart">
+          🛒 Cart <span class="cart-pill" id="cart-count">0</span>
+        </a>
+        <a href="/booking">📅 Book</a>
+        <a href="/contact">📞 Contact Us</a>
+        <a href="/help">❓ Help</a>
+        <a href="/feedback">💬 Feedback</a>
+        <a href="/about">ℹ️ About Us</a>
+        <div class="nav-dropdown open" id="customerAccountDropdown">
+          <button type="button" class="nav-dropdown-toggle" aria-expanded="true" onclick="toggleCustomerAccountMenu()">
+            <span>👤 My Account</span>
+            <span class="nav-dropdown-arrow">▾</span>
+          </button>
+          <div class="nav-dropdown-menu" id="customerAccountDropdownMenu"></div>
+        </div>
+      </div>
+      <div class="nav-auth-box">
+        <a id="adminReturnPortalBtn" href="/admin" style="display:none; background:#f59e0b; color:#0f172a; text-decoration:none; border-radius:6px; padding:8px 12px; font-size:0.82rem; font-weight:800; justify-content:center;">
+          👑 Back to Admin ERP
+        </a>
+        <span id="navCustomerBadge" style="color:#e2e8f0; font-size:0.85rem; font-weight:600; padding:0 4px;">👤 Customer</span>
+        <button type="button" onclick="logoutCustomer()" style="width:100%; background:#ef4444; color:#ffffff; border:none; border-radius:6px; padding:8px 14px; font-size:0.84rem; font-weight:700; cursor:pointer;">
+          Logout
+        </button>
+      </div>
+    </nav>
+
+    <div class="storefront-content">
+      <div class="customer-shell">
+        <div class="customer-welcome-banner">
+          <div>
+            <h2>👤 My Profile &amp; Contact Details</h2>
+            <p>View and update your personal details, phone number, and delivery location.</p>
+          </div>
+          <a href="/customer" class="btn-sm" style="background:rgba(255,255,255,0.16); color:#fff; border:1px solid rgba(255,255,255,0.3); text-decoration:none; padding:10px 16px; font-weight:700; border-radius:6px;">
+            ← Account Overview
+          </a>
+        </div>
+
+        <section class="customer-panel">
+          <div class="customer-panel-header">
+            <h3>👤 Personal &amp; Contact Information</h3>
+            <button type="button" class="btn-sm btn-primary" onclick="openEditProfileModal()">✎ Edit My Details</button>
+          </div>
+          <div class="profile-grid">
+            <div class="profile-field">
+              <label>Full Name</label>
+              <div id="prof-name">—</div>
+            </div>
+            <div class="profile-field">
+              <label>Phone Number</label>
+              <div id="prof-phone">—</div>
+            </div>
+            <div class="profile-field">
+              <label>Email Address</label>
+              <div id="prof-email">—</div>
+            </div>
+            <div class="profile-field">
+              <label>Delivery Address</label>
+              <div id="prof-location">—</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="modal-overlay" id="cust-profile-modal">
+        <div class="modal">
+          <h3>Edit My Profile &amp; Contact</h3>
+          <form id="custProfileForm">
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" id="edit_cust_name" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Phone Number (10 Digits)</label>
+              <input type="tel" id="edit_cust_phone" class="form-control" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" placeholder="07XXXXXXXX or 01XXXXXXXX" required>
+            </div>
+            <div class="form-group">
+              <label>Delivery Location / Address</label>
+              <input type="text" id="edit_cust_location" class="form-control" placeholder="e.g. Makutano, Meru" required>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn-sm" onclick="closeCustModal('cust-profile-modal')">Cancel</button>
+              <button type="submit" class="btn-sm btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <footer>
+        <p><strong>Elight Electrical Shop</strong> &copy; 2026. All rights reserved.</p>
+        <p>Location: Meru, Meru County, Kenya | Call / WhatsApp: +254 700 000 000 | Email: elightelectrical@ke.com</p>
+      </footer>
+    </div>
+  </div>
+
+  <script src="js/customer_portal.js"></script>
+</body>
+</html>

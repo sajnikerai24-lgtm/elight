@@ -8,6 +8,40 @@ let loggedCustomerUser = null;
 let myCustomerProfile = null;
 let myCustomerServices = [];
 
+const CUSTOMER_ACCOUNT_MENU_ITEMS = [
+  { href: '/customer', label: '📊 Account Overview' },
+  { href: '/customer-profile', label: '👤 My Profile & Contact Details' },
+  { href: '/customer-orders', label: '🛍️ My Orders & Purchases' },
+  { href: '/customer-payments', label: '💳 My Payments & Official Receipts' },
+  { href: '/customer-deliveries', label: '🚚 My Scheduled Deliveries' },
+  { href: '/customer-bookings', label: '📅 My Scheduled Bookings' },
+  { href: '/customer-services', label: '🛠️ My Electrical Service Jobs, Service Fees & Receipts' },
+  { href: '/customer-warranties', label: '🛡️ My Product Warranties' }
+];
+
+function toggleCustomerAccountMenu(forceState) {
+  const dropdown = document.getElementById('customerAccountDropdown');
+  if (!dropdown) return;
+  const shouldOpen = typeof forceState === 'boolean' ? forceState : !dropdown.classList.contains('open');
+  dropdown.classList.toggle('open', shouldOpen);
+  const toggleBtn = dropdown.querySelector('.nav-dropdown-toggle');
+  if (toggleBtn) toggleBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+}
+
+function initCustomerAccountDropdown() {
+  const menu = document.getElementById('customerAccountDropdownMenu');
+  if (!menu) return;
+  const currentPath = (window.location.pathname || '/customer').replace(/\.html$/i, '') || '/customer';
+
+  menu.innerHTML = CUSTOMER_ACCOUNT_MENU_ITEMS.map(item => {
+    const isActive = currentPath === item.href;
+    return `<a href="${item.href}" class="nav-dropdown-item${isActive ? ' active' : ''}">${item.label}</a>`;
+  }).join('');
+
+  // Expand automatically on desktop sidebar; toggle on tap on narrow mobile nav
+  toggleCustomerAccountMenu(window.innerWidth > 820);
+}
+
 function escapeHTML(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => ({
     '&': '&amp;',
@@ -88,6 +122,7 @@ function verifyCustomerSession() {
     return false;
   }
 
+  initCustomerAccountDropdown();
   document.getElementById('customerPageBody').style.visibility = 'visible';
 
   const adminReturnBtn = document.getElementById('adminReturnPortalBtn');
@@ -99,10 +134,16 @@ function verifyCustomerSession() {
     .replace(/\s*\(customer\)\s*$/i, '')
     .trim();
 
-  document.getElementById('navCustomerBadge').textContent = isAdminPreview
-    ? `👑 ${cleanDisplayName} (Admin View)`
-    : `👤 ${cleanDisplayName}`;
-  document.getElementById('custWelcomeTitle').textContent = `Welcome, ${cleanDisplayName}!`;
+  const navBadge = document.getElementById('navCustomerBadge');
+  if (navBadge) {
+    navBadge.textContent = isAdminPreview
+      ? `👑 ${cleanDisplayName} (Admin View)`
+      : `👤 ${cleanDisplayName}`;
+  }
+  const welcomeTitle = document.getElementById('custWelcomeTitle');
+  if (welcomeTitle) {
+    welcomeTitle.textContent = `Welcome, ${cleanDisplayName}!`;
+  }
   return true;
 }
 
@@ -127,13 +168,13 @@ async function loadMyCustomerPortal() {
     const services = data.services || [];
     myCustomerServices = services;
 
-    // Populate Profile Section
+    // Populate Profile Section (only if present on current page)
     const displayName = myCustomerProfile.full_name ||
       String(loggedCustomerUser.full_name || '').replace(/\s*\(customer\)\s*$/i, '');
-    document.getElementById('prof-name').textContent = displayName || '—';
-    document.getElementById('prof-phone').textContent = myCustomerProfile.phone || loggedCustomerUser.phone || '—';
-    document.getElementById('prof-email').textContent = myCustomerProfile.email || loggedCustomerUser.email || '—';
-    document.getElementById('prof-location').textContent = myCustomerProfile.location || 'Meru, Meru County';
+    if (document.getElementById('prof-name')) document.getElementById('prof-name').textContent = displayName || '—';
+    if (document.getElementById('prof-phone')) document.getElementById('prof-phone').textContent = myCustomerProfile.phone || loggedCustomerUser.phone || '—';
+    if (document.getElementById('prof-email')) document.getElementById('prof-email').textContent = myCustomerProfile.email || loggedCustomerUser.email || '—';
+    if (document.getElementById('prof-location')) document.getElementById('prof-location').textContent = myCustomerProfile.location || 'Meru, Meru County';
 
     // KPIs
     const activeWarranties = warranties.filter(w => w.status === 'active').length;
@@ -259,19 +300,21 @@ async function loadMyCustomerPortal() {
 
     // 4. Render Customer's Own Warranties
     const warrBody = document.getElementById('cust-warranties-tbody');
-    if (warranties.length === 0) {
-      warrBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:18px; color:var(--text-muted);">No product warranties registered under your account yet.</td></tr>';
-    } else {
-      warrBody.innerHTML = warranties.map(w => `
-        <tr>
-          <td><strong>#WAR-${w.warranty_id}</strong></td>
-          <td><strong>${escapeHTML(w.product_name)}</strong></td>
-          <td><code>${escapeHTML(w.serial_no || 'N/A')}</code></td>
-          <td>${w.start_date || '—'}</td>
-          <td>${w.expiry_date || '—'}</td>
-          <td><span class="badge-tag badge-${escapeHTML(w.status)}">${escapeHTML(w.status)}</span></td>
-        </tr>
-      `).join('');
+    if (warrBody) {
+      if (warranties.length === 0) {
+        warrBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:18px; color:var(--text-muted);">No product warranties registered under your account yet.</td></tr>';
+      } else {
+        warrBody.innerHTML = warranties.map(w => `
+          <tr>
+            <td><strong>#WAR-${w.warranty_id}</strong></td>
+            <td><strong>${escapeHTML(w.product_name)}</strong></td>
+            <td><code>${escapeHTML(w.serial_no || 'N/A')}</code></td>
+            <td>${w.start_date || '—'}</td>
+            <td>${w.expiry_date || '—'}</td>
+            <td><span class="badge-tag badge-${escapeHTML(w.status)}">${escapeHTML(w.status)}</span></td>
+          </tr>
+        `).join('');
+      }
     }
 
     // 5. Render Customer's Own Scheduled Bookings
@@ -365,7 +408,8 @@ if (editCustPhoneInput) {
   });
 }
 
-document.getElementById('custProfileForm').addEventListener('submit', async (e) => {
+const custProfileFormEl = document.getElementById('custProfileForm');
+if (custProfileFormEl) custProfileFormEl.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!myCustomerProfile?.customer_id) return;
 
@@ -405,8 +449,10 @@ document.getElementById('custProfileForm').addEventListener('submit', async (e) 
 
     closeCustModal('cust-profile-modal');
     showToast('Your profile has been updated!', 'success');
-    document.getElementById('navCustomerBadge').textContent = `👤 ${full_name}`;
-    document.getElementById('custWelcomeTitle').textContent = `Welcome, ${full_name}!`;
+    const navBadge = document.getElementById('navCustomerBadge');
+    if (navBadge) navBadge.textContent = `👤 ${full_name}`;
+    const welcomeTitle = document.getElementById('custWelcomeTitle');
+    if (welcomeTitle) welcomeTitle.textContent = `Welcome, ${full_name}!`;
     loadMyCustomerPortal();
   } catch (err) {
     showToast(err.message, 'error');
