@@ -6,6 +6,7 @@ const interModuleSync = require('../utils/interModuleSync');
 const { buildOfficialReceiptPdf } = require('../utils/pdfReceiptGenerator');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 const { validatePaymentReference, validateBankAccountNumber } = require('../utils/paymentValidation');
+const { sortByLatest } = require('../utils/sortLatest');
 
 const BUCKET_NAME = 'supplier-documents';
 const MAX_DOC_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -1499,7 +1500,7 @@ exports.downloadOwnSupplierDocument = async (req, res) => {
 exports.erpListSuppliers = async (req, res) => {
   try {
     const [supRes, posRes, invRes, payRes, authListRes] = await Promise.all([
-      supabase.from('suppliers').select('*').order('supplier_id', { ascending: true }),
+      supabase.from('suppliers').select('*').order('supplier_id', { ascending: false }),
       supabase.from('purchase_orders').select('po_id, supplier_id, total_amount, status'),
       supabase.from('supplier_invoices').select('invoice_id, supplier_id, total_amount, amount_paid, status'),
       supabase.from('payments').select('payment_id, supplier_id, amount_paid'),
@@ -1903,14 +1904,14 @@ exports.erpGetProcurementOverview = async (req, res) => {
     return res.json({
       success: true,
       suppliers: supRes.data || [],
-      purchase_orders: posRes.data || [],
+      purchase_orders: sortByLatest(posRes.data || [], 'po_id'),
       purchase_items: purchaseItems,
-      quotations: qRes.data || [],
+      quotations: sortByLatest(qRes.data || [], 'quotation_id'),
       quotation_items: enrichedQuotationItems,
-      deliveries: delRes.data || [],
-      purchases: purRes.data || [],
-      invoices: invRes.data || [],
-      products: prodRes || []
+      deliveries: sortByLatest(delRes.data || [], 'delivery_id'),
+      purchases: sortByLatest(purRes.data || [], 'purchase_id'),
+      invoices: sortByLatest(invRes.data || [], 'invoice_id'),
+      products: sortByLatest(prodRes || [], 'product_id')
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed loading procurement overview.' });
@@ -2529,12 +2530,12 @@ exports.erpGetFinanceOverview = async (req, res) => {
 
     return res.json({
       success: true,
-      invoices: passedInvoices,
-      payments: payRes.data || [],
+      invoices: sortByLatest(passedInvoices, 'invoice_id'),
+      payments: sortByLatest(payRes.data || [], 'payment_id'),
       suppliers: supRes.data || [],
-      purchase_orders: enrichedPOs,
-      quotations: enrichedQuotes,
-      grns: grnRes.data || []
+      purchase_orders: sortByLatest(enrichedPOs, 'po_id'),
+      quotations: sortByLatest(enrichedQuotes, 'quotation_id'),
+      grns: sortByLatest(grnRes.data || [], 'purchase_id')
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed loading supplier finance overview.' });

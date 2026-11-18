@@ -3,6 +3,7 @@ const path = require('path');
 const supabase = require('../config/supabase');
 const interModuleSync = require('../utils/interModuleSync');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
+const { sortByLatest } = require('../utils/sortLatest');
 
 const FEEDBACK_DATA_PATH = path.join(__dirname, '../config/feedback_data.json');
 
@@ -227,8 +228,8 @@ const engagementController = {
         const { data, error } = await supabase
           .from('bookings')
           .select('*')
-          .order('preferred_date', { ascending: true })
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .order('booking_id', { ascending: false });
         if (!error && Array.isArray(data) && data.length > 0) {
           allBookings = data;
         }
@@ -237,6 +238,7 @@ const engagementController = {
       if (allBookings.length === 0) {
         allBookings = await interModuleSync.getBookings();
       }
+      allBookings = sortByLatest(allBookings, 'booking_id');
 
       if (scope === 'all') {
         // Administrator view: return all bookings
@@ -630,6 +632,8 @@ const engagementController = {
         });
       }
 
+      list = sortByLatest(list, 'feedback_id');
+
       if (scope === 'all') {
         return res.json({ success: true, count: list.length, feedback: list, department_filter: targetDept || 'all' });
       }
@@ -830,7 +834,7 @@ const engagementController = {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      res.json({ success: true, inquiries: data || [] });
+      res.json({ success: true, inquiries: sortByLatest(data || [], 'inquiry_id') });
     } catch (err) {
       console.error('getContactInquiries error:', err);
       res.status(500).json({ success: false, message: 'Failed to load inquiries.' });

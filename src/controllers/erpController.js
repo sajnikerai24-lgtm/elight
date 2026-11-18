@@ -5,6 +5,7 @@ const interModuleSync = require('../utils/interModuleSync');
 const { buildOfficialReceiptPdf } = require('../utils/pdfReceiptGenerator');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 const { validatePaymentReference, validateBankAccountNumber } = require('../utils/paymentValidation');
+const { sortByLatest } = require('../utils/sortLatest');
 
 const SETTINGS_PATH = path.join(__dirname, '../config/system_settings.json');
 const CASHIER_ORDERS_PATH = path.join(__dirname, '../config/cashier_orders.json');
@@ -546,10 +547,10 @@ const erpController = {
       const { data, error } = await supabase
         .from('users_accounts')
         .select('user_id, full_name, username, email, role, phone, status, created_at, auth_user_id')
-        .order('user_id', { ascending: true });
+        .order('user_id', { ascending: false });
       if (error) throw error;
 
-      const users = Array.isArray(data) ? data : [];
+      const users = sortByLatest(Array.isArray(data) ? data : [], 'user_id');
       res.json({ success: true, count: users.length, users });
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
@@ -917,7 +918,8 @@ const erpController = {
         .select('*')
         .order('customer_id', { ascending: false });
       if (error) throw error;
-      res.json({ success: true, count: data.length, customers: data });
+      const customers = sortByLatest(data || [], 'customer_id');
+      res.json({ success: true, count: customers.length, customers });
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -944,7 +946,8 @@ const erpController = {
         .select('*, customers(full_name, phone)')
         .order('warranty_id', { ascending: false });
       if (error) throw error;
-      res.json({ success: true, count: data.length, warranties: data });
+      const warranties = sortByLatest(data || [], 'warranty_id');
+      res.json({ success: true, count: warranties.length, warranties });
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -1136,17 +1139,17 @@ const erpController = {
           status: 'confirmed'
         }));
 
-      const combinedPayments = [...servicePayments, ...myPayments];
+      const combinedPayments = sortByLatest([...servicePayments, ...myPayments], 'request_id');
 
       res.json({
         success: true,
         profile: customerProfile,
-        warranties,
-        dispatches,
-        orders: myOrders,
+        warranties: sortByLatest(warranties, 'warranty_id'),
+        dispatches: sortByLatest(dispatches, 'dispatch_id'),
+        orders: sortByLatest(myOrders),
         payments: combinedPayments,
-        bookings,
-        services: myServices
+        bookings: sortByLatest(bookings, 'booking_id'),
+        services: sortByLatest(myServices, 'request_id')
       });
     } catch (err) {
       console.error('Customer portal fetch error:', err);
@@ -1609,9 +1612,10 @@ const erpController = {
       if (records.length === 0) {
         records = readFinanceRecords();
       }
+      records = sortByLatest(records, 'record_id');
       res.json({ success: true, count: records.length, records });
     } catch (err) {
-      const records = readFinanceRecords();
+      const records = sortByLatest(readFinanceRecords(), 'record_id');
       res.json({ success: true, count: records.length, records });
     }
   },
@@ -1900,15 +1904,16 @@ const erpController = {
         };
       });
 
-      const pendingFinance = normalized.filter(o => o.finance_release_status === 'pending_finance');
-      const pendingCredit = normalized.filter(o => o.finance_release_status === 'pending_credit_review');
-      const released = normalized.filter(o => o.finance_release_status === 'released');
-      const creditHolds = normalized.filter(o => o.finance_release_status === 'credit_hold');
+      const sortedNormalized = sortByLatest(normalized);
+      const pendingFinance = sortedNormalized.filter(o => o.finance_release_status === 'pending_finance');
+      const pendingCredit = sortedNormalized.filter(o => o.finance_release_status === 'pending_credit_review');
+      const released = sortedNormalized.filter(o => o.finance_release_status === 'released');
+      const creditHolds = sortedNormalized.filter(o => o.finance_release_status === 'credit_hold');
       const totalReceivable = pendingCredit.reduce((sum, o) => sum + (o.balance_due || 0), 0);
 
       res.json({
         success: true,
-        orders: normalized,
+        orders: sortedNormalized,
         counts: {
           pending_finance: pendingFinance.length,
           pending_credit_review: pendingCredit.length,
@@ -2333,7 +2338,7 @@ const erpController = {
         supabase.from('finance_records').select('*').eq('type', 'sale').order('record_id', { ascending: false }).limit(40),
         supabase.from('dispatches').select('*').order('dispatch_id', { ascending: false }).limit(40),
         supabase.from('bookings').select('*').order('booking_id', { ascending: false }).limit(25),
-        supabase.from('inventory').select('*').order('product_id', { ascending: true }),
+        supabase.from('inventory').select('*').order('product_id', { ascending: false }),
         supabase.from('customers').select('*').order('customer_id', { ascending: false })
       ]);
 

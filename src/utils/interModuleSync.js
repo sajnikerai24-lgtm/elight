@@ -3,6 +3,7 @@ const path = require('path');
 const supabase = require('../config/supabase');
 const { readJsonFile, writeJsonFile } = require('./jsonStore');
 const { validatePaymentReference } = require('./paymentValidation');
+const { sortByLatest } = require('./sortLatest');
 
 // File paths for resilient local storage and offline ERP operations
 const CONFIG_DIR = path.join(__dirname, '../config');
@@ -302,15 +303,15 @@ const interModuleSync = {
   getProducts: async () => {
     try {
       const { data, error } = await withTimeout(
-        supabase.from('inventory').select('*').order('product_name', { ascending: true })
+        supabase.from('inventory').select('*').order('product_id', { ascending: false })
       );
       if (!error && Array.isArray(data) && data.length > 0) {
-        // Sync local file with supabase data
-        writeJson(PRODUCTS_DATA_PATH, data);
-        return data;
+        const sorted = sortByLatest(data, 'product_id');
+        writeJson(PRODUCTS_DATA_PATH, sorted);
+        return sorted;
       }
     } catch (e) {}
-    return readJson(PRODUCTS_DATA_PATH, DEFAULT_PRODUCTS);
+    return sortByLatest(readJson(PRODUCTS_DATA_PATH, DEFAULT_PRODUCTS), 'product_id');
   },
 
   getStockMovements: async () => {
@@ -319,11 +320,12 @@ const interModuleSync = {
         supabase.from('stock_movements').select('*').order('movement_id', { ascending: false })
       );
       if (!error && Array.isArray(data) && data.length > 0) {
-        writeJson(STOCK_MOVEMENTS_PATH, data);
-        return data;
+        const sorted = sortByLatest(data, 'movement_id');
+        writeJson(STOCK_MOVEMENTS_PATH, sorted);
+        return sorted;
       }
     } catch (e) {}
-    return readJson(STOCK_MOVEMENTS_PATH, DEFAULT_MOVEMENTS);
+    return sortByLatest(readJson(STOCK_MOVEMENTS_PATH, DEFAULT_MOVEMENTS), 'movement_id');
   },
 
   adjustProductStock: async ({
@@ -431,19 +433,20 @@ const interModuleSync = {
       let query = supabase
         .from('bookings')
         .select('*')
-        .order('preferred_date', { ascending: true })
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('booking_id', { ascending: false });
 
       if (filter.booking_ref) {
         query = query.ilike('booking_ref', filter.booking_ref);
       }
       const { data, error } = await query;
       if (!error && Array.isArray(data) && data.length > 0) {
-        writeJson(BOOKINGS_PATH, data);
-        return data;
+        const sorted = sortByLatest(data, 'booking_id');
+        writeJson(BOOKINGS_PATH, sorted);
+        return sorted;
       }
     } catch (e) {}
-    return readJson(BOOKINGS_PATH, DEFAULT_BOOKINGS);
+    return sortByLatest(readJson(BOOKINGS_PATH, DEFAULT_BOOKINGS), 'booking_id');
   },
 
   getServiceRequests: async (technicianFilter = null, technicianId = null) => {
@@ -840,13 +843,14 @@ const interModuleSync = {
       const { data, error } = await supabase
         .from('inventory')
         .select('*')
-        .order('product_id', { ascending: true });
+        .order('product_id', { ascending: false });
       if (!error && Array.isArray(data) && data.length > 0) {
-        writeJson(PRODUCTS_DATA_PATH, data);
-        return data;
+        const sorted = sortByLatest(data, 'product_id');
+        writeJson(PRODUCTS_DATA_PATH, sorted);
+        return sorted;
       }
     } catch (e) {}
-    return readJson(PRODUCTS_DATA_PATH, DEFAULT_PRODUCTS);
+    return sortByLatest(readJson(PRODUCTS_DATA_PATH, DEFAULT_PRODUCTS), 'product_id');
   },
 
   getMaterialRequests: async (filter = {}) => {
@@ -907,7 +911,7 @@ const interModuleSync = {
       enriched = enriched.filter(m => String(m.technician_name || '').toLowerCase().includes(tLow));
     }
 
-    return enriched;
+    return sortByLatest(enriched, 'material_request_id');
   },
 
   createMaterialRequest: async ({ service_request_id, technician_id, technician_name, items, notes }) => {
@@ -1561,7 +1565,7 @@ const interModuleSync = {
       });
     }
 
-    return dispatches;
+    return sortByLatest(dispatches, 'dispatch_id');
   },
 
   createDispatchForOrder: async (order, options = {}) => {
@@ -1788,7 +1792,7 @@ const interModuleSync = {
   // 5. CUSTOMER CARE FOLLOW-UP MODULE (Stage 6)
   // ========================================================
   getCustomerCareTasks: async () => {
-    return readJson(CUSTOMER_CARE_TASKS_PATH, []);
+    return sortByLatest(readJson(CUSTOMER_CARE_TASKS_PATH, []), 'created_at');
   },
 
   createCustomerCareTaskForOrder: async (order, extra = {}) => {

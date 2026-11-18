@@ -1,5 +1,6 @@
 const supabase = require('../config/supabase');
 const interModuleSync = require('../utils/interModuleSync');
+const { sortByLatest } = require('../utils/sortLatest');
 
 // Sample initial products for fallback preview when table is not yet created in Supabase
 const sampleProducts = [
@@ -151,7 +152,7 @@ const inventoryController = {
       let products = [];
       try {
         const { data, error } = await withTimeout(
-          supabase.from('inventory').select('*').order('product_name', { ascending: true })
+          supabase.from('inventory').select('*').order('product_id', { ascending: false })
         );
         if (!error && Array.isArray(data) && data.length > 0) {
           products = data;
@@ -161,6 +162,7 @@ const inventoryController = {
       if (products.length === 0) {
         products = await interModuleSync.getProducts();
       }
+      products = sortByLatest(products, 'product_id');
 
       res.json({
         success: true,
@@ -288,7 +290,8 @@ const inventoryController = {
         if (sort === 'price-desc') return priceB - priceA;
         if (sort === 'stock-desc') return stockB - stockA;
         if (sort === 'name-desc') return nameB.localeCompare(nameA);
-        return nameA.localeCompare(nameB);
+        if (sort === 'name-asc') return nameA.localeCompare(nameB);
+        return Number(b.item.product_id || 0) - Number(a.item.product_id || 0);
       });
 
       const totalMatches = scored.length;
