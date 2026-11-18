@@ -2542,16 +2542,11 @@ const erpController = {
         };
       });
 
+      // Sort strictly by latest order first (newest created_at timestamp at the top)
       normalizedOrders.sort((a, b) => {
-        // Show pending credit review and pending finance release at top, then newest
-        const rank = (o) => {
-          if (o.finance_release_status === 'pending_credit_review') return 0;
-          if (o.finance_release_status === 'pending_finance') return 1;
-          if (o.fulfillment_status === 'paid_awaiting_handoff' || o.fulfillment_status === 'ready_for_collection') return 2;
-          return 3;
-        };
-        if (rank(a) !== rank(b)) return rank(a) - rank(b);
-        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        const timeB = new Date(b.created_at || b.paid_at || 0).getTime() || 0;
+        const timeA = new Date(a.created_at || a.paid_at || 0).getTime() || 0;
+        return timeB - timeA;
       });
 
       const products = invRes.data || [];

@@ -1604,7 +1604,7 @@ async function loadCashierDesk() {
 
     renderCashierOrdersTable();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">${escapeHTML(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">${escapeHTML(err.message)}</td></tr>`;
   }
 }
 
@@ -1695,6 +1695,10 @@ function renderCashierOrdersTable() {
     const itemsStr = (o.items || []).map(i => i.product_name).join(' ');
     const hay = `${o.order_no || ''} ${o.receipt_no || ''} ${o.customer_name || ''} ${o.customer_phone || ''} ${o.payment_ref || ''} ${itemsStr}`.toLowerCase();
     return hay.includes(searchVal);
+  }).sort((a, b) => {
+    const timeB = new Date(b.created_at || b.paid_at || 0).getTime() || 0;
+    const timeA = new Date(a.created_at || a.paid_at || 0).getTime() || 0;
+    return timeB - timeA;
   });
 
   const badgeEl = document.getElementById('cashier-orders-badge');
@@ -1703,13 +1707,22 @@ function renderCashierOrdersTable() {
   }
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:22px;">No customer orders match the selected filter.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:22px;">No customer orders match the selected filter.</td></tr>';
     return;
   }
 
   tbody.innerHTML = filtered.map(o => {
     const isPaid = o.payment_status === 'paid';
     const isReleased = o.finance_release_status === 'released';
+    const rawOrderDate = o.created_at || o.paid_at;
+    const parsedOrderDate = rawOrderDate ? new Date(rawOrderDate) : null;
+    const hasValidDate = parsedOrderDate && !Number.isNaN(parsedOrderDate.getTime());
+    const dateLine = hasValidDate
+      ? parsedOrderDate.toLocaleDateString('en-KE', { year: 'numeric', month: 'short', day: 'numeric' })
+      : '—';
+    const timeLine = hasValidDate
+      ? parsedOrderDate.toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' })
+      : '';
     const itemsHtml = (o.items || [])
       .map(i => `<div style="font-size:0.82rem;">• ${escapeHTML(i.product_name)} <strong>×${i.quantity}</strong></div>`)
       .join('');
@@ -1798,6 +1811,10 @@ function renderCashierOrdersTable() {
         <td>
           <strong style="font-family:monospace; color:var(--primary);">${escapeHTML(o.order_no)}</strong><br>
           <small style="color:var(--text-muted);">${o.receipt_no ? `Receipt: <strong>${escapeHTML(o.receipt_no)}</strong>` : escapeHTML(o.source || 'Order')}</small>
+        </td>
+        <td style="white-space:nowrap;">
+          <div style="font-weight:700; color:#0f172a; font-size:0.84rem;">${escapeHTML(dateLine)}</div>
+          ${timeLine ? `<small style="color:var(--text-muted);">${escapeHTML(timeLine)}</small>` : ''}
         </td>
         <td>
           <strong>${escapeHTML(o.customer_name)}</strong>
