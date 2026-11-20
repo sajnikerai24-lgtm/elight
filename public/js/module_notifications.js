@@ -376,7 +376,7 @@
     wrap.innerHTML = `
       <button type="button" id="elightErpBellBtn" class="elight-topbar-bell-btn" onclick="toggleErpTopNotifDropdown(event)">
         <span>🔔</span>
-        <span>${isAdmin ? 'System Notifications' : 'My Module Notifications'}</span>
+        <span>Notifications</span>
         <span id="elightErpBellCount" style="background:#ef4444; color:#fff; border-radius:999px; padding:1px 7px; font-size:0.74rem; display:none;">0</span>
       </button>
       <div id="elightErpTopNotifDropdown" class="elight-topbar-dropdown">
