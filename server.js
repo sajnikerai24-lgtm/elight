@@ -20,6 +20,30 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve static frontend assets from public directory
 app.use(express.static(publicDir));
 
+// Lightweight real-time mutation version tracker for automatic UI updates
+let liveSyncVersion = Date.now();
+let liveSyncUpdatedAt = new Date().toISOString();
+
+app.get('/api/live-sync/version', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.json({ success: true, version: liveSyncVersion, updatedAt: liveSyncUpdatedAt });
+});
+
+app.use('/api', (req, res, next) => {
+  const method = String(req.method || 'GET').toUpperCase();
+  const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+  const isAuthOnly = /^\/(auth|supplier\/auth)\/(login|refresh|quick-login|register)/i.test(req.path || '');
+  if (isMutation && !isAuthOnly) {
+    res.on('finish', () => {
+      if (res.statusCode < 400) {
+        liveSyncVersion += 1;
+        liveSyncUpdatedAt = new Date().toISOString();
+      }
+    });
+  }
+  next();
+});
+
 // API Routes
 app.use('/api', inventoryRoutes);
 app.use('/api', supplierRoutes);

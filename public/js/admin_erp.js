@@ -196,6 +196,7 @@ function switchModule(moduleName) {
   }
 
   // Update visible section
+  currentActiveERPModule = moduleName;
   document.querySelectorAll('.erp-module-section').forEach(sec => sec.classList.remove('active'));
   const targetSec = document.getElementById(`module-${moduleName}`);
   if (targetSec) targetSec.classList.add('active');
@@ -206,7 +207,15 @@ function switchModule(moduleName) {
     reportsAutoRefreshTimer = null;
   }
 
-  // Trigger relevant data loader
+  loadERPModuleData(moduleName, false);
+}
+
+let currentActiveERPModule = 'overview';
+const NON_BG_SYNC_MODULES = new Set(['new_sale', 'settings', 'help', 'about']);
+
+function loadERPModuleData(moduleName, isBackground = false) {
+  if (isBackground && NON_BG_SYNC_MODULES.has(moduleName)) return;
+
   if (moduleName === 'overview') loadOverviewKPIs();
   else if (moduleName === 'admin') loadUsers();
   else if (moduleName === 'suppliers' && typeof loadAdminSuppliers === 'function') loadAdminSuppliers();
@@ -239,8 +248,8 @@ function switchModule(moduleName) {
   else if (moduleName === 'feedback') loadAdminFeedback();
   else if (moduleName === 'contact') loadAdminContactInquiries();
   else if (moduleName === 'reports') {
-    loadRealtimeReports();
-    syncReportsAutoRefresh();
+    loadRealtimeReports(isBackground);
+    if (!isBackground) syncReportsAutoRefresh();
   }
 }
 
@@ -4606,6 +4615,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   switchModule(initialModule);
   togglePOSCashFields();
   syncFinanceEntryRefRules();
+  if (typeof startElightLiveSync === 'function') {
+    startElightLiveSync(() => loadERPModuleData(currentActiveERPModule, true), {
+      canSync: () => !NON_BG_SYNC_MODULES.has(currentActiveERPModule)
+    });
+  }
 });
 
 
@@ -5292,9 +5306,8 @@ function syncReportsAutoRefresh() {
     clearInterval(reportsAutoRefreshTimer);
     reportsAutoRefreshTimer = null;
   }
-  const toggle = document.getElementById('reports-autorefresh-toggle');
   const sec = document.getElementById('module-reports');
-  if (toggle && toggle.checked && sec && sec.classList.contains('active')) {
+  if (sec && sec.classList.contains('active')) {
     reportsAutoRefreshTimer = setInterval(() => {
       loadRealtimeReports(true);
     }, 15000);
@@ -5303,11 +5316,6 @@ function syncReportsAutoRefresh() {
 
 function toggleReportsAutoRefresh() {
   syncReportsAutoRefresh();
-  const toggle = document.getElementById('reports-autorefresh-toggle');
-  showToast(
-    toggle && toggle.checked ? 'Live 15-second auto-sync enabled.' : 'Live auto-sync paused.',
-    'info'
-  );
 }
 
 function switchReportSubTab(tab) {
@@ -5355,7 +5363,7 @@ async function loadRealtimeReports(silent = false) {
 
     renderRealtimeReportsView();
   } catch (err) {
-    if (syncEl) syncEl.textContent = 'Sync error — click Refresh to retry';
+    if (syncEl) syncEl.textContent = 'Sync interrupted — retrying automatically...';
     if (bodyEl && !latestRealtimeReport) {
       bodyEl.innerHTML = `<div style="padding:32px; color:#b91c1c; font-weight:600; text-align:center;">⚠️ ${escapeHTML(err.message)}</div>`;
     }

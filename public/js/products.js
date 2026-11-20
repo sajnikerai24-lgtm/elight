@@ -382,4 +382,9 @@ if (resetFiltersBtn) {
   });
 }
 
-document.addEventListener('DOMContentLoaded', loadCatalog);
+document.addEventListener('DOMContentLoaded', () => {
+  loadCatalog();
+  if (typeof startElightLiveSync === 'function') {
+    startElightLiveSync(() => executeProductSearch());
+  }
+});

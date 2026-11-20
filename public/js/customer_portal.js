@@ -545,5 +545,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (verifyCustomerSession()) {
     updateCartPill();
     loadMyCustomerPortal();
+    if (typeof startElightLiveSync === 'function') {
+      startElightLiveSync(() => loadMyCustomerPortal());
+    }
   }
 });

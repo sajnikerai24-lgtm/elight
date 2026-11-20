@@ -131,3 +131,16 @@ async function initSupplierHeader(activeTab) {
   return null;
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof startElightLiveSync !== 'function') return;
+  const loader =
+    (typeof window.loadDashboardOverview === 'function' && window.loadDashboardOverview) ||
+    (typeof window.loadTendersPage === 'function' && window.loadTendersPage) ||
+    (typeof window.loadOrdersPage === 'function' && window.loadOrdersPage) ||
+    (typeof window.loadPaymentsPage === 'function' && window.loadPaymentsPage) ||
+    null;
+  if (loader) {
+    startElightLiveSync(() => loader());
+  }
+});
+
