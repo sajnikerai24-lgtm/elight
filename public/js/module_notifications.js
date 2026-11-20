@@ -369,7 +369,6 @@
   function ensureErpTopBell() {
     const mainView = document.querySelector('.erp-main-view');
     if (!mainView || document.getElementById('elightErpTopNotifWrap')) return;
-    const isAdmin = isCurrentUserErpAdmin();
     const wrap = document.createElement('div');
     wrap.id = 'elightErpTopNotifWrap';
     wrap.className = 'elight-topbar-notif-wrap';
@@ -381,7 +380,7 @@
       </button>
       <div id="elightErpTopNotifDropdown" class="elight-topbar-dropdown">
         <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:8px; margin-bottom:8px; border-bottom:1px solid #e2e8f0;">
-          <strong style="color:#0f172a; font-size:0.9rem;">${isAdmin ? '🔔 All ERP Notifications (Admin)' : '🔔 Sent to My Modules'}</strong>
+          <strong style="color:#0f172a; font-size:0.9rem;">🔔 Notifications</strong>
           <button type="button" class="module-notif-btn" onclick="markAllErpNotifsRead('all')">Mark All Read</button>
         </div>
         <div id="elightErpTopNotifList">
@@ -539,14 +538,13 @@
     const collapsed = hasManual ? isCollapsed(collapseKey) : unread.length === 0;
     const showAll = isShowAll(collapseKey);
     const visibleItems = showAll ? list.slice(0, 20) : list.slice(0, 5);
-    const isAdminOverview = mod === 'overview' && isCurrentUserErpAdmin();
 
     panel.classList.toggle('has-unread', unread.length > 0);
     panel.innerHTML = `
       <div class="module-notif-head" onclick="toggleErpInlineNotifCollapse('${escapeHtmlSafe(mod)}')">
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <span style="font-size:0.95rem;">🔔</span>
-          <strong style="font-size:0.86rem; color:#0f172a;">${isAdminOverview ? 'All System Notifications (Admin)' : 'Notifications Sent to This Module'}</strong>
+          <strong style="font-size:0.86rem; color:#0f172a;">Notifications</strong>
           ${unread.length > 0
             ? `<span style="background:#ef4444; color:#fff; border-radius:999px; padding:2px 8px; font-size:0.72rem; font-weight:800;">${unread.length} Unread</span>`
             : `<span style="background:#e2e8f0; color:#475569; border-radius:999px; padding:2px 8px; font-size:0.72rem; font-weight:700;">${list.length} Total</span>`}
@@ -746,7 +744,7 @@
         <div class="module-notif-head" onclick="toggleCustomerNotifCollapse()">
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <span>🔔</span>
-            <strong style="font-size:0.88rem; color:#0f172a;">My Notifications &amp; Status Updates</strong>
+            <strong style="font-size:0.88rem; color:#0f172a;">Notifications</strong>
             ${unreadCount > 0
               ? `<span style="background:#ef4444; color:#fff; border-radius:999px; padding:2px 8px; font-size:0.72rem; font-weight:800;">${unreadCount} Unread</span>`
               : `<span style="background:#e2e8f0; color:#475569; border-radius:999px; padding:2px 8px; font-size:0.72rem; font-weight:700;">${list.length} Total</span>`}
@@ -846,7 +844,7 @@
         <div class="module-notif-head" onclick="toggleSupplierNotifCollapse()">
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <span>🔔</span>
-            <strong style="font-size:0.88rem; color:#0f172a;">Notifications from Elight Procurement &amp; Finance</strong>
+            <strong style="font-size:0.88rem; color:#0f172a;">Notifications</strong>
             ${unreadCount > 0
               ? `<span style="background:#ef4444; color:#fff; border-radius:999px; padding:2px 8px; font-size:0.72rem; font-weight:800;">${unreadCount} Unread</span>`
               : `<span style="background:#e2e8f0; color:#475569; border-radius:999px; padding:2px 8px; font-size:0.72rem; font-weight:700;">${list.length} Total</span>`}
