@@ -667,17 +667,24 @@
               </div>
             </div>
 
-            <!-- Fulfillment Pipeline & Payment Terms -->
+            <!-- Independent Delivery & Installation Selection -->
             <div class="form-row">
-              <div class="form-group" style="flex:2;">
-                <label>Fulfillment Workflow &amp; Dispatch Pipeline *</label>
-                <select id="pos_fulfillment_type" onchange="recalculatePOSTotals()" style="font-weight:600;">
-                  <option value="product_delivery">🚚 Product only: Cashier → Finance → Delivery (+KES 300 / +KES 500)</option>
-                  <option value="product_delivery_install">🚚🔧 Product + installation: Cashier → Finance → Delivery → Installation (+KES 300 / +KES 500)</option>
-                  <option value="product_collection">🏬 Product collected from shop: Cashier → Finance → Collection (Free Pickup)</option>
-                  <option value="product_install_later">🚚📅 Product + installation booked later: Cashier → Finance → Delivery → Scheduled installation (+KES 300 / +KES 500)</option>
+              <div class="form-group" style="flex:1.2;">
+                <label>Delivery / Collection Method *</label>
+                <select id="pos_delivery_method" onchange="recalculatePOSTotals()" style="font-weight:600;">
+                  <option value="delivery">🚚 Deliver to Customer (+KES 300 / +KES 500)</option>
+                  <option value="collection">🏬 Collected from Shop Counter (Free Pickup)</option>
                 </select>
+                <input type="hidden" id="pos_fulfillment_type" value="product_delivery">
                 <input type="hidden" id="pos_fulfillment_mode" value="delivery">
+              </div>
+              <div class="form-group" style="flex:1.2;">
+                <label>Installation Request (Independent)</label>
+                <select id="pos_installation_option" onchange="recalculatePOSTotals()" style="font-weight:600;">
+                  <option value="none">📦 No Installation Requested (Product Only)</option>
+                  <option value="immediate">🛠️ Request Installation</option>
+                  <option value="later">📅 Schedule Installation Later</option>
+                </select>
               </div>
               <div class="form-group" style="flex:1;">
                 <label>Payment Terms *</label>

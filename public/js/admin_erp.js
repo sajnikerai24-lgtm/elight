@@ -1626,17 +1626,26 @@ function renderFulfillmentBadge(order) {
   let flowPipeline = 'Cashier → Finance → Delivery';
   let flowIcon = '🚚';
 
-  if (fType === 'product_delivery_install') {
+  const needsInst = Boolean(
+    order.requires_installation ||
+    fType === 'product_delivery_install' ||
+    fType === 'product_install_later' ||
+    (order.installation_status && order.installation_status !== 'not_requested')
+  );
+
+  if (fType === 'product_collection') {
+    flowTitle = needsInst ? 'Shop collection + installation' : 'Product collected from shop';
+    flowPipeline = needsInst
+      ? 'Cashier → Finance → Collection | Installation (Independent)'
+      : 'Cashier → Finance → Collection';
+    flowIcon = needsInst ? '🏬🔧' : '🏬';
+  } else if (fType === 'product_delivery_install') {
     flowTitle = 'Product + installation';
-    flowPipeline = 'Cashier → Finance → Delivery → Installation';
+    flowPipeline = 'Cashier → Finance → Delivery | Installation (Independent)';
     flowIcon = '🚚🔧';
-  } else if (fType === 'product_collection') {
-    flowTitle = 'Product collected from shop';
-    flowPipeline = 'Cashier → Finance → Collection';
-    flowIcon = '🏬';
   } else if (fType === 'product_install_later') {
     flowTitle = 'Product + installation booked later';
-    flowPipeline = 'Cashier → Finance → Delivery → Scheduled installation';
+    flowPipeline = 'Cashier → Finance → Delivery | Scheduled installation';
     flowIcon = '🚚📅';
   }
 
@@ -1920,7 +1929,10 @@ async function loadNewSaleModule() {
   setVal('pos_split_mpesa_amount', '');
   setVal('pos_split_mpesa_phone', '');
   setVal('pos_split_payment_ref', '');
-  setVal('pos_fulfillment_mode', 'collection');
+  setVal('pos_delivery_method', 'delivery');
+  setVal('pos_installation_option', 'none');
+  setVal('pos_fulfillment_type', 'product_delivery');
+  setVal('pos_fulfillment_mode', 'delivery');
 
   togglePOSCashFields();
   renderPOSCartItems();
@@ -2093,21 +2105,32 @@ function handleSplitMpesaAmountChange() {
 }
 
 function getPOSFulfillmentDetails() {
-  const fType = document.getElementById('pos_fulfillment_type')?.value || 'product_collection';
+  const delMethod = document.getElementById('pos_delivery_method')?.value || 'delivery';
+  const instOption = document.getElementById('pos_installation_option')?.value || 'none';
   const zone = document.getElementById('pos_delivery_zone')?.value || 'town';
   const zoneGroup = document.getElementById('pos_delivery_zone_group');
   const hiddenMode = document.getElementById('pos_fulfillment_mode');
+  const hiddenType = document.getElementById('pos_fulfillment_type');
 
-  if (fType === 'product_collection') {
+  const requiresInstallation = instOption === 'immediate' || instOption === 'later';
+  const scheduleInstallLater = instOption === 'later';
+
+  if (delMethod === 'collection') {
     if (zoneGroup) zoneGroup.style.display = 'none';
     if (hiddenMode) hiddenMode.value = 'collection';
-    return { mode: 'collection', type: fType, fee: 0 };
-  } else {
-    if (zoneGroup) zoneGroup.style.display = 'block';
-    if (hiddenMode) hiddenMode.value = 'delivery';
-    const fee = zone === 'subcounty' ? 500 : 300;
-    return { mode: 'delivery', type: fType, fee };
+    if (hiddenType) hiddenType.value = 'product_collection';
+    return { mode: 'collection', type: 'product_collection', fee: 0, requiresInstallation, scheduleInstallLater };
   }
+
+  const fType = instOption === 'immediate'
+    ? 'product_delivery_install'
+    : (instOption === 'later' ? 'product_install_later' : 'product_delivery');
+
+  if (zoneGroup) zoneGroup.style.display = 'block';
+  if (hiddenMode) hiddenMode.value = 'delivery';
+  if (hiddenType) hiddenType.value = fType;
+  const fee = zone === 'subcounty' ? 500 : 300;
+  return { mode: 'delivery', type: fType, fee, requiresInstallation, scheduleInstallLater };
 }
 
 function togglePOSPaymentTerms() {
@@ -2270,7 +2293,7 @@ async function handleRecordCashierSale(e) {
     return;
   }
 
-  const { mode, type, fee } = getPOSFulfillmentDetails();
+  const { mode, type, fee, requiresInstallation, scheduleInstallLater } = getPOSFulfillmentDetails();
   const subtotal = posCartItems.reduce((s, i) => s + i.quantity * i.unit_price, 0);
   const grandTotal = subtotal + fee;
 
@@ -2365,6 +2388,8 @@ async function handleRecordCashierSale(e) {
     split_mpesa_amount: splitMpesa,
     fulfillment_type: type,
     fulfillment_mode: mode,
+    requires_installation: Boolean(requiresInstallation),
+    schedule_install_later: Boolean(scheduleInstallLater),
     amount_paid: amountPaid,
     balance_due: balanceDue,
     credit_policy_notes: creditNotes,
@@ -3500,6 +3525,14 @@ function renderFinanceReleasesTable() {
           <div style="font-weight:700; color:#1e293b;">${escapeHTML(order.customer_name || 'Walk-in')}</div>
           <div style="font-size:0.8rem; color:#64748b;">${escapeHTML(order.customer_phone || '-')}</div>
           <div style="margin-top:6px;">${renderFulfillmentBadge(order)}</div>
+          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:5px;">
+            <span class="badge-tag" style="background:${order.delivery_status === 'delivered' ? '#dcfce7' : (order.delivery_status === 'failed' ? '#fee2e2' : '#e0f2fe')}; color:${order.delivery_status === 'delivered' ? '#15803d' : (order.delivery_status === 'failed' ? '#b91c1c' : '#0369a1')}; font-size:0.68rem; font-weight:700;">
+              Deliv: <strong>${escapeHTML(order.delivery_status || 'not_scheduled')}</strong>
+            </span>
+            <span class="badge-tag" style="background:${order.installation_status === 'completed' ? '#dcfce7' : (order.installation_status === 'not_requested' ? '#f1f5f9' : '#f3e8ff')}; color:${order.installation_status === 'completed' ? '#15803d' : (order.installation_status === 'not_requested' ? '#64748b' : '#6b21a8')}; font-size:0.68rem; font-weight:700;">
+              Inst: <strong>${escapeHTML(order.installation_status || 'not_requested')}</strong>
+            </span>
+          </div>
         </td>
         <td>
           <div>Total: <strong>${formatKES(order.total_amount)}</strong></div>

@@ -186,17 +186,43 @@ async function loadMyCustomerPortal() {
     if (document.getElementById('cust-kpi-deliveries')) document.getElementById('cust-kpi-deliveries').textContent = dispatches.length;
     if (document.getElementById('cust-kpi-bookings')) document.getElementById('cust-kpi-bookings').textContent = bookings.length;
 
-    // 1. Render Customer's Own Orders & Purchases
+    // 1. Render Customer's Own Orders & Purchases (with independent Delivery Status & Installation Status)
     const ordersBody = document.getElementById('cust-orders-tbody');
     if (ordersBody) {
       if (orders.length === 0) {
-        ordersBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:18px; color:var(--text-muted);">No recorded purchases under your account yet. <a href="/products" style="color:var(--primary); font-weight:700;">Browse catalog →</a></td></tr>';
+        ordersBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:18px; color:var(--text-muted);">No recorded purchases under your account yet. <a href="/products" style="color:var(--primary); font-weight:700;">Browse catalog →</a></td></tr>';
       } else {
+        const formatOrderSubStatus = (val, kind) => {
+          const st = String(val || '').toLowerCase();
+          if (kind === 'delivery') {
+            if (st === 'delivered') return { label: '✓ Delivered', bg: '#dcfce7', color: '#15803d' };
+            if (st === 'out_for_delivery') return { label: '🚗 Out for Delivery', bg: '#fef9c3', color: '#854d0e' };
+            if (st === 'scheduled') return { label: '🚚 Scheduled', bg: '#e0f2fe', color: '#0369a1' };
+            if (st === 'failed') return { label: '⚠ Delivery Failed', bg: '#fee2e2', color: '#b91c1c' };
+            if (st === 'cancelled') return { label: 'Cancelled', bg: '#fee2e2', color: '#b91c1c' };
+            return { label: 'Not Scheduled', bg: '#f1f5f9', color: '#475569' };
+          }
+          if (st === 'completed') return { label: '✓ Completed', bg: '#dcfce7', color: '#15803d' };
+          if (st === 'awaiting_inspection') return { label: '🔍 Awaiting Inspection', bg: '#f3e8ff', color: '#6b21a8' };
+          if (st === 'in_progress') return { label: '🔧 In Progress', bg: '#e0f2fe', color: '#0369a1' };
+          if (st === 'approved' || st === 'scheduled') return { label: '✓ Approved / Scheduled', bg: '#ede9fe', color: '#5b21b6' };
+          if (st === 'requested') return { label: '⏳ Requested', bg: '#fef3c7', color: '#b45309' };
+          if (st === 'cancelled') return { label: 'Cancelled', bg: '#fee2e2', color: '#b91c1c' };
+          return { label: 'Not Requested', bg: '#f1f5f9', color: '#64748b' };
+        };
+
         ordersBody.innerHTML = orders.map(o => {
           const itemsHtml = (o.items || [])
             .map(i => `${escapeHTML(i.product_name)} <strong>(×${i.quantity})</strong>`)
             .join(', ');
           const isPaid = o.payment_status === 'paid';
+          const isCollection = o.fulfillment_type === 'product_collection' || o.fulfillment_mode === 'collection';
+          const delBadge = (isCollection && o.fulfillment_status === 'collected')
+            ? { label: '✔️ Collected at Shop', bg: '#dcfce7', color: '#15803d' }
+            : (isCollection && o.delivery_status !== 'delivered'
+              ? { label: '🏬 Shop Pick-Up', bg: '#e0e7ff', color: '#3730a3' }
+              : formatOrderSubStatus(o.delivery_status, 'delivery'));
+          const instBadge = formatOrderSubStatus(o.installation_status || 'not_requested', 'installation');
           return `
             <tr>
               <td><strong style="font-family:monospace; color:var(--primary);">${escapeHTML(o.order_no)}</strong></td>
@@ -204,7 +230,8 @@ async function loadMyCustomerPortal() {
               <td><strong>KES ${Number(o.total_amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
               <td><span class="badge-tag" style="background:${isPaid ? '#dcfce7' : '#fee2e2'}; color:${isPaid ? '#15803d' : '#b91c1c'}; font-weight:700;">${isPaid ? '✓ Paid' : '⏳ Pending'}</span></td>
               <td>${escapeHTML(o.payment_method || 'M-Pesa')}</td>
-              <td><span class="badge-tag badge-${escapeHTML(o.fulfillment_status || 'completed')}">${escapeHTML(String(o.fulfillment_status || 'Processed').replace(/_/g, ' '))}</span></td>
+              <td><span class="badge-tag" style="background:${delBadge.bg}; color:${delBadge.color}; font-weight:700;">${delBadge.label}</span></td>
+              <td><span class="badge-tag" style="background:${instBadge.bg}; color:${instBadge.color}; font-weight:700;">${instBadge.label}</span></td>
             </tr>
           `;
         }).join('');

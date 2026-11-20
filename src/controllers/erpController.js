@@ -187,6 +187,112 @@ function appendAuditLog(action, details, actor = 'System Administrator', departm
   writeSystemConfig(cfg);
 }
 
+/**
+ * Normalizes order pipeline fields while keeping delivery_status and installation_status
+ * strictly independent so customers can receive products without requesting installation.
+ */
+function normalizeOrderDualStatuses(o) {
+  const total = Number(o.total_amount || 0);
+  const paid = o.amount_paid !== undefined ? Number(o.amount_paid) : (o.payment_status === 'paid' ? total : 0);
+  const balance = o.balance_due !== undefined ? Number(o.balance_due) : Math.max(0, total - paid);
+  const hasUnpaid = balance > 0;
+  const fType = o.fulfillment_type || (o.fulfillment_mode === 'collection' ? 'product_collection' : 'product_delivery');
+
+  let relStatus = o.finance_release_status;
+  if (!relStatus) {
+    if (hasUnpaid) relStatus = 'pending_credit_review';
+    else if (['delivered', 'collected', 'installed_and_completed'].includes(o.fulfillment_status)) relStatus = 'released';
+    else relStatus = 'pending_finance';
+  }
+
+  let stage = o.fulfillment_stage;
+  if (!stage) {
+    if (relStatus === 'released') {
+      if (['delivered', 'collected', 'installed_and_completed'].includes(o.fulfillment_status)) stage = 'completed';
+      else if (fType === 'product_collection') stage = 'collection';
+      else stage = 'delivery';
+    } else {
+      stage = 'finance';
+    }
+  }
+
+  const orderNo = o.order_no || o.order_number;
+  const invoiceNo = o.invoice_no || `INV-${String(orderNo || '').replace(/^EL-/, '') || Date.now().toString().slice(-6)}`;
+
+  let ordStatus = o.order_status || o.status || 'processing';
+  if (o.status === 'cancelled' || o.order_status === 'cancelled') ordStatus = 'cancelled';
+  else if (['delivered', 'collected', 'installed_and_completed'].includes(o.fulfillment_status) || stage === 'completed') ordStatus = 'completed';
+  else if (o.fulfillment_status === 'ready_for_collection') ordStatus = 'ready';
+
+  let payStatus = o.payment_status;
+  if (relStatus === 'payment_failed') payStatus = 'failed';
+  else if (!payStatus || payStatus === 'pending') {
+    if (paid === 0) payStatus = 'unpaid';
+    else if (relStatus === 'released') payStatus = hasUnpaid ? 'partially_paid' : 'paid';
+    else payStatus = 'pending_verification';
+  }
+
+  // Independent Delivery Status
+  let delStatus = o.delivery_status;
+  if (o.status === 'cancelled' || o.order_status === 'cancelled') {
+    delStatus = 'cancelled';
+  } else if (!delStatus) {
+    if (fType === 'product_collection') {
+      delStatus = ['collected', 'completed', 'delivered'].includes(o.fulfillment_status) ? 'delivered' : 'not_scheduled';
+    } else if (relStatus === 'released') {
+      if (['delivered', 'installed_and_completed'].includes(o.fulfillment_status)) delStatus = 'delivered';
+      else if (o.fulfillment_status === 'out_for_delivery') delStatus = 'out_for_delivery';
+      else delStatus = 'scheduled';
+    } else {
+      delStatus = 'not_scheduled';
+    }
+  }
+
+  // Independent Installation Status (remains 'not_requested' unless explicitly requested)
+  const needsInst = Boolean(
+    o.requires_installation ||
+    fType === 'product_delivery_install' ||
+    fType === 'product_install_later' ||
+    (o.installation_status && o.installation_status !== 'not_requested')
+  );
+  let instStatus = o.installation_status;
+  if (o.status === 'cancelled' || o.order_status === 'cancelled') {
+    instStatus = 'cancelled';
+  } else if (!instStatus) {
+    if (!needsInst) {
+      instStatus = 'not_requested';
+    } else if (o.fulfillment_status === 'installed_and_completed') {
+      instStatus = 'completed';
+    } else if (relStatus === 'released') {
+      instStatus = 'approved';
+    } else {
+      instStatus = 'requested';
+    }
+  }
+
+  return {
+    ...o,
+    order_no: orderNo,
+    order_number: orderNo,
+    invoice_no: invoiceNo,
+    order_status: ordStatus,
+    status: ordStatus,
+    payment_status: payStatus,
+    delivery_status: delStatus,
+    installation_status: instStatus,
+    requires_installation: needsInst,
+    packing_status: o.packing_status || 'pending',
+    site_ready_for_installation: Boolean(o.site_ready_for_installation || delStatus === 'delivered' || fType === 'product_collection'),
+    fulfillment_type: fType,
+    total_amount: total,
+    amount_paid: paid,
+    balance_due: balance,
+    unpaid_balance: hasUnpaid,
+    finance_release_status: relStatus,
+    fulfillment_stage: stage
+  };
+}
+
 function calculateTreasuryBalances(records, customSettings) {
   const cfg = readSystemConfig();
   const settings = customSettings || cfg.settings || {};
@@ -1042,23 +1148,25 @@ const erpController = {
       const activeNameLower = (customerProfile?.full_name || baseName || '').toLowerCase();
       const activeEmailLower = (customerProfile?.email || email || '').toLowerCase();
 
-      // 4. Fetch ONLY this customer's orders from cashier_orders.json
+      // 4. Fetch ONLY this customer's orders from cashier_orders.json (normalized for independent delivery & installation tracking)
       const allOrders = readCashierOrders();
-      const myOrders = allOrders.filter(o => {
-        const oPhone = String(o.customer_phone || '').trim();
-        const oName = String(o.customer_name || '').toLowerCase().trim();
-        const matchPhone = activePhone && activePhone !== 'N/A' && (
-          oPhone === activePhone ||
-          (activePhone.length >= 8 && oPhone.includes(activePhone.slice(-8))) ||
-          (oPhone.length >= 8 && activePhone.includes(oPhone.slice(-8)))
-        );
-        const matchName = activeNameLower && (
-          oName === activeNameLower ||
-          (activeNameLower.length > 3 && oName.includes(activeNameLower)) ||
-          (oName.length > 3 && activeNameLower.includes(oName))
-        );
-        return matchPhone || matchName;
-      });
+      const myOrders = allOrders
+        .filter(o => {
+          const oPhone = String(o.customer_phone || '').trim();
+          const oName = String(o.customer_name || '').toLowerCase().trim();
+          const matchPhone = activePhone && activePhone !== 'N/A' && (
+            oPhone === activePhone ||
+            (activePhone.length >= 8 && oPhone.includes(activePhone.slice(-8))) ||
+            (oPhone.length >= 8 && activePhone.includes(oPhone.slice(-8)))
+          );
+          const matchName = activeNameLower && (
+            oName === activeNameLower ||
+            (activeNameLower.length > 3 && oName.includes(activeNameLower)) ||
+            (oName.length > 3 && activeNameLower.includes(oName))
+          );
+          return matchPhone || matchName;
+        })
+        .map(normalizeOrderDualStatuses);
 
       // 5. Fetch ONLY this customer's payments
       const myPayments = myOrders
@@ -1808,101 +1916,7 @@ const erpController = {
   getPendingFinanceReleases: async (req, res) => {
     try {
       const orders = readCashierOrders();
-      const normalized = orders.map(o => {
-        const total = Number(o.total_amount || 0);
-        const paid = o.amount_paid !== undefined ? Number(o.amount_paid) : (o.payment_status === 'paid' ? total : 0);
-        const balance = o.balance_due !== undefined ? Number(o.balance_due) : Math.max(0, total - paid);
-        const hasUnpaid = balance > 0;
-        const fType = o.fulfillment_type || (o.fulfillment_mode === 'collection' ? 'product_collection' : 'product_delivery');
-
-        let relStatus = o.finance_release_status;
-        if (!relStatus) {
-          if (hasUnpaid) relStatus = 'pending_credit_review';
-          else if (['delivered', 'collected', 'installed_and_completed'].includes(o.fulfillment_status)) relStatus = 'released';
-          else relStatus = 'pending_finance';
-        }
-
-        let stage = o.fulfillment_stage;
-        if (!stage) {
-          if (relStatus === 'released') {
-            if (['delivered', 'collected', 'installed_and_completed'].includes(o.fulfillment_status)) stage = 'completed';
-            else if (fType === 'product_collection') stage = 'collection';
-            else stage = 'delivery';
-          } else {
-            stage = 'finance';
-          }
-        }
-
-        const orderNo = o.order_no || o.order_number;
-        const invoiceNo = o.invoice_no || `INV-${String(orderNo || '').replace(/^EL-/, '') || Date.now().toString().slice(-6)}`;
-
-        // 1. Order Status: 'pending', 'confirmed', 'processing', 'ready', 'completed', 'cancelled'
-        let ordStatus = o.order_status || o.status || 'processing';
-        if (o.status === 'cancelled' || o.order_status === 'cancelled') ordStatus = 'cancelled';
-        else if (['delivered', 'collected', 'installed_and_completed'].includes(o.fulfillment_status) || stage === 'completed') ordStatus = 'completed';
-        else if (o.fulfillment_status === 'ready_for_collection') ordStatus = 'ready';
-
-        // 2. Payment Status: 'unpaid', 'pending_verification', 'partially_paid', 'paid', 'failed', 'refunded'
-        let payStatus = o.payment_status;
-        if (relStatus === 'payment_failed') payStatus = 'failed';
-        else if (!payStatus || payStatus === 'pending') {
-          if (paid === 0) payStatus = 'unpaid';
-          else if (relStatus === 'released') payStatus = hasUnpaid ? 'partially_paid' : 'paid';
-          else payStatus = 'pending_verification';
-        }
-
-        // 3. Delivery Status: 'not_scheduled', 'scheduled', 'assigned', 'out_for_delivery', 'delivered', 'failed', 'rescheduled'
-        let delStatus = o.delivery_status;
-        if (o.status === 'cancelled') delStatus = 'cancelled';
-        else if (!delStatus) {
-          if (fType === 'product_collection') {
-            delStatus = ['collected', 'completed', 'delivered'].includes(o.fulfillment_status) ? 'delivered' : 'not_scheduled';
-          } else {
-            if (relStatus === 'released') {
-              if (o.fulfillment_status === 'delivered') delStatus = 'delivered';
-              else if (o.fulfillment_status === 'out_for_delivery') delStatus = 'out_for_delivery';
-              else delStatus = 'scheduled';
-            } else {
-              delStatus = 'not_scheduled';
-            }
-          }
-        }
-
-        // 4. Installation Status: 'not_requested', 'requested', 'pending_approval', 'approved', 'scheduled', 'technician_assigned', 'in_progress', 'awaiting_inspection', 'completed', 'cancelled'
-        let instStatus = o.installation_status;
-        if (o.status === 'cancelled') instStatus = 'cancelled';
-        else if (!instStatus) {
-          const needsInst = fType === 'product_delivery_install' || fType === 'product_install_later';
-          if (!needsInst) {
-            instStatus = 'not_requested';
-          } else {
-            if (o.fulfillment_status === 'installed_and_completed') instStatus = 'completed';
-            else if (relStatus === 'released') instStatus = 'approved';
-            else instStatus = 'requested';
-          }
-        }
-
-        return {
-          ...o,
-          order_no: orderNo,
-          order_number: orderNo,
-          invoice_no: invoiceNo,
-          order_status: ordStatus,
-          status: ordStatus,
-          payment_status: payStatus,
-          delivery_status: delStatus,
-          installation_status: instStatus,
-          packing_status: o.packing_status || 'pending',
-          site_ready_for_installation: Boolean(o.site_ready_for_installation || delStatus === 'delivered' || fType === 'product_collection'),
-          fulfillment_type: fType,
-          total_amount: total,
-          amount_paid: paid,
-          balance_due: balance,
-          unpaid_balance: hasUnpaid,
-          finance_release_status: relStatus,
-          fulfillment_stage: stage
-        };
-      });
+      const normalized = orders.map(normalizeOrderDualStatuses);
 
       const sortedNormalized = sortByLatest(normalized);
       const pendingFinance = sortedNormalized.filter(o => o.finance_release_status === 'pending_finance');
@@ -2094,99 +2108,90 @@ const erpController = {
         const fType = order.fulfillment_type || (order.fulfillment_mode === 'collection' ? 'product_collection' : 'product_delivery');
         order.fulfillment_type = fType;
 
-        if (order.installation_status === 'requested' || order.installation_status === 'pending_approval') {
+        const wantsInst = Boolean(
+          order.requires_installation ||
+          fType === 'product_delivery_install' ||
+          fType === 'product_install_later' ||
+          (order.installation_status && order.installation_status !== 'not_requested')
+        );
+        order.requires_installation = wantsInst;
+
+        if (wantsInst) {
           order.installation_status = 'approved';
+        } else {
+          order.installation_status = 'not_requested';
         }
 
-        // Route order into its specific pipeline stage
+        // 1. Handle Delivery / Collection independently
         if (fType === 'product_collection') {
-          // Flow 3: Product collected from shop: Cashier -> Finance -> Collection
           order.fulfillment_stage = 'collection';
           order.fulfillment_status = 'ready_for_collection';
           order.delivery_status = 'not_scheduled';
-        } else if (fType === 'product_delivery_install') {
-          // Flow 2: Product + installation: Cashier -> Finance -> Delivery -> Installation
+        } else {
           order.fulfillment_stage = 'delivery';
           order.fulfillment_status = 'sent_to_dispatch';
           order.delivery_status = 'scheduled';
-          await interModuleSync.createDispatchForOrder(order, { needs_installation: true });
+          await interModuleSync.createDispatchForOrder(order, {
+            needs_installation: wantsInst && fType !== 'product_install_later',
+            booked_later: fType === 'product_install_later'
+          });
+        }
 
-          // Create linked installation request for Service Manager to schedule & assign in advance
+        // 2. Handle Installation independently ONLY if requested
+        if (wantsInst) {
+          const isLater = fType === 'product_install_later' || Boolean(order.schedule_install_later);
+          const reqPrefix = isLater ? 'SCH' : 'INS';
           const sRequests = readServiceRequests();
-          let existingInstall = sRequests.find(s => s.order_no === order.order_no || s.booking_ref === `INS-${order.order_no}`);
-          if (!existingInstall) {
+          const existingInst = sRequests.find(s =>
+            s.order_no === order.order_no ||
+            s.booking_ref === `INS-${order.order_no}` ||
+            s.booking_ref === `SCH-${order.order_no}`
+          );
+          if (!existingInst) {
             const nextReqId = sRequests.length > 0 ? Math.max(...sRequests.map(s => s.request_id || 0)) + 1 : 101;
             const itemsSummary = (order.items || []).map(i => `${i.quantity}x ${i.product_name}`).join(', ');
             const installReq = {
               request_id: nextReqId,
               order_no: order.order_no,
-              booking_ref: `INS-${order.order_no}`,
+              booking_ref: `${reqPrefix}-${order.order_no}`,
               customer_name: order.customer_name || 'Customer',
               phone: order.customer_phone || 'N/A',
               location: order.customer_location || 'Meru County',
-              service_type: order.service_type || 'Product Installation',
-              description: `Product Installation for Order ${order.order_no} (${itemsSummary || 'Electrical Products'}). Scheduled in advance while delivery is in transit.`,
-              scheduled_date: order.scheduled_date || 'TBD',
+              service_type: isLater
+                ? 'Scheduled Product Installation'
+                : (order.service_type || 'Product Installation'),
+              description: isLater
+                ? `Scheduled Installation for Order ${order.order_no} (${itemsSummary || 'Electrical Products'}). Customer will confirm preferred installation appointment date.`
+                : `Product Installation for Order ${order.order_no} (${itemsSummary || 'Electrical Products'}). Tracked independently from product delivery.`,
+              scheduled_date: isLater ? 'Pending Customer Booking' : (order.scheduled_date || 'TBD'),
               status: 'pending',
-              site_ready: false,
-              site_ready_for_installation: false,
+              site_ready: fType === 'product_collection',
+              site_ready_for_installation: fType === 'product_collection',
               assigned_technician_id: null,
               assigned_technician_name: '',
               technician_name: '',
               materials_used: '',
               created_at: new Date().toISOString()
             };
+            const validSqlDate = (!isLater && order.scheduled_date && /^\d{4}-\d{2}-\d{2}/.test(String(order.scheduled_date)))
+              ? String(order.scheduled_date).slice(0, 10)
+              : new Date().toISOString().split('T')[0];
+            try {
+              const { data: insertedInst } = await supabase.from('service_requests').insert([{
+                booking_ref: installReq.booking_ref,
+                customer_name: installReq.customer_name,
+                phone: installReq.phone,
+                location: installReq.location,
+                service_type: installReq.service_type,
+                description: installReq.description,
+                scheduled_date: validSqlDate,
+                status: installReq.status
+              }]).select('*').single();
+              if (insertedInst?.request_id) installReq.request_id = insertedInst.request_id;
+            } catch (e) {}
             sRequests.unshift(installReq);
             writeServiceRequests(sRequests);
-            try {
-              await supabase.from('service_requests').insert([installReq]);
-            } catch (e) {}
           }
-        } else if (fType === 'product_install_later') {
-          // Flow 4: Product + installation booked later: Cashier -> Finance -> Delivery -> Scheduled installation
-          order.fulfillment_stage = 'delivery';
-          order.fulfillment_status = 'sent_to_dispatch';
-          order.delivery_status = 'scheduled';
-          await interModuleSync.createDispatchForOrder(order, { booked_later: true });
-          // Flow 4: Product + installation booked later: Cashier -> Finance -> Delivery -> Scheduled installation
-          order.fulfillment_stage = 'delivery';
-          order.fulfillment_status = 'sent_to_dispatch';
-          await interModuleSync.createDispatchForOrder(order, { booked_later: true });
-
-          // Also log scheduled installation booking in service_requests awaiting customer date
-          const sRequests = readServiceRequests();
-          const existingSch = sRequests.find(s => s.booking_ref === `SCH-${order.order_no}`);
-          if (!existingSch) {
-            const nextReqId = sRequests.length > 0 ? Math.max(...sRequests.map(s => s.request_id || 0)) + 1 : 101;
-            const itemsSummary = (order.items || []).map(i => `${i.quantity}x ${i.product_name}`).join(', ');
-            const schReq = {
-              request_id: nextReqId,
-              booking_ref: `SCH-${order.order_no}`,
-              customer_name: order.customer_name || 'Customer',
-              phone: order.customer_phone || 'N/A',
-              location: order.customer_location || 'Meru County',
-              service_type: 'Scheduled Product Installation',
-              description: `Scheduled Installation for Order ${order.order_no} (${itemsSummary}). Goods dispatched for delivery; customer will confirm preferred installation appointment date.`,
-              scheduled_date: 'Pending Customer Booking',
-              status: 'pending',
-              assigned_technician_id: null,
-              assigned_technician_name: '',
-              technician_name: '',
-              materials_used: '',
-              created_at: new Date().toISOString()
-            };
-            sRequests.unshift(schReq);
-            writeServiceRequests(sRequests);
-            try {
-              await supabase.from('service_requests').insert([schReq]);
-            } catch (e) {}
-          }
-        } else {
-          // Flow 1: Product only: Cashier -> Finance -> Delivery
-          order.fulfillment_stage = 'delivery';
-          order.fulfillment_status = 'sent_to_dispatch';
-          order.delivery_status = 'scheduled';
-          await interModuleSync.createDispatchForOrder(order);
         }
 
         writeCashierOrders(orders);
@@ -2351,9 +2356,17 @@ const erpController = {
       localOrders.forEach(o => {
         const d = dispatchByOrder[String(o.order_no || '').toUpperCase()];
         if (d) {
-          if (d.status === 'delivered') o.fulfillment_status = 'delivered';
-          else if (d.status === 'out_for_delivery') o.fulfillment_status = 'out_for_delivery';
-          else if (d.status === 'pending_dispatch' && o.fulfillment_status !== 'collected') {
+          if (d.status === 'delivered') {
+            o.delivery_status = 'delivered';
+            if (!['installation_pending', 'scheduled_installation_pending', 'installed_and_completed'].includes(o.fulfillment_status)) {
+              o.fulfillment_status = 'delivered';
+            }
+          } else if (d.status === 'out_for_delivery') {
+            o.delivery_status = 'out_for_delivery';
+            o.fulfillment_status = 'out_for_delivery';
+          } else if (d.status === 'failed') {
+            o.delivery_status = 'failed';
+          } else if (d.status === 'pending_dispatch' && o.fulfillment_status !== 'collected') {
             o.fulfillment_status = 'sent_to_dispatch';
           }
         }
@@ -2450,102 +2463,8 @@ const erpController = {
         });
       });
 
-      // Normalize order pipeline fields so frontend and reporting stay synchronized across all order sources
-      const normalizedOrders = mergedOrders.map(o => {
-        const total = Number(o.total_amount || 0);
-        const paid = o.amount_paid !== undefined ? Number(o.amount_paid) : (o.payment_status === 'paid' ? total : 0);
-        const balance = o.balance_due !== undefined ? Number(o.balance_due) : Math.max(0, total - paid);
-        const hasUnpaid = balance > 0;
-        const fType = o.fulfillment_type || (o.fulfillment_mode === 'collection' ? 'product_collection' : 'product_delivery');
-
-        let relStatus = o.finance_release_status;
-        if (!relStatus) {
-          if (hasUnpaid) relStatus = 'pending_credit_review';
-          else if (['delivered', 'collected', 'installed_and_completed'].includes(o.fulfillment_status)) relStatus = 'released';
-          else relStatus = 'pending_finance';
-        }
-
-        let stage = o.fulfillment_stage;
-        if (!stage) {
-          if (relStatus === 'released') {
-            if (['delivered', 'collected', 'installed_and_completed'].includes(o.fulfillment_status)) stage = 'completed';
-            else if (fType === 'product_collection') stage = 'collection';
-            else stage = 'delivery';
-          } else {
-            stage = 'finance';
-          }
-        }
-
-        const orderNo = o.order_no || o.order_number;
-        const invoiceNo = o.invoice_no || `INV-${String(orderNo || '').replace(/^EL-/, '') || Date.now().toString().slice(-6)}`;
-
-        // 1. Order Status: 'pending', 'confirmed', 'processing', 'ready', 'completed', 'cancelled'
-        let ordStatus = o.order_status || o.status || 'processing';
-        if (o.status === 'cancelled' || o.order_status === 'cancelled') ordStatus = 'cancelled';
-        else if (['delivered', 'collected', 'installed_and_completed'].includes(o.fulfillment_status) || stage === 'completed') ordStatus = 'completed';
-        else if (o.fulfillment_status === 'ready_for_collection') ordStatus = 'ready';
-
-        // 2. Payment Status: 'unpaid', 'pending_verification', 'partially_paid', 'paid', 'failed', 'refunded'
-        let payStatus = o.payment_status;
-        if (relStatus === 'payment_failed') payStatus = 'failed';
-        else if (!payStatus || payStatus === 'pending') {
-          if (paid === 0) payStatus = 'unpaid';
-          else if (relStatus === 'released') payStatus = hasUnpaid ? 'partially_paid' : 'paid';
-          else payStatus = 'pending_verification';
-        }
-
-        // 3. Delivery Status: 'not_scheduled', 'scheduled', 'assigned', 'out_for_delivery', 'delivered', 'failed', 'rescheduled'
-        let delStatus = o.delivery_status;
-        if (o.status === 'cancelled') delStatus = 'cancelled';
-        else if (!delStatus) {
-          if (fType === 'product_collection') {
-            delStatus = ['collected', 'completed', 'delivered'].includes(o.fulfillment_status) ? 'delivered' : 'not_scheduled';
-          } else {
-            if (relStatus === 'released') {
-              if (o.fulfillment_status === 'delivered') delStatus = 'delivered';
-              else if (o.fulfillment_status === 'out_for_delivery') delStatus = 'out_for_delivery';
-              else delStatus = 'scheduled';
-            } else {
-              delStatus = 'not_scheduled';
-            }
-          }
-        }
-
-        // 4. Installation Status: 'not_requested', 'requested', 'pending_approval', 'approved', 'scheduled', 'technician_assigned', 'in_progress', 'awaiting_inspection', 'completed', 'cancelled'
-        let instStatus = o.installation_status;
-        if (o.status === 'cancelled') instStatus = 'cancelled';
-        else if (!instStatus) {
-          const needsInst = fType === 'product_delivery_install' || fType === 'product_install_later';
-          if (!needsInst) {
-            instStatus = 'not_requested';
-          } else {
-            if (o.fulfillment_status === 'installed_and_completed') instStatus = 'completed';
-            else if (relStatus === 'released') instStatus = 'approved';
-            else instStatus = 'requested';
-          }
-        }
-
-        return {
-          ...o,
-          order_no: orderNo,
-          order_number: orderNo,
-          invoice_no: invoiceNo,
-          order_status: ordStatus,
-          status: ordStatus,
-          payment_status: payStatus,
-          delivery_status: delStatus,
-          installation_status: instStatus,
-          packing_status: o.packing_status || 'pending',
-          site_ready_for_installation: Boolean(o.site_ready_for_installation || delStatus === 'delivered' || fType === 'product_collection'),
-          fulfillment_type: fType,
-          total_amount: total,
-          amount_paid: paid,
-          balance_due: balance,
-          unpaid_balance: hasUnpaid,
-          finance_release_status: relStatus,
-          fulfillment_stage: stage
-        };
-      });
+      // Normalize order pipeline fields (keeping delivery_status & installation_status strictly independent)
+      const normalizedOrders = mergedOrders.map(normalizeOrderDualStatuses);
 
       // Sort strictly by latest order first (newest created_at timestamp at the top)
       normalizedOrders.sort((a, b) => {
@@ -2661,21 +2580,28 @@ const erpController = {
       // 4. Product + installation booked later: Cashier -> Finance -> Delivery -> Scheduled installation
       // 5. Product with unpaid balance: Finance checks credit/payment policy before release
       const rawType = String(fulfillment_type || '').trim();
-      const needsInst = Boolean(req.body.requires_installation || req.body.installation_required || req.body.service_type || Number(req.body.installation_fee || 0) > 0);
+      const rawMode = String(fulfillment_mode || '').trim().toLowerCase();
+      const explicitlyNeedsInst = Boolean(
+        req.body.requires_installation ||
+        req.body.installation_required ||
+        req.body.service_type ||
+        Number(req.body.installation_fee || 0) > 0 ||
+        rawType === 'product_delivery_install' ||
+        rawType === 'product_install_later'
+      );
       let fType = 'product_collection';
       if (['product_delivery', 'product_delivery_install', 'product_collection', 'product_install_later'].includes(rawType)) {
         fType = rawType;
+      } else if (rawMode.includes('delivery')) {
+        fType = explicitlyNeedsInst ? 'product_delivery_install' : 'product_delivery';
       } else {
-        const mode = String(fulfillment_mode || '').trim().toLowerCase();
-        if (mode.includes('delivery')) {
-          fType = needsInst ? 'product_delivery_install' : 'product_delivery';
-        } else {
-          fType = needsInst ? 'product_delivery_install' : 'product_collection';
-        }
+        // Collection stays 'product_collection' even when installation is also requested independently
+        fType = 'product_collection';
       }
-      if (needsInst && fType === 'product_delivery') {
-        fType = 'product_delivery_install';
+      if (explicitlyNeedsInst && fType === 'product_delivery') {
+        fType = req.body.schedule_install_later ? 'product_install_later' : 'product_delivery_install';
       }
+      const needsInst = explicitlyNeedsInst;
 
       const rawPaid = req.body.amount_paid !== undefined ? Number(req.body.amount_paid) : totalAmount;
       if (Number.isNaN(rawPaid) || rawPaid <= 0) {
@@ -2860,7 +2786,9 @@ const erpController = {
         status: 'processing',
         payment_status: paymentStatus,
         delivery_status: 'not_scheduled',
-        installation_status: (fType === 'product_delivery_install' || fType === 'product_install_later' || needsInst) ? 'requested' : 'not_requested',
+        installation_status: needsInst ? 'requested' : 'not_requested',
+        requires_installation: Boolean(needsInst),
+        schedule_install_later: Boolean(req.body.schedule_install_later || fType === 'product_install_later'),
         service_type: req.body.service_type || (needsInst ? 'Product Installation' : null),
         installation_fee: Number(req.body.installation_fee || 0),
         scheduled_date: req.body.scheduled_date || null,
@@ -3316,19 +3244,29 @@ const erpController = {
         order.delivery_status = 'delivered';
         order.site_ready_for_installation = true;
 
-        const needsInstallation = order.fulfillment_type === 'product_delivery_install' || order.fulfillment_type === 'product_install_later' || (order.installation_status && order.installation_status !== 'not_requested' && order.installation_status !== 'completed');
+        const needsInstallation = Boolean(
+          order.requires_installation ||
+          order.fulfillment_type === 'product_delivery_install' ||
+          order.fulfillment_type === 'product_install_later' ||
+          (order.installation_status && !['not_requested', 'completed', 'cancelled'].includes(order.installation_status))
+        );
 
         if (needsInstallation) {
           order.fulfillment_stage = 'installation';
           order.order_status = 'processing';
           order.status = 'processing';
+          if (!order.installation_status || order.installation_status === 'not_requested') {
+            order.installation_status = 'approved';
+          }
           const sRequests = readServiceRequests();
           const existingReq = sRequests.find(r => r.booking_ref === `INS-${order.order_no}` || r.booking_ref === `SCH-${order.order_no}`);
           if (existingReq) {
             existingReq.site_ready = true;
+            existingReq.site_ready_for_installation = true;
             writeServiceRequests(sRequests);
           }
         } else {
+          order.installation_status = 'not_requested';
           order.fulfillment_stage = 'completed';
           order.order_status = 'completed';
           order.status = 'completed';

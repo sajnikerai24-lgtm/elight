@@ -458,8 +458,11 @@ const interModuleSync = {
         .select('*')
         .order('request_id', { ascending: false });
       if (!error && Array.isArray(data) && data.length > 0) {
+        const matchedDbIds = new Set();
         requests = data.map(sr => {
-          const local = localRequests.find(l => Number(l.request_id) === Number(sr.request_id));
+          const local = localRequests.find(l => Number(l.request_id) === Number(sr.request_id))
+            || (sr.booking_ref && localRequests.find(l => l.booking_ref === sr.booking_ref));
+          if (local) matchedDbIds.add(local);
           const extractedRef = sr.booking_ref || (local && local.booking_ref) || (sr.description && sr.description.match(/\[(BK-ELIGHT-[^\]]+)\]/i)?.[1]) || null;
           const assignedTime = sr.assigned_time || (local && local.assigned_time) || 'Pending Service Manager Assignment';
           return {
@@ -473,6 +476,12 @@ const interModuleSync = {
             payment_status: sr.payment_status || local?.payment_status || 'unpaid'
           };
         });
+        for (const loc of localRequests) {
+          if (!matchedDbIds.has(loc) && !requests.some(r => (r.booking_ref && loc.booking_ref && r.booking_ref === loc.booking_ref) || Number(r.request_id) === Number(loc.request_id))) {
+            requests.push(loc);
+          }
+        }
+        requests = sortByLatest(requests, 'request_id');
         writeJson(SERVICE_REQUESTS_PATH, requests);
       }
     } catch (e) {}
@@ -1653,15 +1662,21 @@ const interModuleSync = {
         order.delivery_status = 'delivered';
         const isInstallNow = order.fulfillment_type === 'product_delivery_install' || disp.needs_installation;
         const isInstallLater = order.fulfillment_type === 'product_install_later' || disp.booked_later;
+        const hasRequestedInst = Boolean(
+          order.requires_installation ||
+          isInstallNow ||
+          isInstallLater ||
+          (order.installation_status && !['not_requested', 'completed', 'cancelled'].includes(order.installation_status))
+        );
 
-        if (isInstallNow) {
-          // Flow 2: Product + installation -> Cashier -> Finance -> Delivery -> Installation
+        if (hasRequestedInst && (isInstallNow || (!isInstallLater && order.requires_installation))) {
+          // Product + immediate installation -> Delivery finished (delivered), Installation stays independent
           order.fulfillment_stage = 'installation';
           order.fulfillment_status = 'installation_pending';
           order.installation_status = order.installation_status && order.installation_status !== 'not_requested' ? order.installation_status : 'approved';
           order.site_ready_for_installation = true;
 
-          // Trigger immediate product installation ticket for Service Manager & Field Technicians
+          // Trigger/unlock linked product installation ticket for Service Manager & Field Technicians
           const serviceRequests = readJson(SERVICE_REQUESTS_PATH, DEFAULT_SERVICE_REQUESTS);
           const existingReq = serviceRequests.find(r => r.booking_ref === `INS-${order.order_no}` || (r.description && r.description.includes(order.order_no)));
           if (!existingReq) {
@@ -1688,20 +1703,36 @@ const interModuleSync = {
             serviceRequests.unshift(installReq);
             writeJson(SERVICE_REQUESTS_PATH, serviceRequests);
             try {
-              await supabase.from('service_requests').insert([installReq]);
+              const { data: insertedInst } = await supabase.from('service_requests').insert([{
+                booking_ref: installReq.booking_ref,
+                customer_name: installReq.customer_name,
+                phone: installReq.phone,
+                location: installReq.location,
+                service_type: installReq.service_type,
+                description: installReq.description,
+                scheduled_date: installReq.scheduled_date,
+                status: installReq.status
+              }]).select('*').single();
+              if (insertedInst?.request_id) {
+                installReq.request_id = insertedInst.request_id;
+                writeJson(SERVICE_REQUESTS_PATH, serviceRequests);
+              }
             } catch (e) {}
           } else {
             existingReq.site_ready = true;
             existingReq.site_ready_for_installation = true;
             writeJson(SERVICE_REQUESTS_PATH, serviceRequests);
           }
-        } else if (isInstallLater) {
-          // Flow 4: Product + installation booked later -> Cashier -> Finance -> Delivery -> Scheduled installation
+        } else if (hasRequestedInst && isInstallLater) {
+          // Product delivered; scheduled installation remains independent until booked/completed
           order.fulfillment_stage = 'scheduled_installation';
           order.fulfillment_status = 'scheduled_installation_pending';
+          order.installation_status = order.installation_status && order.installation_status !== 'not_requested' ? order.installation_status : 'approved';
           order.site_ready_for_installation = true;
         } else {
-          // Flow 1: Product only -> Cashier -> Finance -> Delivery (Completed)
+          // Product only (no installation requested): Delivery completed, Installation explicitly remains not_requested
+          order.installation_status = 'not_requested';
+          order.requires_installation = false;
           order.fulfillment_stage = 'completed';
           order.fulfillment_status = 'delivered';
           order.order_status = 'completed';

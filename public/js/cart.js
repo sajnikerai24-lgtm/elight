@@ -294,8 +294,10 @@ async function handleCheckout(e) {
   }
 
   const phone = rawPhone || user.phone || 'Cash Customer';
+  const deliveryOption = document.getElementById('cust_delivery').value;
   const delivery = document.getElementById('cust_delivery').selectedOptions[0].text;
   const location = document.getElementById('cust_location').value.trim() || 'Meru';
+  const requiresInstallation = Boolean(document.getElementById('cust_requires_installation')?.checked);
 
   const subtotal = cart.reduce((sum, item) => sum + (Number(item.selling_price) * item.quantity), 0);
   const grandTotal = subtotal + deliveryCost;
@@ -306,8 +308,10 @@ async function handleCheckout(e) {
     orderNumber,
     name,
     phone,
+    deliveryOption,
     delivery,
     location,
+    requiresInstallation,
     paymentVal,
     paymentLabel,
     grandTotal,
@@ -332,7 +336,7 @@ async function handleCheckout(e) {
 }
 
 function finalizeOrderPlacement(orderCtx, mpesaReceipt) {
-  const { orderNumber, name, phone, delivery, location, paymentVal, paymentLabel, grandTotal, orderedSnapshot } = orderCtx;
+  const { orderNumber, name, phone, deliveryOption, delivery, location, requiresInstallation, paymentVal, paymentLabel, grandTotal, orderedSnapshot } = orderCtx;
 
   // Sync live order to ERP so Reports, Cashier, Finance, Dispatch & Inventory update immediately
   fetch('/api/orders/checkout', {
@@ -343,6 +347,8 @@ function finalizeOrderPlacement(orderCtx, mpesaReceipt) {
       customer_name: name,
       customer_phone: phone,
       delivery_address: `${delivery} — ${location}`,
+      fulfillment_mode: deliveryOption === 'pickup' ? 'collection' : 'delivery',
+      requires_installation: Boolean(requiresInstallation),
       payment_method: paymentVal === 'cash' ? 'Cash' : 'M-Pesa',
       mpesa_receipt: mpesaReceipt || '',
       total_amount: grandTotal,

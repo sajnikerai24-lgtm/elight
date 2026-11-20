@@ -547,7 +547,8 @@ const reportsController = {
       }
       const cleanReceipt = refCheck.value;
       const isPaid = Boolean(cleanReceipt);
-      const isPickup = /pickup|collection/i.test(String(delivery_address || ''));
+      const isPickup = req.body.fulfillment_mode === 'collection' || /pickup|collection/i.test(String(delivery_address || ''));
+      const wantsInstallation = Boolean(req.body.requires_installation || req.body.installation_required);
 
       // 1. Save full itemized order into Cashier queue
       try {
@@ -563,7 +564,9 @@ const reportsController = {
         const itemsSubtotal = normalizedItems.reduce((s, i) => s + i.quantity * i.unit_price, 0);
         const delivFee = Math.max(0, cleanAmount - itemsSubtotal);
         const nowIso = new Date().toISOString();
-        const fType = isPickup ? 'product_collection' : 'product_delivery';
+        const fType = isPickup
+          ? 'product_collection'
+          : (wantsInstallation ? 'product_delivery_install' : 'product_delivery');
         const cleanAmountPaid = isPaid ? cleanAmount : 0;
         const balanceDue = isPaid ? 0 : cleanAmount;
         const hasUnpaidBalance = balanceDue > 0;
@@ -582,7 +585,13 @@ const reportsController = {
           amount_paid: cleanAmountPaid,
           balance_due: balanceDue,
           unpaid_balance: hasUnpaidBalance,
+          order_status: 'processing',
+          status: 'processing',
           payment_status: isPaid ? 'paid' : 'pending',
+          delivery_status: 'not_scheduled',
+          installation_status: wantsInstallation ? 'requested' : 'not_requested',
+          requires_installation: wantsInstallation,
+          site_ready_for_installation: isPickup,
           payment_method: cleanMethod,
           payment_ref: isPaid
             ? cleanReceipt
