@@ -768,6 +768,7 @@ const engagementController = {
       moduleNotifications.notify({
         targetModules: fbTargets,
         sourceModule: 'feedback',
+        department: cleanDept,
         senderName: newFeedback.customer_name,
         title: cleanType === 'complaint' ? `⚠️ Customer Complaint: ${newFeedback.subject}` : `New Customer Feedback: ${newFeedback.subject}`,
         message: `${newFeedback.customer_name} (${cleanDept}) rated ${cleanRating}/5: "${newFeedback.message}"`,

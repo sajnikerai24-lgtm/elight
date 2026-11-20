@@ -74,6 +74,7 @@ function notify({
   refNo = '',
   actionModule = '',
   actionUrl = '',
+  department = '',
   recipientPhone = '',
   recipientEmail = '',
   recipientName = '',
@@ -100,6 +101,7 @@ function notify({
     ref_no: String(refNo || '').trim(),
     action_module: String(actionModule || cleanMods[0] || '').trim().toLowerCase(),
     action_url: String(actionUrl || '').trim(),
+    department: String(department || '').trim().toLowerCase(),
     recipient_phone: String(recipientPhone || '').trim(),
     recipient_email: String(recipientEmail || '').trim(),
     recipient_name: String(recipientName || '').trim(),
@@ -115,9 +117,27 @@ function notify({
   return entry;
 }
 
+function canNonAdminAccessErpNotification(n, allowedSet, userDepartment) {
+  const mods = Array.isArray(n.target_modules) ? n.target_modules : [n.target_module];
+  const erpMods = mods.filter(m => m !== 'customer' && m !== 'supplier');
+  if (erpMods.length === 0) return false;
+  if (!allowedSet || allowedSet.size === 0) return false;
+  if (!erpMods.some(m => allowedSet.has(m))) return false;
+
+  // For feedback notifications with a specific department tag, isolate non-admins to their own department
+  if (mods.includes('feedback') && n.department && n.department !== 'general') {
+    const dept = String(n.department).toLowerCase();
+    const matchDept = allowedSet.has(dept) || (userDepartment && (userDepartment === dept || userDepartment === 'customer_care'));
+    if (!matchDept) return false;
+  }
+  return true;
+}
+
 function getNotifications({
   module = 'all',
   allowedModules = null,
+  isAdmin = true,
+  userDepartment = '',
   customerPhone = '',
   customerEmail = '',
   customerName = '',
@@ -165,8 +185,10 @@ function getNotifications({
     const mods = Array.isArray(n.target_modules) ? n.target_modules : [n.target_module];
     const erpMods = mods.filter(m => m !== 'customer' && m !== 'supplier');
     if (erpMods.length === 0) return false;
-    if (!allowedSet) return true;
-    return erpMods.some(m => allowedSet.has(m));
+    if (isAdmin) {
+      return !allowedSet || erpMods.some(m => allowedSet.has(m));
+    }
+    return canNonAdminAccessErpNotification(n, allowedSet, userDepartment);
   });
 
   const countsByModule = {};
@@ -181,7 +203,7 @@ function getNotifications({
     }
   }
 
-  const filtered = (cleanMod === 'all' || cleanMod === 'overview' || !cleanMod)
+  const filtered = (cleanMod === 'all' || (isAdmin && cleanMod === 'overview') || !cleanMod)
     ? erpList
     : erpList.filter(n => {
         const mods = Array.isArray(n.target_modules) ? n.target_modules : [n.target_module];
@@ -189,12 +211,18 @@ function getNotifications({
       });
 
   const scopeKey = buildScopeKey({ module: cleanMod });
-  const mapped = filtered.map(n => ({
-    ...n,
-    is_read: cleanMod === 'all' || cleanMod === 'overview'
-      ? Boolean(n.is_read || (Array.isArray(n.read_by) && n.read_by.length > 0))
-      : isReadInScope(n, scopeKey, cleanMod)
-  }));
+  const mapped = filtered.map(n => {
+    const mods = Array.isArray(n.target_modules) ? n.target_modules : [n.target_module];
+    const visibleMods = allowedSet ? mods.filter(m => allowedSet.has(m)) : mods;
+    const preferredMod = (visibleMods.includes(n.action_module) ? n.action_module : visibleMods[0]) || n.action_module || '';
+    return {
+      ...n,
+      action_module: preferredMod,
+      is_read: cleanMod === 'all' || cleanMod === 'overview'
+        ? Boolean(n.is_read || (visibleMods.length > 0 && visibleMods.every(m => isReadInScope(n, `erp:${m}`, m))))
+        : isReadInScope(n, scopeKey, cleanMod)
+    };
+  });
 
   const uniqueUnreadIds = new Set();
   for (const n of erpList) {
@@ -217,6 +245,14 @@ function markNotificationRead(notificationId, options = {}) {
   const target = list.find(n => String(n.notification_id) === String(notificationId));
   if (!target) return null;
 
+  const mods = Array.isArray(target.target_modules) ? target.target_modules : [target.target_module];
+  if (options.isAdmin === false && Array.isArray(options.allowedModules)) {
+    const allowedSet = new Set(options.allowedModules.map(m => String(m).trim().toLowerCase()));
+    if (!canNonAdminAccessErpNotification(target, allowedSet, options.userDepartment || '')) {
+      return false;
+    }
+  }
+
   const cleanMod = String(options.module || '').trim().toLowerCase();
   const scopeKey = buildScopeKey(options);
   if (!Array.isArray(target.read_by)) target.read_by = [];
@@ -225,7 +261,6 @@ function markNotificationRead(notificationId, options = {}) {
   }
 
   // Also mark global is_read when viewed from its primary target module or explicit clear
-  const mods = Array.isArray(target.target_modules) ? target.target_modules : [target.target_module];
   if (!cleanMod || cleanMod === 'all' || cleanMod === 'overview' || mods.includes(cleanMod)) {
     target.is_read = true;
     for (const m of mods) {
@@ -241,6 +276,8 @@ function markNotificationRead(notificationId, options = {}) {
 function markAllRead({
   module = 'all',
   allowedModules = null,
+  isAdmin = true,
+  userDepartment = '',
   customerPhone = '',
   customerEmail = '',
   customerName = '',
@@ -262,6 +299,9 @@ function markAllRead({
       hit = matchesCustomer(n, { customerPhone, customerEmail, customerName });
     } else if (cleanMod === 'supplier' || supplierId) {
       hit = mods.includes('supplier') && Number(n.supplier_id) === Number(supplierId);
+    } else if (!isAdmin) {
+      hit = canNonAdminAccessErpNotification(n, allowedSet, userDepartment) &&
+        (cleanMod === 'all' ? true : mods.includes(cleanMod));
     } else if (cleanMod === 'all' || cleanMod === 'overview') {
       hit = mods.some(m => m !== 'customer' && m !== 'supplier' && (!allowedSet || allowedSet.has(m)));
     } else {
@@ -274,8 +314,10 @@ function markAllRead({
       if (cleanMod === 'all' || cleanMod === 'overview' || mods.includes(cleanMod)) {
         n.is_read = true;
         for (const m of mods) {
-          const k = `erp:${m}`;
-          if (!n.read_by.includes(k)) n.read_by.push(k);
+          if (isAdmin || (allowedSet && allowedSet.has(m))) {
+            const k = `erp:${m}`;
+            if (!n.read_by.includes(k)) n.read_by.push(k);
+          }
         }
       }
       updated += 1;

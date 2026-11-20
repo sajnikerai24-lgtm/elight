@@ -3766,15 +3766,11 @@ const erpController = {
   },
 
   // ==========================================
-  // MODULE NOTIFICATIONS CENTER
+  // MODULE NOTIFICATIONS CENTER (Role-Scoped)
   // ==========================================
   getModuleNotifications: async (req, res) => {
     try {
       const moduleName = String(req.query.module || 'all').trim().toLowerCase();
-      const rawAllowed = String(req.query.allowed_modules || '').trim();
-      const allowedModules = rawAllowed
-        ? rawAllowed.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
-        : null;
 
       if (moduleName === 'customer') {
         const customerPhone = String(req.query.customer_phone || '').trim();
@@ -3793,12 +3789,96 @@ const erpController = {
         return res.json({ success: true, ...result });
       }
 
+      const rawRole = String(req.headers?.['x-user-role'] || req.query?.user_role || '').trim().toLowerCase();
+      const normRole = (() => {
+        if (rawRole === 'administrator' || rawRole === 'superadmin' || rawRole === 'admin' || rawRole === 'owner') return rawRole === 'owner' ? 'owner' : 'admin';
+        if (rawRole === 'service' || rawRole === 'service_manager') return 'service_manager';
+        if (rawRole === 'inventory' || rawRole === 'inventory_manager' || rawRole === 'storekeeper') return 'inventory_manager';
+        if (rawRole === 'finance' || rawRole === 'finance_manager' || rawRole === 'accountant') return 'finance_manager';
+        if (rawRole === 'dispatch' || rawRole === 'dispatch_manager') return 'dispatch_manager';
+        if (rawRole === 'tech' || rawRole === 'technician' || rawRole === 'service_tech') return 'technician';
+        if (rawRole === 'cashier' || rawRole === 'cashier_manager') return 'cashier';
+        if (rawRole === 'driver' || rawRole === 'rider' || rawRole === 'delivery') return 'driver';
+        if (rawRole === 'customer_care' || rawRole === 'support' || rawRole === 'care' || rawRole === 'cs') return 'customer_care';
+        return rawRole;
+      })();
+      const isAdmin = normRole === 'admin' || normRole === 'owner';
+
+      if (!isAdmin) {
+        if (!normRole || normRole === 'customer') {
+          return res.status(403).json({
+            success: false,
+            message: 'Access Denied: Staff role required to view ERP module notifications.'
+          });
+        }
+        const cfg = readSystemConfig();
+        const defaultRoleMap = {
+          cashier: ['cashier', 'new_sale', 'feedback', 'help'],
+          service_manager: ['services', 'bookings', 'feedback', 'help'],
+          technician: ['technicians', 'feedback', 'help'],
+          finance_manager: ['finance', 'finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
+          dispatch_manager: ['dispatch', 'bookings', 'feedback', 'help'],
+          driver: ['driver', 'feedback', 'help'],
+          inventory_manager: ['inventory', 'inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices', 'feedback', 'help'],
+          customer_care: ['customers', 'customer_care', 'feedback', 'help']
+        };
+        const cfgPerms = (cfg.role_permissions && Array.isArray(cfg.role_permissions[normRole]) && cfg.role_permissions[normRole].length > 0)
+          ? [...cfg.role_permissions[normRole]]
+          : [...(defaultRoleMap[normRole] || [])];
+
+        if (cfgPerms.includes('cashier') && !cfgPerms.includes('new_sale')) cfgPerms.push('new_sale');
+        if (cfgPerms.includes('finance')) {
+          ['finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments'].forEach(sub => {
+            if (!cfgPerms.includes(sub)) cfgPerms.push(sub);
+          });
+        }
+        if (cfgPerms.includes('inventory')) {
+          ['inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices'].forEach(sub => {
+            if (!cfgPerms.includes(sub)) cfgPerms.push(sub);
+          });
+        }
+
+        const allowedModules = Array.from(new Set(cfgPerms.map(m => String(m).trim().toLowerCase())));
+        if (moduleName !== 'all' && !allowedModules.includes(moduleName)) {
+          return res.status(403).json({
+            success: false,
+            message: `Access Denied: Your role cannot access notifications for module "${moduleName}".`
+          });
+        }
+
+        const deptMap = {
+          cashier: 'cashier',
+          finance_manager: 'finance',
+          inventory_manager: 'inventory',
+          service_manager: 'services',
+          technician: 'services',
+          dispatch_manager: 'dispatch',
+          driver: 'driver',
+          customer_care: 'customer_care'
+        };
+
+        const result = moduleNotifications.getNotifications({
+          module: moduleName,
+          allowedModules,
+          isAdmin: false,
+          userDepartment: deptMap[normRole] || normRole,
+          limit: Number(req.query.limit || 60)
+        });
+        return res.json({ success: true, is_admin_scope: false, ...result });
+      }
+
+      const rawAllowed = String(req.query.allowed_modules || '').trim();
+      const allowedModules = rawAllowed
+        ? rawAllowed.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+        : null;
+
       const result = moduleNotifications.getNotifications({
         module: moduleName,
         allowedModules,
+        isAdmin: true,
         limit: Number(req.query.limit || 60)
       });
-      res.json({ success: true, ...result });
+      res.json({ success: true, is_admin_scope: true, ...result });
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -3807,12 +3887,51 @@ const erpController = {
   markModuleNotificationRead: async (req, res) => {
     try {
       const id = String(req.params.id || '').trim();
+      const rawRole = String(req.headers?.['x-user-role'] || req.body?.user_role || '').trim().toLowerCase();
+      const isAdmin = ['admin', 'administrator', 'owner', 'superadmin'].includes(rawRole);
+      const isCust = String(req.body?.module || '').toLowerCase() === 'customer';
+
+      let nonAdminOpts = {};
+      if (!isCust && rawRole && !isAdmin) {
+        const cfg = readSystemConfig();
+        const roleKey = rawRole === 'service' ? 'service_manager'
+          : (rawRole === 'inventory' || rawRole === 'storekeeper' ? 'inventory_manager'
+            : (rawRole === 'finance' || rawRole === 'accountant' ? 'finance_manager'
+              : (rawRole === 'tech' || rawRole === 'service_tech' ? 'technician'
+                : (rawRole === 'rider' || rawRole === 'delivery' ? 'driver' : rawRole))));
+        const defaultMap = {
+          cashier: ['cashier', 'new_sale', 'feedback', 'help'],
+          service_manager: ['services', 'bookings', 'feedback', 'help'],
+          technician: ['technicians', 'feedback', 'help'],
+          finance_manager: ['finance', 'finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
+          dispatch_manager: ['dispatch', 'bookings', 'feedback', 'help'],
+          driver: ['driver', 'feedback', 'help'],
+          inventory_manager: ['inventory', 'inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices', 'feedback', 'help'],
+          customer_care: ['customers', 'customer_care', 'feedback', 'help']
+        };
+        const perms = (cfg.role_permissions && Array.isArray(cfg.role_permissions[roleKey]))
+          ? [...cfg.role_permissions[roleKey]]
+          : [...(defaultMap[roleKey] || [])];
+        if (perms.includes('finance')) perms.push('finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments');
+        if (perms.includes('inventory')) perms.push('inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices');
+        if (perms.includes('cashier')) perms.push('new_sale');
+        nonAdminOpts = {
+          isAdmin: false,
+          allowedModules: Array.from(new Set(perms)),
+          userDepartment: roleKey === 'finance_manager' ? 'finance' : (roleKey === 'inventory_manager' ? 'inventory' : (roleKey === 'service_manager' || roleKey === 'technician' ? 'services' : (roleKey === 'dispatch_manager' ? 'dispatch' : roleKey)))
+        };
+      }
+
       const updated = moduleNotifications.markNotificationRead(id, {
         module: req.body?.module || req.query?.module || '',
         customerPhone: req.body?.customer_phone || '',
         customerEmail: req.body?.customer_email || '',
-        customerName: req.body?.customer_name || ''
+        customerName: req.body?.customer_name || '',
+        ...nonAdminOpts
       });
+      if (updated === false) {
+        return res.status(403).json({ success: false, message: 'Access Denied: Notification does not belong to your module.' });
+      }
       if (!updated) return res.status(404).json({ success: false, message: 'Notification not found.' });
       res.json({ success: true, notification: updated });
     } catch (err) {
@@ -3823,16 +3942,61 @@ const erpController = {
   markAllModuleNotificationsRead: async (req, res) => {
     try {
       const moduleName = String(req.body?.module || 'all').trim().toLowerCase();
-      const rawAllowed = req.body?.allowed_modules;
-      const allowedModules = Array.isArray(rawAllowed)
-        ? rawAllowed
-        : (typeof rawAllowed === 'string' && rawAllowed.trim() ? rawAllowed.split(',').map(s => s.trim()) : null);
+      if (moduleName === 'customer') {
+        const count = moduleNotifications.markAllRead({
+          module: 'customer',
+          customerPhone: req.body?.customer_phone || '',
+          customerEmail: req.body?.customer_email || '',
+          customerName: req.body?.customer_name || ''
+        });
+        return res.json({ success: true, marked_count: count });
+      }
+
+      const rawRole = String(req.headers?.['x-user-role'] || req.body?.user_role || '').trim().toLowerCase();
+      const isAdmin = ['admin', 'administrator', 'owner', 'superadmin'].includes(rawRole);
+      let allowedModules = null;
+      let userDept = '';
+
+      if (!isAdmin) {
+        if (!rawRole || rawRole === 'customer') {
+          return res.status(403).json({ success: false, message: 'Access Denied.' });
+        }
+        const cfg = readSystemConfig();
+        const roleKey = rawRole === 'service' ? 'service_manager'
+          : (rawRole === 'inventory' || rawRole === 'storekeeper' ? 'inventory_manager'
+            : (rawRole === 'finance' || rawRole === 'accountant' ? 'finance_manager'
+              : (rawRole === 'tech' || rawRole === 'service_tech' ? 'technician'
+                : (rawRole === 'rider' || rawRole === 'delivery' ? 'driver' : rawRole))));
+        const defaultMap = {
+          cashier: ['cashier', 'new_sale', 'feedback', 'help'],
+          service_manager: ['services', 'bookings', 'feedback', 'help'],
+          technician: ['technicians', 'feedback', 'help'],
+          finance_manager: ['finance', 'finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
+          dispatch_manager: ['dispatch', 'bookings', 'feedback', 'help'],
+          driver: ['driver', 'feedback', 'help'],
+          inventory_manager: ['inventory', 'inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices', 'feedback', 'help'],
+          customer_care: ['customers', 'customer_care', 'feedback', 'help']
+        };
+        const perms = (cfg.role_permissions && Array.isArray(cfg.role_permissions[roleKey]))
+          ? [...cfg.role_permissions[roleKey]]
+          : [...(defaultMap[roleKey] || [])];
+        if (perms.includes('finance')) perms.push('finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments');
+        if (perms.includes('inventory')) perms.push('inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices');
+        if (perms.includes('cashier')) perms.push('new_sale');
+        allowedModules = Array.from(new Set(perms));
+        userDept = roleKey === 'finance_manager' ? 'finance' : (roleKey === 'inventory_manager' ? 'inventory' : (roleKey === 'service_manager' || roleKey === 'technician' ? 'services' : (roleKey === 'dispatch_manager' ? 'dispatch' : roleKey)));
+      } else {
+        const rawAllowed = req.body?.allowed_modules;
+        allowedModules = Array.isArray(rawAllowed)
+          ? rawAllowed
+          : (typeof rawAllowed === 'string' && rawAllowed.trim() ? rawAllowed.split(',').map(s => s.trim()) : null);
+      }
+
       const count = moduleNotifications.markAllRead({
         module: moduleName,
         allowedModules,
-        customerPhone: req.body?.customer_phone || '',
-        customerEmail: req.body?.customer_email || '',
-        customerName: req.body?.customer_name || ''
+        isAdmin,
+        userDepartment: userDept
       });
       res.json({ success: true, marked_count: count });
     } catch (err) {

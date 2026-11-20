@@ -1,9 +1,8 @@
 /**
- * Elight Electrical Shop - Unified Cross-Module Notifications Center
- * Renders persistent in-module notifications & unread badges across:
- *   1. All ERP Modules (Sidebar pills + Top bell + Per-Module Inbox Panel)
- *   2. Customer Portal & My Account sub-pages
- *   3. Supplier Portal pages
+ * Elight Electrical Shop - Unified Role-Scoped Module Notifications Center
+ * Strict isolation: Only Admin sees all notifications across modules.
+ * Every other user/customer/supplier sees ONLY notifications sent to their own modules
+ * and can click/open directly into the referenced module/record/page.
  */
 (function () {
   if (window.__elightModuleNotifsLoaded) return;
@@ -83,7 +82,7 @@
         position: absolute;
         top: calc(100% + 6px);
         right: 0;
-        width: min(440px, 94vw);
+        width: min(460px, 94vw);
         max-height: 460px;
         overflow-y: auto;
         background: #ffffff;
@@ -127,7 +126,6 @@
       .module-notif-list {
         display: flex;
         flex-direction: column;
-        divide-y: 1px solid #e2e8f0;
       }
       .module-notif-item {
         display: flex;
@@ -137,6 +135,10 @@
         padding: 10px 14px;
         border-top: 1px solid #f1f5f9;
         font-size: 0.84rem;
+        transition: background-color 0.15s ease;
+      }
+      .module-notif-item.clickable:hover {
+        background: #f8fafc;
       }
       .module-notif-item.unread {
         background: #eff6ff;
@@ -174,14 +176,27 @@
         background: #ffffff;
         color: #1e293b;
         border-radius: 6px;
-        padding: 4px 8px;
+        padding: 4px 9px;
         font-size: 0.74rem;
         font-weight: 700;
         cursor: pointer;
         white-space: nowrap;
       }
+      .module-notif-btn.open-btn {
+        background: #1e3a8a;
+        border-color: #1e3a8a;
+        color: #ffffff;
+      }
+      .module-notif-btn.open-btn:hover {
+        background: #1d4ed8;
+      }
       .module-notif-btn:hover {
         background: #f1f5f9;
+      }
+      .elight-notif-highlight-row {
+        outline: 2px solid #f59e0b !important;
+        background-color: #fef3c7 !important;
+        transition: background-color 0.4s ease;
       }
       @media print {
         .elight-topbar-notif-wrap,
@@ -209,7 +224,34 @@
     sessionStorage.setItem(`elight_notif_showall_${key}`, isShowAll(key) ? '0' : '1');
   }
 
-  function renderNotifItemsHtml(items, { onMarkReadFnName, onOpenModuleFnName = '', emptyText = 'No notifications sent to this module yet.' } = {}) {
+  function highlightMatchingRef(containerRoot, refNo) {
+    const cleanRef = String(refNo || '').trim().replace(/^#/, '');
+    if (!cleanRef || !containerRoot) return false;
+    const upper = cleanRef.toUpperCase();
+    const candidates = Array.from(containerRoot.querySelectorAll('tbody tr, .kpi-card, .portal-card'));
+    for (const row of candidates) {
+      if ((row.textContent || '').toUpperCase().includes(upper)) {
+        row.classList.add('elight-notif-highlight-row');
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => row.classList.remove('elight-notif-highlight-row'), 4500);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function checkQueryRefHighlight(rootSelector) {
+    try {
+      const ref = new URLSearchParams(window.location.search).get('ref');
+      if (!ref) return;
+      const root = document.querySelector(rootSelector);
+      if (root) {
+        setTimeout(() => highlightMatchingRef(root, ref), 450);
+      }
+    } catch (e) {}
+  }
+
+  function renderNotifItemsHtml(items, { onMarkReadFnName, onOpenFnName, resolveTargetFn, emptyText = 'No notifications sent to this module yet.' } = {}) {
     if (!items || items.length === 0) {
       return `<div style="padding:12px 14px; font-size:0.82rem; color:#64748b;">${escapeHtmlSafe(emptyText)}</div>`;
     }
@@ -217,18 +259,23 @@
       const id = escapeHtmlSafe(n.notification_id || n.id || '');
       const sev = escapeHtmlSafe(n.severity || (n.notification_type && /reject|warn|hold/i.test(n.notification_type) ? 'warning' : 'info'));
       const unreadCls = n.is_read ? '' : 'unread';
-      const refBadge = n.ref_no
-        ? `<code style="background:#e2e8f0; color:#0f172a; padding:1px 6px; border-radius:4px; font-size:0.72rem; font-weight:700;">${escapeHtmlSafe(n.ref_no)}</code>`
+      const refNo = String(n.ref_no || (n.related_id ? String(n.related_id) : '')).trim();
+      const targetVal = typeof resolveTargetFn === 'function' ? resolveTargetFn(n) : (n.action_module || n.target_module || '');
+      const openCall = onOpenFnName && targetVal
+        ? `${onOpenFnName}('${escapeHtmlSafe(id)}', '${escapeHtmlSafe(targetVal)}', '${escapeHtmlSafe(refNo)}')`
         : '';
-      const openBtn = onOpenModuleFnName && n.action_module
-        ? `<button type="button" class="module-notif-btn" onclick="${onOpenModuleFnName}('${escapeHtmlSafe(id)}', '${escapeHtmlSafe(n.action_module)}')">Open →</button>`
+      const refBadge = refNo
+        ? `<code style="background:#e2e8f0; color:#0f172a; padding:1px 6px; border-radius:4px; font-size:0.72rem; font-weight:700;">${escapeHtmlSafe(refNo)}</code>`
+        : '';
+      const openBtn = openCall
+        ? `<button type="button" class="module-notif-btn open-btn" onclick="event.stopPropagation(); ${openCall}">Open →</button>`
         : '';
       const readBtn = !n.is_read
-        ? `<button type="button" class="module-notif-btn" onclick="${onMarkReadFnName}('${escapeHtmlSafe(id)}')">✓ Read</button>`
+        ? `<button type="button" class="module-notif-btn" onclick="event.stopPropagation(); ${onMarkReadFnName}('${escapeHtmlSafe(id)}')">✓ Read</button>`
         : `<span style="font-size:0.72rem; color:#94a3b8; font-weight:600;">Read</span>`;
 
       return `
-        <div class="module-notif-item ${unreadCls} sev-${sev}">
+        <div class="module-notif-item ${openCall ? 'clickable' : ''} ${unreadCls} sev-${sev}" ${openCall ? `style="cursor:pointer;" onclick="${openCall}"` : ''}>
           <div style="min-width:0; flex:1;">
             <div style="font-weight:800; color:#0f172a; line-height:1.3;">
               ${!n.is_read ? '<span style="color:#2563eb; margin-right:4px;">●</span>' : ''}
@@ -260,30 +307,81 @@
     active_module_list: []
   };
 
-  function getErpAllowedCsv() {
+  function getCurrentErpRole() {
+    if (window.currentUser?.role) return String(window.currentUser.role).trim();
     try {
-      if (typeof getAllowedModulesForRole === 'function' && window.currentUser) {
-        return getAllowedModulesForRole(normalizeRole(currentUser.role)).join(',');
+      const parsed = JSON.parse(localStorage.getItem('elight_user') || '{}');
+      return String(parsed.role || '').trim();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function isCurrentUserErpAdmin() {
+    const r = getCurrentErpRole().toLowerCase();
+    return ['admin', 'administrator', 'owner', 'superadmin'].includes(r);
+  }
+
+  function getErpAllowedModulesList() {
+    try {
+      if (typeof getAllowedModulesForRole === 'function' && window.currentUser?.role) {
+        return getAllowedModulesForRole(normalizeRole(currentUser.role));
       }
     } catch (e) {}
-    return '';
+    return [];
   }
+
+  const ERP_MODULE_SEARCH_MAP = {
+    admin: 'users-search-input',
+    customer_care: 'cc-search-input',
+    cashier: 'cashier-search-input',
+    finance_releases: 'fin-releases-search',
+    inventory: 'erp-inv-search',
+    feedback: 'admin-feedback-search',
+    activity: 'activity-search-input'
+  };
+
+  window.focusModuleNotificationTarget = function (targetMod, refNo) {
+    const cleanRef = String(refNo || '').trim().replace(/^#/, '');
+    const runFocus = () => {
+      const searchId = ERP_MODULE_SEARCH_MAP[targetMod];
+      if (searchId && cleanRef) {
+        const inp = document.getElementById(searchId);
+        if (inp) {
+          inp.value = cleanRef;
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+      const sec = document.getElementById(`module-${targetMod}`);
+      if (sec) {
+        highlightMatchingRef(sec, cleanRef);
+      }
+    };
+
+    if (typeof switchModule === 'function' && window.currentActiveERPModule !== targetMod) {
+      switchModule(targetMod);
+      setTimeout(runFocus, 550);
+    } else {
+      runFocus();
+    }
+  };
 
   function ensureErpTopBell() {
     const mainView = document.querySelector('.erp-main-view');
     if (!mainView || document.getElementById('elightErpTopNotifWrap')) return;
+    const isAdmin = isCurrentUserErpAdmin();
     const wrap = document.createElement('div');
     wrap.id = 'elightErpTopNotifWrap';
     wrap.className = 'elight-topbar-notif-wrap';
     wrap.innerHTML = `
       <button type="button" id="elightErpBellBtn" class="elight-topbar-bell-btn" onclick="toggleErpTopNotifDropdown(event)">
         <span>🔔</span>
-        <span>Notifications</span>
+        <span>${isAdmin ? 'System Notifications' : 'My Module Notifications'}</span>
         <span id="elightErpBellCount" style="background:#ef4444; color:#fff; border-radius:999px; padding:1px 7px; font-size:0.74rem; display:none;">0</span>
       </button>
       <div id="elightErpTopNotifDropdown" class="elight-topbar-dropdown">
         <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:8px; margin-bottom:8px; border-bottom:1px solid #e2e8f0;">
-          <strong style="color:#0f172a; font-size:0.9rem;">🔔 Cross-Module Inbox</strong>
+          <strong style="color:#0f172a; font-size:0.9rem;">${isAdmin ? '🔔 All ERP Notifications (Admin)' : '🔔 Sent to My Modules'}</strong>
           <button type="button" class="module-notif-btn" onclick="markAllErpNotifsRead('all')">Mark All Read</button>
         </div>
         <div id="elightErpTopNotifList">
@@ -314,35 +412,50 @@
   };
 
   window.markErpNotifRead = async function (notifId) {
+    const role = getCurrentErpRole();
     const mod = window.currentActiveERPModule || 'all';
     await fetch(`/api/notifications/${encodeURIComponent(notifId)}/read`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ module: mod })
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Role': role
+      },
+      body: JSON.stringify({ module: mod, user_role: role })
     }).catch(() => {});
     await window.refreshErpModuleNotifications(mod);
   };
 
-  window.openErpNotifModule = async function (notifId, targetModule) {
+  window.openErpNotifModule = async function (notifId, targetModule, refNo = '') {
     await window.markErpNotifRead(notifId);
     const dd = document.getElementById('elightErpTopNotifDropdown');
     if (dd) dd.classList.remove('open');
-    if (targetModule && typeof switchModule === 'function') {
-      switchModule(targetModule);
+
+    const allowed = getErpAllowedModulesList();
+    const safeTarget = (allowed.length === 0 || allowed.includes(targetModule) || isCurrentUserErpAdmin())
+      ? targetModule
+      : (window.currentActiveERPModule || allowed[0]);
+
+    if (safeTarget) {
+      window.focusModuleNotificationTarget(safeTarget, refNo);
     }
   };
 
   window.markAllErpNotifsRead = async function (scopeMod) {
+    const role = getCurrentErpRole();
     const mod = scopeMod || window.currentActiveERPModule || 'all';
     await fetch('/api/notifications/read-all', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Role': role
+      },
       body: JSON.stringify({
         module: mod,
-        allowed_modules: getErpAllowedCsv()
+        user_role: role,
+        allowed_modules: getErpAllowedModulesList().join(',')
       })
     }).catch(() => {});
-    await window.refreshErpModuleNotifications(window.currentActiveERPModule || 'overview');
+    await window.refreshErpModuleNotifications(window.currentActiveERPModule || mod);
   };
 
   window.toggleErpInlineNotifCollapse = function (mod) {
@@ -377,7 +490,6 @@
       }
     });
 
-    // Update parent group chevrons/toggles with total child unread count
     document.querySelectorAll('.erp-nav-group').forEach(grp => {
       const toggle = grp.querySelector('.erp-group-toggle');
       if (!toggle) return;
@@ -423,18 +535,18 @@
     const list = erpNotifState.active_module_list || [];
     const unread = list.filter(n => !n.is_read);
     const collapseKey = `erp_${mod}`;
-    // Default expanded only when unread exists unless user manually toggled
     const hasManual = sessionStorage.getItem(`elight_notif_collapsed_${collapseKey}`) !== null;
     const collapsed = hasManual ? isCollapsed(collapseKey) : unread.length === 0;
     const showAll = isShowAll(collapseKey);
     const visibleItems = showAll ? list.slice(0, 20) : list.slice(0, 5);
+    const isAdminOverview = mod === 'overview' && isCurrentUserErpAdmin();
 
     panel.classList.toggle('has-unread', unread.length > 0);
     panel.innerHTML = `
       <div class="module-notif-head" onclick="toggleErpInlineNotifCollapse('${escapeHtmlSafe(mod)}')">
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <span style="font-size:0.95rem;">🔔</span>
-          <strong style="font-size:0.86rem; color:#0f172a;">Notifications Sent to This Module</strong>
+          <strong style="font-size:0.86rem; color:#0f172a;">${isAdminOverview ? 'All System Notifications (Admin)' : 'Notifications Sent to This Module'}</strong>
           ${unread.length > 0
             ? `<span style="background:#ef4444; color:#fff; border-radius:999px; padding:2px 8px; font-size:0.72rem; font-weight:800;">${unread.length} Unread</span>`
             : `<span style="background:#e2e8f0; color:#475569; border-radius:999px; padding:2px 8px; font-size:0.72rem; font-weight:700;">${list.length} Total</span>`}
@@ -447,7 +559,8 @@
       </div>
       ${collapsed ? '' : `<div class="module-notif-list">${renderNotifItemsHtml(visibleItems, {
         onMarkReadFnName: 'markErpNotifRead',
-        onOpenModuleFnName: mod === 'overview' ? 'openErpNotifModule' : '',
+        onOpenFnName: 'openErpNotifModule',
+        resolveTargetFn: (n) => n.action_module || mod,
         emptyText: 'No incoming notifications for this module right now.'
       })}</div>`}
     `;
@@ -455,18 +568,28 @@
 
   window.refreshErpModuleNotifications = async function (activeMod) {
     if (!document.querySelector('.erp-main-view')) return;
+    const role = getCurrentErpRole();
+    if (!role) return;
+
     injectStyles();
     ensureErpTopBell();
 
     const mod = activeMod || window.currentActiveERPModule || 'overview';
-    const allowedCsv = encodeURIComponent(getErpAllowedCsv());
+    const allowedCsv = encodeURIComponent(getErpAllowedModulesList().join(','));
+    const roleHeaders = { 'X-User-Role': role };
 
     try {
       const [allRes, modRes] = await Promise.all([
-        fetch(`/api/notifications?module=all&allowed_modules=${allowedCsv}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+        fetch(`/api/notifications?module=all&user_role=${encodeURIComponent(role)}&allowed_modules=${allowedCsv}`, {
+          cache: 'no-store',
+          headers: roleHeaders
+        }).then(r => r.json()).catch(() => null),
         mod === 'overview'
           ? Promise.resolve(null)
-          : fetch(`/api/notifications?module=${encodeURIComponent(mod)}&allowed_modules=${allowedCsv}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null)
+          : fetch(`/api/notifications?module=${encodeURIComponent(mod)}&user_role=${encodeURIComponent(role)}&allowed_modules=${allowedCsv}`, {
+              cache: 'no-store',
+              headers: roleHeaders
+            }).then(r => r.json()).catch(() => null)
       ]);
 
       if (allRes && allRes.success) {
@@ -474,7 +597,7 @@
         erpNotifState.unread_count = Number(allRes.unread_count || 0);
         erpNotifState.counts_by_module = allRes.counts_by_module || {};
         erpNotifState.active_module_list = mod === 'overview'
-          ? erpNotifState.notifications
+          ? (isCurrentUserErpAdmin() ? erpNotifState.notifications : [])
           : (modRes && modRes.success ? (modRes.notifications || []) : []);
 
         updateSidebarBadges(erpNotifState.counts_by_module);
@@ -491,8 +614,9 @@
         if (ddList) {
           ddList.innerHTML = renderNotifItemsHtml(erpNotifState.notifications.slice(0, 15), {
             onMarkReadFnName: 'markErpNotifRead',
-            onOpenModuleFnName: 'openErpNotifModule',
-            emptyText: 'All caught up! No notifications yet.'
+            onOpenFnName: 'openErpNotifModule',
+            resolveTargetFn: (n) => n.action_module || n.target_module,
+            emptyText: 'All caught up! No notifications in your modules.'
           });
         }
 
@@ -505,6 +629,19 @@
   // 2. CUSTOMER PORTAL NOTIFICATIONS
   // ========================================================
   let lastCustomerQuery = null;
+
+  function resolveCustomerActionUrl(n) {
+    if (n.action_url) return n.action_url;
+    const text = `${n.source_module || ''} ${n.title || ''} ${n.ref_no || ''}`.toLowerCase();
+    if (/warranty|serial|wrn-/.test(text)) return '/customer-warranties';
+    if (/receipt|rcp-sr-/.test(text)) return '/customer-services';
+    if (/payment|paid|balance|mpesa|finance/.test(text) && !/order/.test(text)) return '/customer-payments';
+    if (/deliver|dispatch|driver|packed|ship|reschedul/.test(text)) return '/customer-deliveries';
+    if (/service|technician|installation|#sr-/.test(text)) return '/customer-services';
+    if (/booking|bk-/.test(text)) return '/customer-bookings';
+    if (/feedback|review|complaint|inquiry/.test(text)) return '/customer-feedback';
+    return '/customer-orders';
+  }
 
   window.markCustomerNotifRead = async function (notifId) {
     if (!lastCustomerQuery) return;
@@ -519,6 +656,17 @@
       })
     }).catch(() => {});
     await window.refreshCustomerNotifications(lastCustomerQuery);
+  };
+
+  window.openCustomerNotifTarget = async function (notifId, targetUrl, refNo = '') {
+    await window.markCustomerNotifRead(notifId);
+    const dest = targetUrl || '/customer-orders';
+    const nextHref = refNo ? `${dest}?ref=${encodeURIComponent(refNo)}` : dest;
+    if (window.location.pathname === dest && refNo) {
+      highlightMatchingRef(document.querySelector('.customer-shell'), refNo);
+      return;
+    }
+    window.location.href = nextHref;
   };
 
   window.markAllCustomerNotifsRead = async function () {
@@ -562,7 +710,6 @@
       const list = data.notifications || [];
       const unreadCount = Number(data.unread_count || 0);
 
-      // Badge inside My Account toggle button
       const toggleBtn = document.querySelector('#customerAccountDropdown .nav-dropdown-toggle');
       if (toggleBtn) {
         let b = toggleBtn.querySelector('.elight-nav-notif-badge');
@@ -611,19 +758,42 @@
         </div>
         ${collapsed ? '' : `<div class="module-notif-list">${renderNotifItemsHtml(list.slice(0, 10), {
           onMarkReadFnName: 'markCustomerNotifRead',
+          onOpenFnName: 'openCustomerNotifTarget',
+          resolveTargetFn: resolveCustomerActionUrl,
           emptyText: 'No new order, delivery, service, or support updates yet.'
         })}</div>`}
       `;
+
+      checkQueryRefHighlight('.customer-shell');
     } catch (e) {}
   };
 
   // ========================================================
   // 3. SUPPLIER PORTAL NOTIFICATIONS
   // ========================================================
+  function resolveSupplierActionUrl(n) {
+    if (n.action_url) return n.action_url;
+    const key = `${n.related_type || ''} ${n.notification_type || ''} ${n.title || ''}`.toLowerCase();
+    if (/payment/.test(key)) return '/supplier-payments';
+    if (/delivery|invoice|grn/.test(key)) return '/supplier-orders';
+    return '/supplier-tenders';
+  }
+
   window.markSupplierPortalNotifRead = async function (notifId) {
     if (typeof authFetch !== 'function') return;
     await authFetch(`/api/supplier/notifications/${encodeURIComponent(notifId)}/read`, { method: 'POST' }).catch(() => {});
     await window.refreshSupplierNotifications();
+  };
+
+  window.openSupplierNotifTarget = async function (notifId, targetUrl, refNo = '') {
+    await window.markSupplierPortalNotifRead(notifId);
+    const dest = targetUrl || '/supplier-tenders';
+    const nextHref = refNo ? `${dest}?ref=${encodeURIComponent(refNo)}` : dest;
+    if (window.location.pathname === dest && refNo) {
+      highlightMatchingRef(document.querySelector('.portal-shell'), refNo);
+      return;
+    }
+    window.location.href = nextHref;
   };
 
   window.markAllSupplierPortalNotifsRead = async function () {
@@ -688,9 +858,13 @@
         </div>
         ${collapsed ? '' : `<div class="module-notif-list">${renderNotifItemsHtml(list.slice(0, 10), {
           onMarkReadFnName: 'markSupplierPortalNotifRead',
+          onOpenFnName: 'openSupplierNotifTarget',
+          resolveTargetFn: resolveSupplierActionUrl,
           emptyText: 'No supplier portal notifications right now.'
         })}</div>`}
       `;
+
+      checkQueryRefHighlight('.portal-shell');
     } catch (e) {}
   };
 })();
