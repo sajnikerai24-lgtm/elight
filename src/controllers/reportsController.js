@@ -662,18 +662,8 @@ const reportsController = {
         }
       }
 
-      // 4. Dispatch Manager Connection: If delivery, queue for driver
-      if (!isPickup) {
-        await interModuleSync.createDispatchForOrder({
-          order_no: refNo,
-          customer_name: customer_name || 'Customer',
-          customer_phone: customer_phone || '',
-          customer_location: delivery_address || 'Meru County Delivery Area',
-          payment_method: cleanMethod,
-          payment_ref: isPaid ? cleanReceipt : 'Pending Online Order',
-          cashier_name: isPaid ? 'M-Pesa Direct' : 'Pending'
-        });
-      }
+      // 4. Finance Confirmation Gate:
+      // Delivery dispatch & service requests are held until Finance confirms & releases the order.
 
       // 5. Cross-Module Notifications for Online Checkout
       moduleNotifications.notify({
@@ -692,24 +682,11 @@ const reportsController = {
         sourceModule: 'storefront',
         senderName: customer_name || 'Online Storefront',
         title: isPaid ? `Online Order ${refNo} Awaiting Finance Release` : `Unpaid Online Order ${refNo} Flagged for Finance`,
-        message: `Online order ${refNo} (${customer_name || 'Customer'}) — Total: KES ${cleanAmount.toLocaleString()}${isPaid ? ', Paid in Full' : `, Balance Due: KES ${cleanAmount.toLocaleString()}`}.`,
+        message: `Online order ${refNo} (${customer_name || 'Customer'}) — Total: KES ${cleanAmount.toLocaleString()}${isPaid ? ', Paid in Full' : `, Balance Due: KES ${cleanAmount.toLocaleString()}`}.${!isPickup ? ' Requires Dispatch after Finance confirmation.' : ''}${wantsInstallation ? ' Installation service requested.' : ''}`,
         severity: isPaid ? 'info' : 'warning',
         refNo,
         actionModule: 'finance_releases'
       });
-
-      if (wantsInstallation) {
-        moduleNotifications.notify({
-          targetModules: ['services'],
-          sourceModule: 'storefront',
-          senderName: customer_name || 'Online Storefront',
-          title: `Installation Requested on Order ${refNo}`,
-          message: `Customer ${customer_name || 'Customer'} requested product installation alongside Order ${refNo}.`,
-          severity: 'info',
-          refNo,
-          actionModule: 'services'
-        });
-      }
 
       moduleNotifications.notify({
         targetModules: ['customer'],

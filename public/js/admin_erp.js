@@ -3771,6 +3771,7 @@ async function handleFinanceReleaseSubmit(e) {
     if (typeof loadFinanceRecords === 'function') loadFinanceRecords();
     if (typeof loadCashierOrders === 'function') loadCashierOrders();
     if (typeof loadDispatches === 'function') loadDispatches();
+    if (typeof loadServiceRequests === 'function') loadServiceRequests();
   } catch (err) {
     showToast(err.message, 'error');
   }
@@ -3832,6 +3833,7 @@ async function verifyAndReleaseFullOrder(orderNo) {
     await loadFinanceReleases();
     if (typeof loadCashierOrders === 'function') loadCashierOrders();
     if (typeof loadDispatches === 'function') loadDispatches();
+    if (typeof loadServiceRequests === 'function') loadServiceRequests();
   } catch (err) {
     showToast(err.message, 'error');
   }

@@ -1992,6 +1992,121 @@ const erpController = {
       } = req.body;
 
       const cleanOfficer = String(officer_name || cashier_name || 'Finance Officer').trim();
+
+      // Shared helper: route a Finance-confirmed order to Dispatch Manager (if dispatch needed)
+      // and/or Service Manager (if electrical service / installation is requested).
+      async function finalizeFinanceConfirmedRouting(targetOrder, officer, releaseNote) {
+        const routedTo = [];
+        const fType = targetOrder.fulfillment_type || (targetOrder.fulfillment_mode === 'collection' ? 'product_collection' : 'product_delivery');
+        targetOrder.fulfillment_type = fType;
+
+        const wantsInst = Boolean(
+          targetOrder.requires_installation ||
+          fType === 'product_delivery_install' ||
+          fType === 'product_install_later' ||
+          (targetOrder.installation_status && targetOrder.installation_status !== 'not_requested')
+        );
+        targetOrder.requires_installation = wantsInst;
+        targetOrder.installation_status = wantsInst ? 'approved' : 'not_requested';
+
+        // 1. Dispatch Manager routing (for any order requiring delivery dispatch)
+        const needsDispatch = fType !== 'product_collection' && fType !== 'service_only' && targetOrder.fulfillment_mode !== 'collection';
+        if (needsDispatch) {
+          targetOrder.fulfillment_stage = 'delivery';
+          targetOrder.fulfillment_status = 'sent_to_dispatch';
+          targetOrder.delivery_status = 'scheduled';
+          await interModuleSync.createDispatchForOrder(targetOrder, {
+            needs_installation: wantsInst && fType !== 'product_install_later',
+            booked_later: fType === 'product_install_later'
+          });
+          routedTo.push('Dispatch Manager');
+        } else if (fType === 'product_collection') {
+          targetOrder.fulfillment_stage = 'collection';
+          targetOrder.fulfillment_status = 'ready_for_collection';
+          targetOrder.delivery_status = 'not_scheduled';
+          moduleNotifications.notify({
+            targetModules: ['cashier'],
+            sourceModule: 'finance',
+            senderName: officer,
+            title: `Order ${targetOrder.order_no} Released for Shop Collection`,
+            message: `Finance confirmed & released Order ${targetOrder.order_no} (${targetOrder.customer_name}) for customer shop counter collection.`,
+            severity: 'success',
+            refNo: targetOrder.order_no,
+            actionModule: 'cashier'
+          });
+        }
+
+        // 2. Service Manager routing (only when a service or installation is requested)
+        if (wantsInst) {
+          const isLater = fType === 'product_install_later' || Boolean(targetOrder.schedule_install_later);
+          const reqPrefix = isLater ? 'SCH' : 'INS';
+          const sRequests = readServiceRequests();
+          const existingInst = sRequests.find(s =>
+            s.order_no === targetOrder.order_no ||
+            s.booking_ref === `INS-${targetOrder.order_no}` ||
+            s.booking_ref === `SCH-${targetOrder.order_no}`
+          );
+          if (!existingInst) {
+            const nextReqId = sRequests.length > 0 ? Math.max(...sRequests.map(s => s.request_id || 0)) + 1 : 101;
+            const itemsSummary = (targetOrder.items || []).map(i => `${i.quantity}x ${i.product_name}`).join(', ');
+            const installReq = {
+              request_id: nextReqId,
+              order_no: targetOrder.order_no,
+              booking_ref: `${reqPrefix}-${targetOrder.order_no}`,
+              customer_name: targetOrder.customer_name || 'Customer',
+              phone: targetOrder.customer_phone || 'N/A',
+              location: targetOrder.customer_location || 'Meru County',
+              service_type: isLater
+                ? 'Scheduled Product Installation'
+                : (targetOrder.service_type || 'Product Installation'),
+              description: isLater
+                ? `Scheduled Installation for Order ${targetOrder.order_no} (${itemsSummary || 'Electrical Products'}). Finance confirmed (${releaseNote}). Customer will confirm preferred installation appointment date.`
+                : `Product Installation for Order ${targetOrder.order_no} (${itemsSummary || 'Electrical Products'}). Finance confirmed (${releaseNote}). Tracked independently from product delivery.`,
+              scheduled_date: isLater ? 'Pending Customer Booking' : (targetOrder.scheduled_date || 'TBD'),
+              status: 'pending',
+              site_ready: fType === 'product_collection',
+              site_ready_for_installation: fType === 'product_collection',
+              assigned_technician_id: null,
+              assigned_technician_name: '',
+              technician_name: '',
+              materials_used: '',
+              created_at: new Date().toISOString()
+            };
+            const validSqlDate = (!isLater && targetOrder.scheduled_date && /^\d{4}-\d{2}-\d{2}/.test(String(targetOrder.scheduled_date)))
+              ? String(targetOrder.scheduled_date).slice(0, 10)
+              : new Date().toISOString().split('T')[0];
+            try {
+              const { data: insertedInst } = await supabase.from('service_requests').insert([{
+                booking_ref: installReq.booking_ref,
+                customer_name: installReq.customer_name,
+                phone: installReq.phone,
+                location: installReq.location,
+                service_type: installReq.service_type,
+                description: installReq.description,
+                scheduled_date: validSqlDate,
+                status: installReq.status
+              }]).select('*').single();
+              if (insertedInst?.request_id) installReq.request_id = insertedInst.request_id;
+            } catch (e) {}
+            sRequests.unshift(installReq);
+            writeServiceRequests(sRequests);
+          }
+
+          moduleNotifications.notify({
+            targetModules: ['services'],
+            sourceModule: 'finance',
+            senderName: officer,
+            title: `Service / Installation Job Sent (${targetOrder.order_no})`,
+            message: `Finance confirmed Order ${targetOrder.order_no} (${targetOrder.customer_name}) — queued for Service Manager (${targetOrder.service_type || 'Product Installation'}).`,
+            severity: 'info',
+            refNo: targetOrder.order_no,
+            actionModule: 'services'
+          });
+          routedTo.push('Service Manager');
+        }
+
+        return routedTo;
+      }
       const orders = readCashierOrders();
       let order = orders.find(o => String(o.order_no || o.order_number || '').toUpperCase() === targetNo.toUpperCase());
 
@@ -2014,6 +2129,7 @@ const erpController = {
         if (!refCheck.valid) {
           return res.status(400).json({ success: false, message: refCheck.message });
         }
+        const wasReleased = order.finance_release_status === 'released';
         paid += amt;
         balance = Math.max(0, total - paid);
         order.amount_paid = paid;
@@ -2023,6 +2139,8 @@ const erpController = {
           order.payment_status = 'paid';
           order.finance_release_status = 'released';
           order.financial_clearance = 'approved';
+          if (!order.finance_released_at) order.finance_released_at = new Date().toISOString();
+          if (!order.finance_released_by) order.finance_released_by = cleanOfficer;
         } else {
           order.payment_status = 'partially_paid';
         }
@@ -2054,11 +2172,17 @@ const erpController = {
           }]);
         } catch (e) {}
 
+        // If full balance settlement unlocked release for the first time, route to Dispatch & Service Managers
+        let settledRoutes = [];
+        if (balance === 0 && !wasReleased) {
+          settledRoutes = await finalizeFinanceConfirmedRouting(order, cleanOfficer, `Full balance settled via ${payMethod} (${payRef}).`);
+        }
+
         writeCashierOrders(orders);
 
         appendAuditLog(
           'Customer Order Balance Payment Received',
-          `Finance received KES ${amt.toLocaleString()} via ${payMethod} (${payRef}) for Order ${order.order_no}. Remaining balance: KES ${balance.toLocaleString()}.`,
+          `Finance received KES ${amt.toLocaleString()} via ${payMethod} (${payRef}) for Order ${order.order_no}. Remaining balance: KES ${balance.toLocaleString()}.${settledRoutes.length ? ` Routed to: ${settledRoutes.join(' & ')}.` : ''}`,
           `${cleanOfficer} (Finance)`,
           'Finance & Treasury'
         );
@@ -2080,7 +2204,7 @@ const erpController = {
           senderName: cleanOfficer,
           title: `Payment of KES ${amt.toLocaleString()} Confirmed (${order.order_no})`,
           message: balance === 0
-            ? `Your order ${order.order_no} balance is now fully settled.`
+            ? `Your order ${order.order_no} balance is now fully settled.${settledRoutes.length ? ` Forwarded to ${settledRoutes.join(' & ')}.` : ''}`
             : `Received KES ${amt.toLocaleString()}. Remaining balance: KES ${balance.toLocaleString()}.`,
           severity: 'success',
           refNo: order.order_no,
@@ -2088,7 +2212,12 @@ const erpController = {
           recipientName: order.customer_name || ''
         });
 
-        return res.json({ success: true, order, message: `Payment of KES ${amt.toLocaleString()} recorded. Remaining balance: KES ${balance.toLocaleString()}.` });
+        return res.json({
+          success: true,
+          order,
+          routed_to: settledRoutes,
+          message: `Payment of KES ${amt.toLocaleString()} recorded. Remaining balance: KES ${balance.toLocaleString()}.${settledRoutes.length ? ` Sent to ${settledRoutes.join(' and ')}.` : ''}`
+        });
       }
 
       if (action === 'flag_failed') {
@@ -2200,140 +2329,31 @@ const erpController = {
           order.financial_clearance = 'approved_with_credit';
         }
 
-        const fType = order.fulfillment_type || (order.fulfillment_mode === 'collection' ? 'product_collection' : 'product_delivery');
-        order.fulfillment_type = fType;
-
-        const wantsInst = Boolean(
-          order.requires_installation ||
-          fType === 'product_delivery_install' ||
-          fType === 'product_install_later' ||
-          (order.installation_status && order.installation_status !== 'not_requested')
-        );
-        order.requires_installation = wantsInst;
-
-        if (wantsInst) {
-          order.installation_status = 'approved';
-        } else {
-          order.installation_status = 'not_requested';
-        }
-
-        // 1. Handle Delivery / Collection independently
-        if (fType === 'product_collection') {
-          order.fulfillment_stage = 'collection';
-          order.fulfillment_status = 'ready_for_collection';
-          order.delivery_status = 'not_scheduled';
-        } else {
-          order.fulfillment_stage = 'delivery';
-          order.fulfillment_status = 'sent_to_dispatch';
-          order.delivery_status = 'scheduled';
-          await interModuleSync.createDispatchForOrder(order, {
-            needs_installation: wantsInst && fType !== 'product_install_later',
-            booked_later: fType === 'product_install_later'
-          });
-        }
-
-        // 2. Handle Installation independently ONLY if requested
-        if (wantsInst) {
-          const isLater = fType === 'product_install_later' || Boolean(order.schedule_install_later);
-          const reqPrefix = isLater ? 'SCH' : 'INS';
-          const sRequests = readServiceRequests();
-          const existingInst = sRequests.find(s =>
-            s.order_no === order.order_no ||
-            s.booking_ref === `INS-${order.order_no}` ||
-            s.booking_ref === `SCH-${order.order_no}`
-          );
-          if (!existingInst) {
-            const nextReqId = sRequests.length > 0 ? Math.max(...sRequests.map(s => s.request_id || 0)) + 1 : 101;
-            const itemsSummary = (order.items || []).map(i => `${i.quantity}x ${i.product_name}`).join(', ');
-            const installReq = {
-              request_id: nextReqId,
-              order_no: order.order_no,
-              booking_ref: `${reqPrefix}-${order.order_no}`,
-              customer_name: order.customer_name || 'Customer',
-              phone: order.customer_phone || 'N/A',
-              location: order.customer_location || 'Meru County',
-              service_type: isLater
-                ? 'Scheduled Product Installation'
-                : (order.service_type || 'Product Installation'),
-              description: isLater
-                ? `Scheduled Installation for Order ${order.order_no} (${itemsSummary || 'Electrical Products'}). Customer will confirm preferred installation appointment date.`
-                : `Product Installation for Order ${order.order_no} (${itemsSummary || 'Electrical Products'}). Tracked independently from product delivery.`,
-              scheduled_date: isLater ? 'Pending Customer Booking' : (order.scheduled_date || 'TBD'),
-              status: 'pending',
-              site_ready: fType === 'product_collection',
-              site_ready_for_installation: fType === 'product_collection',
-              assigned_technician_id: null,
-              assigned_technician_name: '',
-              technician_name: '',
-              materials_used: '',
-              created_at: new Date().toISOString()
-            };
-            const validSqlDate = (!isLater && order.scheduled_date && /^\d{4}-\d{2}-\d{2}/.test(String(order.scheduled_date)))
-              ? String(order.scheduled_date).slice(0, 10)
-              : new Date().toISOString().split('T')[0];
-            try {
-              const { data: insertedInst } = await supabase.from('service_requests').insert([{
-                booking_ref: installReq.booking_ref,
-                customer_name: installReq.customer_name,
-                phone: installReq.phone,
-                location: installReq.location,
-                service_type: installReq.service_type,
-                description: installReq.description,
-                scheduled_date: validSqlDate,
-                status: installReq.status
-              }]).select('*').single();
-              if (insertedInst?.request_id) installReq.request_id = insertedInst.request_id;
-            } catch (e) {}
-            sRequests.unshift(installReq);
-            writeServiceRequests(sRequests);
-          }
-        }
+        const routedTo = await finalizeFinanceConfirmedRouting(order, cleanOfficer, noteText);
 
         writeCashierOrders(orders);
 
         appendAuditLog(
           'Order Released by Finance',
-          `Order ${order.order_no} (${order.customer_name}) verified and RELEASED by Finance for ${order.fulfillment_stage.toUpperCase()} (${noteText}).`,
+          `Order ${order.order_no} (${order.customer_name}) verified and RELEASED by Finance${routedTo.length ? ` to ${routedTo.join(' & ')}` : ` for ${order.fulfillment_stage.toUpperCase()}`} (${noteText}).`,
           `${cleanOfficer} (Finance)`,
           'Finance & Treasury'
         );
 
-        if (fType === 'product_collection') {
-          moduleNotifications.notify({
-            targetModules: ['cashier'],
-            sourceModule: 'finance',
-            senderName: cleanOfficer,
-            title: `Order ${order.order_no} Released for Shop Collection`,
-            message: `Finance confirmed & released Order ${order.order_no} (${order.customer_name}) for customer shop counter collection.`,
-            severity: 'success',
-            refNo: order.order_no,
-            actionModule: 'cashier'
-          });
-        }
-
-        if (wantsInst) {
-          moduleNotifications.notify({
-            targetModules: ['services'],
-            sourceModule: 'finance',
-            senderName: cleanOfficer,
-            title: `Installation Order ${order.order_no} Released by Finance`,
-            message: `Order ${order.order_no} (${order.customer_name}) released by Finance and queued for electrical installation.`,
-            severity: 'info',
-            refNo: order.order_no,
-            actionModule: 'services'
-          });
-        }
+        const destSummary = routedTo.length > 0
+          ? `sent to ${routedTo.join(' and ')}`
+          : `released for ${order.fulfillment_stage}`;
 
         moduleNotifications.notify({
           targetModules: ['customer'],
           sourceModule: 'finance',
           senderName: cleanOfficer,
-          title: fType === 'product_collection'
+          title: order.fulfillment_type === 'product_collection' && !order.requires_installation
             ? `Order ${order.order_no} Ready for Shop Collection`
-            : `Order ${order.order_no} Confirmed & Released for Dispatch`,
-          message: fType === 'product_collection'
+            : `Order ${order.order_no} Confirmed by Finance`,
+          message: order.fulfillment_type === 'product_collection' && !order.requires_installation
             ? `Finance confirmed your order ${order.order_no}. You may collect it at Elight Electrical Shop counter.`
-            : `Finance confirmed your order ${order.order_no} and forwarded it to Dispatch.${balance > 0 ? ` Remaining balance: KES ${balance.toLocaleString()}.` : ''}`,
+            : `Finance confirmed your order ${order.order_no} (${destSummary}).${balance > 0 ? ` Remaining balance: KES ${balance.toLocaleString()}.` : ''}`,
           severity: 'success',
           refNo: order.order_no,
           recipientPhone: order.customer_phone || '',
@@ -2343,7 +2363,8 @@ const erpController = {
         return res.json({
           success: true,
           order,
-          message: `Order ${order.order_no} verified and released for ${order.fulfillment_stage}!`
+          routed_to: routedTo,
+          message: `Order ${order.order_no} confirmed by Finance and ${destSummary}!`
         });
       }
 
