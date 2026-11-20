@@ -35,6 +35,7 @@
     const u = String(urlStr || '');
     if (!u.includes('/api/')) return true;
     if (u.includes('/api/live-sync/')) return true;
+    if (u.includes('/api/notifications/') || /\/api\/supplier\/notifications\//i.test(u)) return true;
     if (/\/api\/(auth|supplier\/auth)\/(login|refresh|quick-login|register)/i.test(u)) return true;
     return false;
   }

@@ -2,11 +2,13 @@
  * Elight Electrical Shop - Unified Role-Scoped Module Notifications Center
  * Strict isolation: Only Admin sees all notifications across modules.
  * Every other user/customer/supplier sees ONLY notifications sent to their own modules
- * and can click/open directly into the referenced module/record/page.
+ * and can click/open directly into any notification and its referenced module/record.
  */
 (function () {
   if (window.__elightModuleNotifsLoaded) return;
   window.__elightModuleNotifsLoaded = true;
+
+  const renderedNotifRegistry = {};
 
   function escapeHtmlSafe(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({
@@ -135,9 +137,10 @@
         padding: 10px 14px;
         border-top: 1px solid #f1f5f9;
         font-size: 0.84rem;
+        cursor: pointer;
         transition: background-color 0.15s ease;
       }
-      .module-notif-item.clickable:hover {
+      .module-notif-item:hover {
         background: #f8fafc;
       }
       .module-notif-item.unread {
@@ -198,14 +201,107 @@
         background-color: #fef3c7 !important;
         transition: background-color 0.4s ease;
       }
+      .elight-notif-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        z-index: 2500;
+      }
+      .elight-notif-modal-backdrop.open {
+        display: flex;
+      }
+      .elight-notif-modal-card {
+        background: #ffffff;
+        border-radius: 14px;
+        width: min(560px, 100%);
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 24px 50px rgba(15, 23, 42, 0.3);
+        border: 1px solid #cbd5e1;
+        padding: 20px 22px;
+      }
       @media print {
         .elight-topbar-notif-wrap,
-        .module-notif-panel {
+        .module-notif-panel,
+        .elight-notif-modal-backdrop {
           display: none !important;
         }
       }
     `;
     document.head.appendChild(style);
+  }
+
+  function ensureNotifDetailModal() {
+    injectStyles();
+    let backdrop = document.getElementById('elightNotifDetailBackdrop');
+    if (backdrop) return backdrop;
+
+    backdrop = document.createElement('div');
+    backdrop.id = 'elightNotifDetailBackdrop';
+    backdrop.className = 'elight-notif-modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="elight-notif-modal-card" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:14px;">
+          <div>
+            <div style="font-size:0.74rem; text-transform:uppercase; letter-spacing:0.04em; color:#64748b; font-weight:700;">🔔 Notification Details</div>
+            <h3 id="elightNotifModalTitle" style="margin:4px 0 0 0; font-size:1.06rem; color:#0f172a;">Notification</h3>
+          </div>
+          <button type="button" onclick="closeNotifDetailModal()" style="border:1px solid #cbd5e1; background:#f8fafc; color:#0f172a; border-radius:6px; padding:4px 10px; font-weight:700; cursor:pointer;">✕</button>
+        </div>
+        <div id="elightNotifModalMessage" style="font-size:0.92rem; line-height:1.55; color:#1e293b; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; margin-bottom:14px;"></div>
+        <div id="elightNotifModalMeta" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:8px; font-size:0.8rem; color:#475569; margin-bottom:16px;"></div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; border-top:1px solid #e2e8f0; padding-top:12px;">
+          <button type="button" id="elightNotifModalJumpBtn" class="module-notif-btn open-btn" style="padding:7px 14px; font-size:0.82rem; display:none;">Open Record →</button>
+          <button type="button" onclick="closeNotifDetailModal()" class="module-notif-btn" style="padding:7px 14px; font-size:0.82rem;">Close</button>
+        </div>
+      </div>
+    `;
+    backdrop.addEventListener('click', () => window.closeNotifDetailModal());
+    document.body.appendChild(backdrop);
+    return backdrop;
+  }
+
+  window.closeNotifDetailModal = function () {
+    const backdrop = document.getElementById('elightNotifDetailBackdrop');
+    if (backdrop) backdrop.classList.remove('open');
+  };
+
+  function showNotifDetailModal(notif, { jumpLabel = '', onJump = null } = {}) {
+    if (!notif) return;
+    const backdrop = ensureNotifDetailModal();
+    const titleEl = document.getElementById('elightNotifModalTitle');
+    const msgEl = document.getElementById('elightNotifModalMessage');
+    const metaEl = document.getElementById('elightNotifModalMeta');
+    const jumpBtn = document.getElementById('elightNotifModalJumpBtn');
+
+    if (titleEl) titleEl.textContent = notif.title || 'Notification';
+    if (msgEl) msgEl.textContent = notif.message || 'No additional details.';
+    if (metaEl) {
+      metaEl.innerHTML = `
+        <div><strong>From:</strong> ${escapeHtmlSafe(notif.sender_name || 'Elight System')}</div>
+        <div><strong>Source Module:</strong> ${escapeHtmlSafe(String(notif.source_module || 'system').replace(/_/g, ' '))}</div>
+        <div><strong>Reference #:</strong> ${notif.ref_no ? `<code>${escapeHtmlSafe(notif.ref_no)}</code>` : '—'}</div>
+        <div><strong>Received:</strong> ${escapeHtmlSafe(formatNotifTime(notif.created_at))}</div>
+      `;
+    }
+    if (jumpBtn) {
+      if (typeof onJump === 'function') {
+        jumpBtn.style.display = 'inline-block';
+        jumpBtn.textContent = jumpLabel || 'Go to Record →';
+        jumpBtn.onclick = () => {
+          window.closeNotifDetailModal();
+          onJump();
+        };
+      } else {
+        jumpBtn.style.display = 'none';
+        jumpBtn.onclick = null;
+      }
+    }
+    backdrop.classList.add('open');
   }
 
   function isCollapsed(key) {
@@ -240,42 +336,67 @@
     return false;
   }
 
-  function checkQueryRefHighlight(rootSelector) {
-    try {
-      const ref = new URLSearchParams(window.location.search).get('ref');
-      if (!ref) return;
+  function retryHighlightRef(rootSelector, refNo, maxAttempts = 10) {
+    if (!refNo) return;
+    let attempt = 0;
+    const tick = () => {
+      attempt += 1;
       const root = document.querySelector(rootSelector);
-      if (root) {
-        setTimeout(() => highlightMatchingRef(root, ref), 450);
+      if (root && highlightMatchingRef(root, refNo)) return;
+      if (attempt < maxAttempts) {
+        setTimeout(tick, 250);
+      }
+    };
+    setTimeout(tick, 200);
+  }
+
+  let handledQueryNotif = false;
+  function checkQueryRefHighlight(rootSelector, itemsList = [], resolveTarget = null) {
+    try {
+      const qs = new URLSearchParams(window.location.search);
+      const ref = qs.get('ref');
+      const openNotifId = qs.get('open_notif');
+      if (ref) {
+        retryHighlightRef(rootSelector, ref, 10);
+      }
+      if (openNotifId && !handledQueryNotif) {
+        const match = (itemsList || []).find(it => String(it.notification_id || it.id) === String(openNotifId));
+        if (match) {
+          handledQueryNotif = true;
+          showNotifDetailModal(match, {
+            jumpLabel: ref ? `Locate ${ref} on Page` : 'Stay on Page',
+            onJump: ref ? () => highlightMatchingRef(document.querySelector(rootSelector), ref) : null
+          });
+        }
       }
     } catch (e) {}
   }
 
-  function renderNotifItemsHtml(items, { onMarkReadFnName, onOpenFnName, resolveTargetFn, emptyText = 'No notifications sent to this module yet.' } = {}) {
+  function renderNotifItemsHtml(items, { onMarkReadFnName, onOpenFnName, resolveTargetFn, emptyText = 'No incoming notifications right now.' } = {}) {
     if (!items || items.length === 0) {
       return `<div style="padding:12px 14px; font-size:0.82rem; color:#64748b;">${escapeHtmlSafe(emptyText)}</div>`;
     }
-    return items.map(n => {
-      const id = escapeHtmlSafe(n.notification_id || n.id || '');
-      const sev = escapeHtmlSafe(n.severity || (n.notification_type && /reject|warn|hold/i.test(n.notification_type) ? 'warning' : 'info'));
-      const unreadCls = n.is_read ? '' : 'unread';
+    return items.map((n, idx) => {
+      const rawId = String(n.notification_id || n.id || `tmp-${Date.now()}-${idx}`);
       const refNo = String(n.ref_no || (n.related_id ? String(n.related_id) : '')).trim();
       const targetVal = typeof resolveTargetFn === 'function' ? resolveTargetFn(n) : (n.action_module || n.target_module || '');
-      const openCall = onOpenFnName && targetVal
-        ? `${onOpenFnName}('${escapeHtmlSafe(id)}', '${escapeHtmlSafe(targetVal)}', '${escapeHtmlSafe(refNo)}')`
-        : '';
+      renderedNotifRegistry[rawId] = { notif: n, target: targetVal, ref: refNo };
+
+      const encodedId = encodeURIComponent(rawId);
+      const sev = escapeHtmlSafe(n.severity || (n.notification_type && /reject|warn|hold/i.test(n.notification_type) ? 'warning' : 'info'));
+      const unreadCls = n.is_read ? '' : 'unread';
+      const openCall = `${onOpenFnName}('${encodedId}')`;
+      const markCall = `${onMarkReadFnName}('${encodedId}')`;
       const refBadge = refNo
         ? `<code style="background:#e2e8f0; color:#0f172a; padding:1px 6px; border-radius:4px; font-size:0.72rem; font-weight:700;">${escapeHtmlSafe(refNo)}</code>`
         : '';
-      const openBtn = openCall
-        ? `<button type="button" class="module-notif-btn open-btn" onclick="event.stopPropagation(); ${openCall}">Open →</button>`
-        : '';
+      const openBtn = `<button type="button" class="module-notif-btn open-btn" onclick="event.stopPropagation(); ${openCall}">Open →</button>`;
       const readBtn = !n.is_read
-        ? `<button type="button" class="module-notif-btn" onclick="event.stopPropagation(); ${onMarkReadFnName}('${escapeHtmlSafe(id)}')">✓ Read</button>`
+        ? `<button type="button" class="module-notif-btn" onclick="event.stopPropagation(); ${markCall}">✓ Read</button>`
         : `<span style="font-size:0.72rem; color:#94a3b8; font-weight:600;">Read</span>`;
 
       return `
-        <div class="module-notif-item ${openCall ? 'clickable' : ''} ${unreadCls} sev-${sev}" ${openCall ? `style="cursor:pointer;" onclick="${openCall}"` : ''}>
+        <div class="module-notif-item ${unreadCls} sev-${sev}" onclick="${openCall}">
           <div style="min-width:0; flex:1;">
             <div style="font-weight:800; color:#0f172a; line-height:1.3;">
               ${!n.is_read ? '<span style="color:#2563eb; margin-right:4px;">●</span>' : ''}
@@ -343,7 +464,7 @@
 
   window.focusModuleNotificationTarget = function (targetMod, refNo) {
     const cleanRef = String(refNo || '').trim().replace(/^#/, '');
-    const runFocus = () => {
+    const applySearchAndHighlight = () => {
       const searchId = ERP_MODULE_SEARCH_MAP[targetMod];
       if (searchId && cleanRef) {
         const inp = document.getElementById(searchId);
@@ -352,18 +473,15 @@
           inp.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
-      const sec = document.getElementById(`module-${targetMod}`);
-      if (sec) {
-        highlightMatchingRef(sec, cleanRef);
+      if (cleanRef) {
+        retryHighlightRef(`#module-${targetMod}`, cleanRef, 10);
       }
     };
 
     if (typeof switchModule === 'function' && window.currentActiveERPModule !== targetMod) {
       switchModule(targetMod);
-      setTimeout(runFocus, 550);
-    } else {
-      runFocus();
     }
+    applySearchAndHighlight();
   };
 
   function ensureErpTopBell() {
@@ -410,7 +528,8 @@
     if (dd) dd.classList.toggle('open');
   };
 
-  window.markErpNotifRead = async function (notifId) {
+  window.markErpNotifRead = async function (encodedId) {
+    const notifId = decodeURIComponent(String(encodedId || ''));
     const role = getCurrentErpRole();
     const mod = window.currentActiveERPModule || 'all';
     await fetch(`/api/notifications/${encodeURIComponent(notifId)}/read`, {
@@ -424,19 +543,39 @@
     await window.refreshErpModuleNotifications(mod);
   };
 
-  window.openErpNotifModule = async function (notifId, targetModule, refNo = '') {
-    await window.markErpNotifRead(notifId);
+  window.openErpNotifModule = async function (encodedId) {
+    const notifId = decodeURIComponent(String(encodedId || ''));
+    const entry = renderedNotifRegistry[notifId];
+    const notifObj = entry?.notif ||
+      erpNotifState.notifications.find(n => String(n.notification_id) === notifId) ||
+      erpNotifState.active_module_list.find(n => String(n.notification_id) === notifId);
+    const targetModule = entry?.target || notifObj?.action_module || '';
+    const refNo = entry?.ref || notifObj?.ref_no || '';
+
     const dd = document.getElementById('elightErpTopNotifDropdown');
     if (dd) dd.classList.remove('open');
 
     const allowed = getErpAllowedModulesList();
-    const safeTarget = (allowed.length === 0 || allowed.includes(targetModule) || isCurrentUserErpAdmin())
-      ? targetModule
-      : (window.currentActiveERPModule || allowed[0]);
+    const currentMod = window.currentActiveERPModule || 'overview';
+    const rawTarget = targetModule || currentMod;
+    const safeTarget = (allowed.length === 0 || allowed.includes(rawTarget) || isCurrentUserErpAdmin())
+      ? rawTarget
+      : (allowed.includes(currentMod) ? currentMod : allowed[0]);
 
     if (safeTarget) {
       window.focusModuleNotificationTarget(safeTarget, refNo);
     }
+
+    if (notifObj) {
+      showNotifDetailModal(notifObj, {
+        jumpLabel: safeTarget && safeTarget !== currentMod
+          ? `Open ${safeTarget.replace(/_/g, ' ')} →`
+          : (refNo ? `Locate ${refNo} →` : ''),
+        onJump: safeTarget ? () => window.focusModuleNotificationTarget(safeTarget, refNo) : null
+      });
+    }
+
+    await window.markErpNotifRead(encodedId);
   };
 
   window.markAllErpNotifsRead = async function (scopeMod) {
@@ -641,8 +780,9 @@
     return '/customer-orders';
   }
 
-  window.markCustomerNotifRead = async function (notifId) {
+  window.markCustomerNotifRead = async function (encodedId) {
     if (!lastCustomerQuery) return;
+    const notifId = decodeURIComponent(String(encodedId || ''));
     await fetch(`/api/notifications/${encodeURIComponent(notifId)}/read`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -656,15 +796,31 @@
     await window.refreshCustomerNotifications(lastCustomerQuery);
   };
 
-  window.openCustomerNotifTarget = async function (notifId, targetUrl, refNo = '') {
-    await window.markCustomerNotifRead(notifId);
-    const dest = targetUrl || '/customer-orders';
-    const nextHref = refNo ? `${dest}?ref=${encodeURIComponent(refNo)}` : dest;
-    if (window.location.pathname === dest && refNo) {
-      highlightMatchingRef(document.querySelector('.customer-shell'), refNo);
+  window.openCustomerNotifTarget = async function (encodedId) {
+    const notifId = decodeURIComponent(String(encodedId || ''));
+    const entry = renderedNotifRegistry[notifId];
+    const notifObj = entry?.notif || null;
+    const refNo = entry?.ref || notifObj?.ref_no || '';
+    const dest = entry?.target || (notifObj ? resolveCustomerActionUrl(notifObj) : '/customer-orders');
+
+    await window.markCustomerNotifRead(encodedId);
+
+    if (window.location.pathname === dest) {
+      if (refNo) retryHighlightRef('.customer-shell', refNo, 6);
+      if (notifObj) {
+        showNotifDetailModal(notifObj, {
+          jumpLabel: refNo ? `Highlight ${refNo}` : '',
+          onJump: refNo ? () => highlightMatchingRef(document.querySelector('.customer-shell'), refNo) : null
+        });
+      }
       return;
     }
-    window.location.href = nextHref;
+
+    const params = new URLSearchParams();
+    if (refNo) params.set('ref', refNo);
+    if (notifId) params.set('open_notif', notifId);
+    const qStr = params.toString();
+    window.location.href = qStr ? `${dest}?${qStr}` : dest;
   };
 
   window.markAllCustomerNotifsRead = async function () {
@@ -762,7 +918,7 @@
         })}</div>`}
       `;
 
-      checkQueryRefHighlight('.customer-shell');
+      checkQueryRefHighlight('.customer-shell', list, resolveCustomerActionUrl);
     } catch (e) {}
   };
 
@@ -777,21 +933,38 @@
     return '/supplier-tenders';
   }
 
-  window.markSupplierPortalNotifRead = async function (notifId) {
+  window.markSupplierPortalNotifRead = async function (encodedId) {
     if (typeof authFetch !== 'function') return;
+    const notifId = decodeURIComponent(String(encodedId || ''));
     await authFetch(`/api/supplier/notifications/${encodeURIComponent(notifId)}/read`, { method: 'POST' }).catch(() => {});
     await window.refreshSupplierNotifications();
   };
 
-  window.openSupplierNotifTarget = async function (notifId, targetUrl, refNo = '') {
-    await window.markSupplierPortalNotifRead(notifId);
-    const dest = targetUrl || '/supplier-tenders';
-    const nextHref = refNo ? `${dest}?ref=${encodeURIComponent(refNo)}` : dest;
-    if (window.location.pathname === dest && refNo) {
-      highlightMatchingRef(document.querySelector('.portal-shell'), refNo);
+  window.openSupplierNotifTarget = async function (encodedId) {
+    const notifId = decodeURIComponent(String(encodedId || ''));
+    const entry = renderedNotifRegistry[notifId];
+    const notifObj = entry?.notif || null;
+    const refNo = entry?.ref || String(notifObj?.ref_no || notifObj?.related_id || '').trim();
+    const dest = entry?.target || (notifObj ? resolveSupplierActionUrl(notifObj) : '/supplier-tenders');
+
+    await window.markSupplierPortalNotifRead(encodedId);
+
+    if (window.location.pathname === dest) {
+      if (refNo) retryHighlightRef('.portal-shell', refNo, 6);
+      if (notifObj) {
+        showNotifDetailModal(notifObj, {
+          jumpLabel: refNo ? `Highlight ${refNo}` : '',
+          onJump: refNo ? () => highlightMatchingRef(document.querySelector('.portal-shell'), refNo) : null
+        });
+      }
       return;
     }
-    window.location.href = nextHref;
+
+    const params = new URLSearchParams();
+    if (refNo) params.set('ref', refNo);
+    if (notifId) params.set('open_notif', notifId);
+    const qStr = params.toString();
+    window.location.href = qStr ? `${dest}?${qStr}` : dest;
   };
 
   window.markAllSupplierPortalNotifsRead = async function () {
@@ -862,7 +1035,7 @@
         })}</div>`}
       `;
 
-      checkQueryRefHighlight('.portal-shell');
+      checkQueryRefHighlight('.portal-shell', list, resolveSupplierActionUrl);
     } catch (e) {}
   };
 })();
