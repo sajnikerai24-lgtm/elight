@@ -954,7 +954,7 @@
     const method = document.getElementById('pay_sup_method')?.value || 'M-Pesa Paybill';
     if (typeof window.applyPaymentRefInputRules === 'function') {
       window.applyPaymentRefInputRules('pay_sup_ref', method, 'pay_sup_ref_label', {
-        mpesa: 'M-Pesa Reference # * (Max 10 chars)',
+        mpesa: 'M-Pesa Reference # *',
         bank: 'Bank Transfer Ref # * (Max 12 digits)',
         cash: 'Transaction Ref # *'
       });

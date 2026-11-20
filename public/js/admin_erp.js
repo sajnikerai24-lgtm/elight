@@ -35,7 +35,7 @@ function applyPaymentRefInputRules(inputOrId, method, labelOrId = null, customLa
     input.inputMode = 'text';
     input.setAttribute('pattern', '[A-Za-z0-9]{1,10}');
     input.style.textTransform = 'uppercase';
-    input.placeholder = 'e.g. SLK884290Q (max 10 chars)';
+    input.placeholder = 'e.g. SLK884290Q';
     input.oninput = () => {
       input.value = input.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
     };
@@ -99,7 +99,7 @@ window.validatePaymentRefClient = validatePaymentRefClient;
 window.syncFinanceEntryRefRules = function () {
   const method = document.getElementById('fin_payment')?.value || 'M-Pesa';
   applyPaymentRefInputRules('fin_ref', method, 'fin_ref_label', {
-    mpesa: 'M-Pesa Reference Code (Max 10 chars)',
+    mpesa: 'M-Pesa Reference Code',
     bank: 'Bank Transfer Reference (Max 12 digits)',
     cash: 'Cash Receipt / Voucher Reference'
   });
@@ -108,7 +108,7 @@ window.syncFinanceEntryRefRules = function () {
 window.syncFinanceBalanceRefRules = function () {
   const method = document.getElementById('fin_balance_method')?.value || 'M-Pesa';
   applyPaymentRefInputRules('fin_balance_ref', method, 'fin_balance_ref_label', {
-    mpesa: 'M-Pesa Reference Code * (Max 10 chars)',
+    mpesa: 'M-Pesa Reference Code *',
     bank: 'Bank Transfer Reference * (Max 12 digits)',
     cash: 'Cash Receipt / Reference Code *'
   });
@@ -117,7 +117,7 @@ window.syncFinanceBalanceRefRules = function () {
 window.syncServicePayRefRules = function () {
   const method = document.getElementById('fin_svc_pay_method')?.value || 'M-Pesa';
   applyPaymentRefInputRules('fin_svc_pay_ref', method, 'fin_svc_pay_ref_label', {
-    mpesa: 'M-Pesa Reference # * (Max 10 chars)',
+    mpesa: 'M-Pesa Reference # *',
     bank: 'Bank Transfer Reference # * (Max 12 digits)',
     cash: 'Cash Receipt Reference # *'
   });
@@ -2033,7 +2033,7 @@ function togglePOSCashFields() {
     if (cashGrp) cashGrp.style.display = method === 'Cash' ? '' : 'none';
     if (refLbl) {
       applyPaymentRefInputRules('pos_payment_ref', method, refLbl, {
-        mpesa: 'M-Pesa Transaction Code (Max 10 chars)',
+        mpesa: 'M-Pesa Transaction Code',
         bank: 'Bank Transfer Reference (Max 12 digits)',
         cash: 'Cash Receipt Note (Optional)'
       });
@@ -2493,7 +2493,7 @@ function toggleConfirmCashFields() {
     if (cashGrp) cashGrp.style.display = method === 'Cash' ? '' : 'none';
     if (refLbl) {
       applyPaymentRefInputRules('confirm_payment_ref', method, refLbl, {
-        mpesa: 'Verified M-Pesa Reference * (Max 10 chars)',
+        mpesa: 'Verified M-Pesa Reference *',
         bank: 'Bank Transfer Reference * (Max 12 digits)',
         cash: 'Cash Receipt Note (Optional)'
       });
