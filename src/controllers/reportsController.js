@@ -4,6 +4,7 @@ const supabase = require('../config/supabase');
 const interModuleSync = require('../utils/interModuleSync');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 const { validatePaymentReference } = require('../utils/paymentValidation');
+const moduleNotifications = require('../utils/moduleNotifications');
 
 const CASHIER_ORDERS_PATH = path.join(__dirname, '../config/cashier_orders.json');
 const FINANCE_RECORDS_PATH = path.join(__dirname, '../config/finance_records.json');
@@ -673,6 +674,56 @@ const reportsController = {
           cashier_name: isPaid ? 'M-Pesa Direct' : 'Pending'
         });
       }
+
+      // 5. Cross-Module Notifications for Online Checkout
+      moduleNotifications.notify({
+        targetModules: ['cashier'],
+        sourceModule: 'storefront',
+        senderName: customer_name || 'Online Customer',
+        title: `New Online Order ${refNo}`,
+        message: `${customer_name || 'Customer'} placed an online order for KES ${cleanAmount.toLocaleString()} (${isPaid ? `Paid via ${cleanMethod}` : 'Payment Pending'}).`,
+        severity: isPaid ? 'info' : 'warning',
+        refNo,
+        actionModule: 'cashier'
+      });
+
+      moduleNotifications.notify({
+        targetModules: ['finance', 'finance_releases'],
+        sourceModule: 'storefront',
+        senderName: customer_name || 'Online Storefront',
+        title: isPaid ? `Online Order ${refNo} Awaiting Finance Release` : `Unpaid Online Order ${refNo} Flagged for Finance`,
+        message: `Online order ${refNo} (${customer_name || 'Customer'}) — Total: KES ${cleanAmount.toLocaleString()}${isPaid ? ', Paid in Full' : `, Balance Due: KES ${cleanAmount.toLocaleString()}`}.`,
+        severity: isPaid ? 'info' : 'warning',
+        refNo,
+        actionModule: 'finance_releases'
+      });
+
+      if (wantsInstallation) {
+        moduleNotifications.notify({
+          targetModules: ['services'],
+          sourceModule: 'storefront',
+          senderName: customer_name || 'Online Storefront',
+          title: `Installation Requested on Order ${refNo}`,
+          message: `Customer ${customer_name || 'Customer'} requested product installation alongside Order ${refNo}.`,
+          severity: 'info',
+          refNo,
+          actionModule: 'services'
+        });
+      }
+
+      moduleNotifications.notify({
+        targetModules: ['customer'],
+        sourceModule: 'storefront',
+        senderName: 'Elight Storefront',
+        title: `Order ${refNo} Received`,
+        message: isPaid
+          ? `Your order ${refNo} (KES ${cleanAmount.toLocaleString()}) has been received and sent to Finance for confirmation.`
+          : `Your order ${refNo} (KES ${cleanAmount.toLocaleString()}) is pending payment confirmation by Cashier.`,
+        severity: 'success',
+        refNo,
+        recipientPhone: customer_phone || '',
+        recipientName: customer_name || ''
+      });
 
       res.status(201).json({ success: true, order_no: refNo });
     } catch (err) {

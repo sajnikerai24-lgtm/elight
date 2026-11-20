@@ -4,6 +4,7 @@ const supabase = require('../config/supabase');
 const interModuleSync = require('../utils/interModuleSync');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 const { sortByLatest } = require('../utils/sortLatest');
+const moduleNotifications = require('../utils/moduleNotifications');
 
 const FEEDBACK_DATA_PATH = path.join(__dirname, '../config/feedback_data.json');
 
@@ -434,6 +435,29 @@ const engagementController = {
         await interModuleSync.createCashierOrderFromBooking(savedBooking);
       }
 
+      moduleNotifications.notify({
+        targetModules: ['bookings'],
+        sourceModule: 'storefront',
+        senderName: savedBooking.customer_name || 'Customer',
+        title: `New ${typeClean === 'service' ? 'Service' : 'Product'} Booking ${savedBooking.booking_ref}`,
+        message: `${savedBooking.customer_name} booked "${savedBooking.item_or_service_name}" for ${savedBooking.preferred_date}.`,
+        severity: 'info',
+        refNo: savedBooking.booking_ref,
+        actionModule: 'bookings'
+      });
+
+      moduleNotifications.notify({
+        targetModules: ['customer'],
+        sourceModule: 'bookings',
+        senderName: 'Elight Bookings Desk',
+        title: `Booking ${savedBooking.booking_ref} Confirmed`,
+        message: `Your ${typeClean} booking for "${savedBooking.item_or_service_name}" on ${savedBooking.preferred_date} has been received.`,
+        severity: 'success',
+        refNo: savedBooking.booking_ref,
+        recipientPhone: savedBooking.customer_phone || '',
+        recipientName: savedBooking.customer_name || ''
+      });
+
       return res.status(201).json({
         success: true,
         message: 'Booking confirmed successfully!',
@@ -478,6 +502,20 @@ const engagementController = {
         const BOOKINGS_PATH = path.join(__dirname, '../config/bookings_data.json');
         writeJsonFile(BOOKINGS_PATH, localBookings);
         if (!updatedBooking) updatedBooking = b;
+      }
+
+      if (updatedBooking) {
+        moduleNotifications.notify({
+          targetModules: ['customer'],
+          sourceModule: 'bookings',
+          senderName: 'Elight Bookings Desk',
+          title: `Booking ${updatedBooking.booking_ref || `#${id}`} Updated (${updatedBooking.status || status})`,
+          message: confirmation_note || `Your booking status is now ${String(updatedBooking.status || status).toUpperCase()}.`,
+          severity: (updatedBooking.status || status) === 'cancelled' ? 'warning' : 'info',
+          refNo: updatedBooking.booking_ref || `#${id}`,
+          recipientPhone: updatedBooking.customer_phone || '',
+          recipientName: updatedBooking.customer_name || ''
+        });
       }
 
       res.json({ success: true, booking: updatedBooking || { booking_id: id, ...updates } });
@@ -721,6 +759,23 @@ const engagementController = {
           ? 'Thank you! Your suggestion has been received by our shop management team.'
           : 'Thank you for your review! Your feedback is now live.';
 
+      const fbTargets = ['feedback', 'customer_care'];
+      if (['cashier', 'finance', 'inventory', 'services', 'dispatch'].includes(cleanDept)) {
+        fbTargets.push(cleanDept);
+      }
+      if (cleanType === 'complaint') fbTargets.push('overview');
+
+      moduleNotifications.notify({
+        targetModules: fbTargets,
+        sourceModule: 'feedback',
+        senderName: newFeedback.customer_name,
+        title: cleanType === 'complaint' ? `⚠️ Customer Complaint: ${newFeedback.subject}` : `New Customer Feedback: ${newFeedback.subject}`,
+        message: `${newFeedback.customer_name} (${cleanDept}) rated ${cleanRating}/5: "${newFeedback.message}"`,
+        severity: cleanType === 'complaint' ? 'danger' : 'info',
+        refNo: `FB-${newFeedback.feedback_id}`,
+        actionModule: 'feedback'
+      });
+
       res.status(201).json({
         success: true,
         message: responseMsg,
@@ -778,6 +833,21 @@ const engagementController = {
           .eq('feedback_id', Number(id));
       } catch (e) {}
 
+      if (item && (admin_reply || status)) {
+        moduleNotifications.notify({
+          targetModules: ['customer'],
+          sourceModule: 'feedback',
+          senderName: 'Elight Customer Care',
+          title: `Update on Your Feedback: ${item.subject}`,
+          message: admin_reply ? `Management Reply: ${admin_reply}` : `Feedback status updated to ${status}.`,
+          severity: 'info',
+          refNo: `FB-${item.feedback_id}`,
+          recipientPhone: item.customer_phone || '',
+          recipientEmail: item.customer_email || '',
+          recipientName: item.customer_name || ''
+        });
+      }
+
       res.json({ success: true, feedback: item || { feedback_id: id, status, admin_reply } });
     } catch (err) {
       console.error('updateFeedback error:', err);
@@ -814,6 +884,17 @@ const engagementController = {
         .single();
 
       if (error) throw error;
+
+      moduleNotifications.notify({
+        targetModules: ['contact', 'customer_care'],
+        sourceModule: 'storefront',
+        senderName: data.full_name,
+        title: `New Customer Inquiry (${ticketRef})`,
+        message: `${data.full_name} sent inquiry "${data.subject}": ${data.message}`,
+        severity: 'info',
+        refNo: ticketRef,
+        actionModule: 'contact'
+      });
 
       res.status(201).json({
         success: true,
@@ -857,6 +938,20 @@ const engagementController = {
         .single();
 
       if (error) throw error;
+      if (data && (data.admin_response || updates.status)) {
+        moduleNotifications.notify({
+          targetModules: ['customer'],
+          sourceModule: 'contact',
+          senderName: 'Elight Support Desk',
+          title: `Reply to Inquiry ${data.ticket_ref}: ${data.subject}`,
+          message: data.admin_response || `Your inquiry status is now ${data.status}.`,
+          severity: 'success',
+          refNo: data.ticket_ref,
+          recipientPhone: data.phone || '',
+          recipientEmail: data.email || '',
+          recipientName: data.full_name || ''
+        });
+      }
       res.json({ success: true, inquiry: data });
     } catch (err) {
       console.error('updateContactInquiry error:', err);

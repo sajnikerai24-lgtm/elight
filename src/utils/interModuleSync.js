@@ -4,6 +4,7 @@ const supabase = require('../config/supabase');
 const { readJsonFile, writeJsonFile } = require('./jsonStore');
 const { validatePaymentReference } = require('./paymentValidation');
 const { sortByLatest } = require('./sortLatest');
+const moduleNotifications = require('./moduleNotifications');
 
 // File paths for resilient local storage and offline ERP operations
 const CONFIG_DIR = path.join(__dirname, '../config');
@@ -392,6 +393,16 @@ const interModuleSync = {
         'Low Stock Warning Triggered',
         `Product "${target.product_name}" is down to ${nextStock} units (Reorder level: ${target.reorder_level}). Restock recommended.`
       );
+      moduleNotifications.notify({
+        targetModules: ['inventory', 'overview'],
+        sourceModule: 'inventory',
+        senderName: 'Stock Guard',
+        title: `⚠️ Low Stock Alert: ${target.product_name}`,
+        message: `"${target.product_name}" is down to ${nextStock} unit(s) (Reorder Level: ${target.reorder_level || 5}). Consider creating a Purchase Order.`,
+        severity: nextStock === 0 ? 'danger' : 'warning',
+        refNo: `PRD-${target.product_id}`,
+        actionModule: 'inventory'
+      });
     }
 
     // Attempt to update Supabase in background
@@ -571,6 +582,17 @@ const interModuleSync = {
       `Created Service Request #SR-${newReq.request_id} for ${newReq.customer_name}${newReq.technician_name ? ` (Assigned: ${newReq.technician_name})` : ''}.`
     );
 
+    moduleNotifications.notify({
+      targetModules: newReq.technician_name ? ['services', 'technicians'] : ['services'],
+      sourceModule: 'bookings',
+      senderName: newReq.customer_name || 'Customer Booking',
+      title: `New Service Job #SR-${newReq.request_id}: ${newReq.service_type}`,
+      message: `${newReq.customer_name} booked ${newReq.service_type} at ${newReq.location} (Scheduled: ${newReq.scheduled_date}).${newReq.technician_name ? ` Assigned to ${newReq.technician_name}.` : ''}`,
+      severity: 'info',
+      refNo: `#SR-${newReq.request_id}`,
+      actionModule: 'services'
+    });
+
     return newReq;
   },
 
@@ -602,6 +624,29 @@ const interModuleSync = {
       'Technician Job Assigned',
       `Assigned ${technicianName} to Service Request #SR-${requestId} (${req.customer_name}). Customer booking synchronized.`
     );
+
+    moduleNotifications.notify({
+      targetModules: ['technicians'],
+      sourceModule: 'services',
+      senderName: 'Service Manager',
+      title: `New Job Assigned (#SR-${requestId}): ${req.service_type}`,
+      message: `Assigned to ${technicianName} — Customer: ${req.customer_name} (${req.location}). Scheduled: ${req.scheduled_date}.`,
+      severity: 'info',
+      refNo: `#SR-${requestId}`,
+      actionModule: 'technicians'
+    });
+
+    moduleNotifications.notify({
+      targetModules: ['customer'],
+      sourceModule: 'services',
+      senderName: 'Service Manager',
+      title: `Technician Assigned to Service #SR-${requestId}`,
+      message: `Field Technician ${technicianName} has been assigned to your ${req.service_type} job.`,
+      severity: 'info',
+      refNo: `#SR-${requestId}`,
+      recipientPhone: req.phone || '',
+      recipientName: req.customer_name || ''
+    });
 
     try {
       await supabase
@@ -650,6 +695,29 @@ const interModuleSync = {
       'Arrival Time Assigned',
       `Assigned arrival time window "${assignedTime}" to Service Request #SR-${requestId} (${req.customer_name}). Customer booking synchronized.`
     );
+
+    moduleNotifications.notify({
+      targetModules: ['technicians'],
+      sourceModule: 'services',
+      senderName: actor || 'Service Manager',
+      title: `Arrival Time Set (#SR-${requestId}): ${assignedTime}`,
+      message: `Customer ${req.customer_name} (${req.service_type}) arrival window set to ${assignedTime}.`,
+      severity: 'info',
+      refNo: `#SR-${requestId}`,
+      actionModule: 'technicians'
+    });
+
+    moduleNotifications.notify({
+      targetModules: ['customer'],
+      sourceModule: 'services',
+      senderName: 'Elight Service Desk',
+      title: `Technician Arrival Time Confirmed (#SR-${requestId})`,
+      message: `Your service technician will arrive during "${assignedTime}".`,
+      severity: 'success',
+      refNo: `#SR-${requestId}`,
+      recipientPhone: req.phone || '',
+      recipientName: req.customer_name || ''
+    });
 
     try {
       await supabase
@@ -827,6 +895,41 @@ const interModuleSync = {
       `Service Status Updated: ${status}`,
       `Service Job #SR-${requestId} marked ${status}. Materials: "${matText || req.materials_used || 'None'}".`
     );
+
+    if (status === 'awaiting_inspection') {
+      moduleNotifications.notify({
+        targetModules: ['services'],
+        sourceModule: 'technicians',
+        senderName: actorVal || req.assigned_technician_name || 'Field Technician',
+        title: `Completion Report Submitted (#SR-${requestId})`,
+        message: `${actorVal || req.assigned_technician_name || 'Technician'} submitted work for inspection on ${req.service_type} (${req.customer_name}).`,
+        severity: 'warning',
+        refNo: `#SR-${requestId}`,
+        actionModule: 'services'
+      });
+    } else if (status === 'in_progress' || status === 'completed') {
+      moduleNotifications.notify({
+        targetModules: ['services'],
+        sourceModule: 'technicians',
+        senderName: actorVal || req.assigned_technician_name || 'Field Technician',
+        title: `Service #SR-${requestId} Marked ${status.replace(/_/g, ' ')}`,
+        message: `${req.customer_name} — ${req.service_type} status updated to ${status.replace(/_/g, ' ')}.`,
+        severity: status === 'completed' ? 'success' : 'info',
+        refNo: `#SR-${requestId}`,
+        actionModule: 'services'
+      });
+      moduleNotifications.notify({
+        targetModules: ['customer'],
+        sourceModule: 'services',
+        senderName: 'Elight Service Team',
+        title: `Service Job #SR-${requestId} ${status === 'completed' ? 'Completed' : 'In Progress'}`,
+        message: `Your ${req.service_type} job is now ${status.replace(/_/g, ' ')}.`,
+        severity: status === 'completed' ? 'success' : 'info',
+        refNo: `#SR-${requestId}`,
+        recipientPhone: req.phone || '',
+        recipientName: req.customer_name || ''
+      });
+    }
 
     try {
       const updates = {};
@@ -1011,6 +1114,17 @@ const interModuleSync = {
       `Technician ${techName} submitted Material Request ${reqNum} for #SR-${srId} (${normalizedItems.map(i => `${i.requested_qty}x ${i.product_name}`).join(', ')}).`
     );
 
+    moduleNotifications.notify({
+      targetModules: ['inventory_materials', 'inventory'],
+      sourceModule: 'technicians',
+      senderName: techName,
+      title: `New Material Request ${reqNum} (#SR-${srId})`,
+      message: `${techName} requested: ${normalizedItems.map(i => `${i.requested_qty}x ${i.product_name}`).join(', ')}.`,
+      severity: 'warning',
+      refNo: reqNum,
+      actionModule: 'inventory_materials'
+    });
+
     return record;
   },
 
@@ -1139,6 +1253,17 @@ const interModuleSync = {
       `${reviewer} marked Material Request ${mr.request_number} (#SR-${mr.service_request_id}) as ${nextStatus}. Notes: ${cleanNotes || 'None'}.`
     );
 
+    moduleNotifications.notify({
+      targetModules: ['technicians'],
+      sourceModule: 'inventory',
+      senderName: reviewer,
+      title: `Material Request ${mr.request_number} ${nextStatus.replace(/_/g, ' ').toUpperCase()}`,
+      message: `${reviewer} marked ${mr.request_number} (#SR-${mr.service_request_id}) as ${nextStatus.replace(/_/g, ' ')}.${cleanNotes ? ` Note: ${cleanNotes}` : ''}`,
+      severity: nextStatus === 'rejected' ? 'danger' : (nextStatus === 'approved' ? 'success' : 'warning'),
+      refNo: mr.request_number,
+      actionModule: 'technicians'
+    });
+
     return updatedRecord;
   },
 
@@ -1241,6 +1366,17 @@ const interModuleSync = {
       `${issuer} issued materials [${issuedSummary}] to ${mr.technician_name} (${mr.request_number}, #SR-${mr.service_request_id}). Inventory deducted and stock movements logged.`
     );
 
+    moduleNotifications.notify({
+      targetModules: ['technicians', 'services'],
+      sourceModule: 'inventory',
+      senderName: issuer,
+      title: `Materials Issued (${mr.request_number})`,
+      message: `${issuer} issued [${issuedSummary}] to ${mr.technician_name} for #SR-${mr.service_request_id}.`,
+      severity: 'success',
+      refNo: mr.request_number,
+      actionModule: 'technicians'
+    });
+
     return { material_request: updatedRecord, movements };
   },
 
@@ -1295,6 +1431,17 @@ const interModuleSync = {
         'Service Job Returned for Further Work',
         `Service Manager ${actorName} returned Service #SR-${srId} (${req.customer_name}) to technician ${req.technician_name || ''} for rework: "${reason}".`
       );
+
+      moduleNotifications.notify({
+        targetModules: ['technicians'],
+        sourceModule: 'services',
+        senderName: actorName,
+        title: `⚠️ Job #SR-${srId} Returned for Rework`,
+        message: `${actorName} returned #SR-${srId} (${req.customer_name}): "${reason}".`,
+        severity: 'warning',
+        refNo: `#SR-${srId}`,
+        actionModule: 'technicians'
+      });
 
       return req;
     }
@@ -1371,6 +1518,29 @@ const interModuleSync = {
       'Service Completion Approved & Billed',
       `Service Manager ${actorName} approved #SR-${srId} (${req.customer_name}). Service fee charged: KES ${req.service_fee.toLocaleString()} (${billingStatus}).`
     );
+
+    moduleNotifications.notify({
+      targetModules: ['finance_services', 'finance'],
+      sourceModule: 'services',
+      senderName: actorName,
+      title: `Service Fee Ready (#SR-${srId}): KES ${req.service_fee.toLocaleString()}`,
+      message: `${req.customer_name} (${req.service_type}) approved & billed at KES ${req.service_fee.toLocaleString()} — Sent to Finance for payment confirmation.`,
+      severity: 'warning',
+      refNo: `#SR-${srId}`,
+      actionModule: 'finance_services'
+    });
+
+    moduleNotifications.notify({
+      targetModules: ['customer'],
+      sourceModule: 'services',
+      senderName: actorName,
+      title: `Service Job #SR-${srId} Completed`,
+      message: `Your ${req.service_type} job was approved. Service fee: KES ${req.service_fee.toLocaleString()} (${billingStatus === 'paid' ? 'Settled' : 'Ready for Finance settlement'}).`,
+      severity: 'success',
+      refNo: `#SR-${srId}`,
+      recipientPhone: req.phone || '',
+      recipientName: req.customer_name || ''
+    });
 
     return req;
   },
@@ -1483,6 +1653,29 @@ const interModuleSync = {
       `${actorName} confirmed KES ${req.service_fee.toLocaleString()} (${cleanMethod}, Ref: ${cleanRef}) for Service #SR-${srId} (${req.customer_name}). Receipt issued: ${receiptNo}.`
     );
 
+    moduleNotifications.notify({
+      targetModules: ['services'],
+      sourceModule: 'finance',
+      senderName: actorName,
+      title: `Service Fee Paid (#SR-${srId}) — ${receiptNo}`,
+      message: `Finance confirmed KES ${req.service_fee.toLocaleString()} (${cleanMethod} Ref: ${cleanRef}) for ${req.customer_name}.`,
+      severity: 'success',
+      refNo: receiptNo,
+      actionModule: 'services'
+    });
+
+    moduleNotifications.notify({
+      targetModules: ['customer'],
+      sourceModule: 'finance',
+      senderName: actorName,
+      title: `Official Service Receipt ${receiptNo} Ready`,
+      message: `Your service payment of KES ${req.service_fee.toLocaleString()} (${cleanMethod}) for #SR-${srId} has been confirmed.`,
+      severity: 'success',
+      refNo: receiptNo,
+      recipientPhone: req.phone || '',
+      recipientName: req.customer_name || ''
+    });
+
     return req;
   },
 
@@ -1542,6 +1735,17 @@ const interModuleSync = {
       'Product Booking Queued for Cashier',
       `Queued Product Reservation ${refNo} (${booking.item_or_service_name}) for ${booking.customer_name} into Cashier payment queue.`
     );
+
+    moduleNotifications.notify({
+      targetModules: ['cashier'],
+      sourceModule: 'bookings',
+      senderName: booking.customer_name || 'Customer Booking',
+      title: `Product Reservation ${refNo} Sent to Cashier`,
+      message: `${booking.customer_name} booked ${qty}x ${booking.item_or_service_name} (KES ${amt.toLocaleString()}) — Awaiting counter payment.`,
+      severity: 'info',
+      refNo,
+      actionModule: 'cashier'
+    });
 
     return newOrder;
   },
@@ -1627,6 +1831,17 @@ const interModuleSync = {
       'Delivery Dispatch Run Created',
       `Auto-created Delivery Run #DSP-${nextId} for Order ${order.order_no} to ${newDisp.delivery_address}. Queued for driver assignment.`
     );
+
+    moduleNotifications.notify({
+      targetModules: ['dispatch'],
+      sourceModule: 'finance',
+      senderName: 'Order Fulfillment Sync',
+      title: `Delivery Run #DSP-${nextId} Queued (${order.order_no})`,
+      message: `Order ${order.order_no} for ${newDisp.customer_name} at ${newDisp.delivery_address} is ready for driver assignment.`,
+      severity: 'info',
+      refNo: `#DSP-${nextId}`,
+      actionModule: 'dispatch'
+    });
 
     try {
       await supabase.from('dispatches').insert([{
@@ -1769,6 +1984,61 @@ const interModuleSync = {
       `Dispatch #DSP-${dispatchId} (${disp.order_no}) marked ${status}. Customer: ${disp.customer_name}.`
     );
 
+    const stLower = String(status || '').toLowerCase();
+    if (stLower === 'dispatched' || stLower === 'pending_dispatch' || driverName) {
+      moduleNotifications.notify({
+        targetModules: ['driver'],
+        sourceModule: 'dispatch',
+        senderName: 'Dispatch Manager',
+        title: `Delivery #DSP-${dispatchId} (${disp.order_no}) Assigned / Dispatched`,
+        message: `Assigned to ${disp.driver_name} — Deliver to ${disp.customer_name} at ${disp.delivery_address}.`,
+        severity: 'info',
+        refNo: `#DSP-${dispatchId}`,
+        actionModule: 'driver'
+      });
+    }
+    if (['out_for_delivery', 'delivered', 'failed'].includes(stLower)) {
+      moduleNotifications.notify({
+        targetModules: ['dispatch', 'cashier'],
+        sourceModule: 'driver',
+        senderName: driverName || disp.driver_name || 'Driver',
+        title: `Delivery #DSP-${dispatchId} (${disp.order_no}): ${stLower.replace(/_/g, ' ').toUpperCase()}`,
+        message: `${disp.customer_name} at ${disp.delivery_address} — Status: ${stLower.replace(/_/g, ' ')}.${driverNotes ? ` Note: ${driverNotes}` : ''}`,
+        severity: stLower === 'failed' ? 'danger' : (stLower === 'delivered' ? 'success' : 'info'),
+        refNo: `#DSP-${dispatchId}`,
+        actionModule: 'dispatch'
+      });
+      moduleNotifications.notify({
+        targetModules: ['customer'],
+        sourceModule: 'driver',
+        senderName: 'Elight Delivery Team',
+        title: stLower === 'out_for_delivery'
+          ? `Order ${disp.order_no} Is Out for Delivery!`
+          : (stLower === 'delivered' ? `Order ${disp.order_no} Delivered` : `Delivery Attempt Issue (${disp.order_no})`),
+        message: stLower === 'delivered'
+          ? `Your Order ${disp.order_no} has been delivered to ${disp.delivery_address}. Thank you!`
+          : (stLower === 'failed'
+            ? `Delivery attempt for ${disp.order_no} could not be completed: ${driverNotes || 'Customer unreachable'}.`
+            : `Driver ${disp.driver_name || ''} is on the way with your Order ${disp.order_no}.`),
+        severity: stLower === 'failed' ? 'danger' : (stLower === 'delivered' ? 'success' : 'info'),
+        refNo: disp.order_no,
+        recipientPhone: disp.customer_phone || '',
+        recipientName: disp.customer_name || ''
+      });
+    }
+    if (stLower === 'delivered' && disp.needs_installation && !disp.booked_later) {
+      moduleNotifications.notify({
+        targetModules: ['services'],
+        sourceModule: 'driver',
+        senderName: driverName || disp.driver_name || 'Driver',
+        title: `Site Ready for Installation (${disp.order_no})`,
+        message: `Goods for Order ${disp.order_no} (${disp.customer_name}) were delivered to ${disp.delivery_address}. Ready for Service Manager assignment.`,
+        severity: 'warning',
+        refNo: disp.order_no,
+        actionModule: 'services'
+      });
+    }
+
     try {
       const updates = {};
       if (status) updates.status = status;
@@ -1807,6 +2077,29 @@ const interModuleSync = {
       'Delivery Rescheduled',
       `Dispatch #DSP-${dispatchId} (${disp.order_no}) rescheduled to ${newScheduledDate}. Reason: ${reason}`
     );
+
+    moduleNotifications.notify({
+      targetModules: ['driver', 'dispatch'],
+      sourceModule: 'dispatch',
+      senderName: actor || 'Dispatch Manager',
+      title: `Delivery #DSP-${dispatchId} Rescheduled to ${newScheduledDate}`,
+      message: `Order ${disp.order_no} (${disp.customer_name}) moved to ${newScheduledDate}. Reason: ${reason || 'Schedule updated'}.`,
+      severity: 'warning',
+      refNo: `#DSP-${dispatchId}`,
+      actionModule: 'driver'
+    });
+
+    moduleNotifications.notify({
+      targetModules: ['customer'],
+      sourceModule: 'dispatch',
+      senderName: 'Elight Dispatch',
+      title: `Delivery Rescheduled for Order ${disp.order_no}`,
+      message: `Your delivery has been rescheduled to ${newScheduledDate}. ${reason ? `Reason: ${reason}` : ''}`,
+      severity: 'warning',
+      refNo: disp.order_no,
+      recipientPhone: disp.customer_phone || '',
+      recipientName: disp.customer_name || ''
+    });
 
     try {
       await supabase.from('dispatches').update({
@@ -1868,6 +2161,17 @@ const interModuleSync = {
       'Follow-Up Task Created',
       `Queued Customer Care follow-up task ${newTask.task_id} for Order #${orderNo} (${newTask.customer_name}).`
     );
+
+    moduleNotifications.notify({
+      targetModules: ['customer_care', 'customers'],
+      sourceModule: 'fulfillment',
+      senderName: 'Fulfillment Engine',
+      title: `Post-Fulfillment Follow-Up Required (#${orderNo})`,
+      message: `Order #${orderNo} (${newTask.customer_name}) completed — follow up with customer regarding ${newTask.product_summary}.`,
+      severity: 'info',
+      refNo: newTask.task_id,
+      actionModule: 'customer_care'
+    });
 
     return newTask;
   },

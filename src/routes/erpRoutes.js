@@ -81,6 +81,11 @@ router.post('/customer-care/tasks/:taskId/complete', erpController.completeCusto
 router.get('/inventory/movements', erpController.getStockMovements);
 router.post('/inventory/movements', erpController.recordStockMovement);
 
+// Module Notifications Inbox (cross-module handoffs & customer/staff inbox)
+router.get('/notifications', erpController.getModuleNotifications);
+router.post('/notifications/read-all', erpController.markAllModuleNotificationsRead);
+router.post('/notifications/:id/read', erpController.markModuleNotificationRead);
+
 // Real-Time Reports & Storefront Order Sync
 router.get('/reports/realtime', reportsController.getRealtimeReports);
 router.post('/orders/checkout', reportsController.recordStorefrontCheckout);

@@ -7,6 +7,7 @@ const { buildOfficialReceiptPdf } = require('../utils/pdfReceiptGenerator');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 const { validatePaymentReference, validateBankAccountNumber } = require('../utils/paymentValidation');
 const { sortByLatest } = require('../utils/sortLatest');
+const moduleNotifications = require('../utils/moduleNotifications');
 
 const BUCKET_NAME = 'supplier-documents';
 const MAX_DOC_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -122,6 +123,16 @@ async function uploadSupplierDocument(supplierId, folder, docPayload) {
 }
 
 async function createSupplierNotification(supplierId, payload) {
+  moduleNotifications.notify({
+    targetModules: ['supplier'],
+    supplierId: Number(supplierId),
+    sourceModule: 'erp',
+    senderName: payload.sender_name || 'Elight Procurement & Finance',
+    title: String(payload.title || 'Supplier Portal Update').slice(0, 180),
+    message: String(payload.message || '').slice(0, 1000),
+    severity: /reject|hold|warn/i.test(String(payload.notification_type || '')) ? 'warning' : 'info',
+    refNo: payload.related_id ? String(payload.related_id) : ''
+  });
   try {
     await supabase.from('supplier_notifications').insert([{
       supplier_id: Number(supplierId),
@@ -629,6 +640,17 @@ exports.acknowledgeSupplierPO = async (req, res) => {
 
     if (updErr) return res.status(400).json({ success: false, message: updErr.message });
 
+    moduleNotifications.notify({
+      targetModules: ['inventory_pos', 'inventory'],
+      sourceModule: 'supplier',
+      senderName: req.supplier?.supplier_name || `Supplier #${req.supplierId}`,
+      title: `Purchase Order ${updated.po_number || `#${poId}`} Acknowledged`,
+      message: `${req.supplier?.supplier_name || 'Supplier'} acknowledged ${updated.po_number || `PO-${poId}`}.`,
+      severity: 'success',
+      refNo: updated.po_number || `PO-${poId}`,
+      actionModule: 'inventory_pos'
+    });
+
     return res.json({
       success: true,
       message: `Purchase Order ${updated.po_number || `#${poId}`} acknowledged.`,
@@ -879,6 +901,17 @@ exports.submitSupplierQuotation = async (req, res) => {
       }
     }
 
+    moduleNotifications.notify({
+      targetModules: ['inventory_quotations', 'inventory'],
+      sourceModule: 'supplier',
+      senderName: req.supplier?.supplier_name || `Supplier #${req.supplierId}`,
+      title: `New Supplier Quotation ${insertedQuote.quotation_number}`,
+      message: `${req.supplier?.supplier_name || 'Supplier'} submitted quotation ${insertedQuote.quotation_number} (KES ${Number(insertedQuote.total_amount || 0).toLocaleString()}) to Inventory Manager.`,
+      severity: 'info',
+      refNo: insertedQuote.quotation_number,
+      actionModule: 'inventory_quotations'
+    });
+
     return res.status(201).json({
       success: true,
       message: `Quotation ${insertedQuote.quotation_number} submitted to Inventory Manager.`,
@@ -987,6 +1020,17 @@ exports.createSupplierDelivery = async (req, res) => {
       })
       .eq('po_id', poId);
 
+    moduleNotifications.notify({
+      targetModules: ['inventory_deliveries', 'inventory'],
+      sourceModule: 'supplier',
+      senderName: req.supplier?.supplier_name || `Supplier #${req.supplierId}`,
+      title: `Supplier Delivery ${delivery.delivery_number} Dispatched`,
+      message: `${req.supplier?.supplier_name || 'Supplier'} logged delivery ${delivery.delivery_number} (${dispatchedQty} units) for PO-${poId}.`,
+      severity: 'info',
+      refNo: delivery.delivery_number,
+      actionModule: 'inventory_deliveries'
+    });
+
     return res.status(201).json({
       success: true,
       message: `Delivery ${delivery.delivery_number} logged. Awaiting Inventory Manager confirmation upon receipt.`,
@@ -1058,6 +1102,17 @@ exports.updateSupplierDelivery = async (req, res) => {
         .update({ delivery_status: updates.delivery_status, updated_at: new Date().toISOString() })
         .eq('po_id', updated.po_id);
     }
+
+    moduleNotifications.notify({
+      targetModules: ['inventory_deliveries', 'inventory'],
+      sourceModule: 'supplier',
+      senderName: req.supplier?.supplier_name || `Supplier #${req.supplierId}`,
+      title: `Supplier Delivery ${updated.delivery_number || `#${deliveryId}`} Updated (${updated.delivery_status || 'updated'})`,
+      message: `Delivery ${updated.delivery_number || `#${deliveryId}`} updated to status: ${updated.delivery_status || 'updated'}.`,
+      severity: 'info',
+      refNo: updated.delivery_number || `DEL-${deliveryId}`,
+      actionModule: 'inventory_deliveries'
+    });
 
     return res.json({ success: true, message: 'Delivery status updated.', delivery: updated });
   } catch (err) {
@@ -1208,6 +1263,17 @@ exports.uploadSupplierInvoice = async (req, res) => {
       }
     }
 
+    moduleNotifications.notify({
+      targetModules: ['inventory_invoices', 'inventory', 'finance_invoices'],
+      sourceModule: 'supplier',
+      senderName: req.supplier?.supplier_name || `Supplier #${req.supplierId}`,
+      title: `New Supplier Invoice ${invoice.invoice_number}`,
+      message: `${req.supplier?.supplier_name || 'Supplier'} uploaded invoice ${invoice.invoice_number} (KES ${Number(invoice.total_amount || 0).toLocaleString()}) awaiting verification & payment.`,
+      severity: 'warning',
+      refNo: invoice.invoice_number,
+      actionModule: 'inventory_invoices'
+    });
+
     return res.status(201).json({
       success: true,
       message: `Invoice ${invoice.invoice_number} submitted to Inventory Manager for verification${stockAdditions.length ? ' & inventory stock updated' : ''}.`,
@@ -1328,6 +1394,17 @@ exports.confirmSupplierPaymentReceived = async (req, res) => {
       notification_type: 'payment'
     });
 
+    moduleNotifications.notify({
+      targetModules: ['finance_payments', 'finance'],
+      sourceModule: 'supplier',
+      senderName: req.supplier?.supplier_name || `Supplier #${req.supplierId}`,
+      title: `Supplier Confirmed Payment Receipt (${payment.payment_number || `PAY-${paymentId}`})`,
+      message: `${req.supplier?.supplier_name || 'Supplier'} confirmed receiving KES ${Number(payment.amount_paid || 0).toLocaleString()}.`,
+      severity: 'success',
+      refNo: payment.payment_number || `PAY-${paymentId}`,
+      actionModule: 'finance_payments'
+    });
+
     return res.json({
       success: true,
       message: `Payment ${payment.payment_number || `PAY-${paymentId}`} confirmed received! Your receipt is ready to download.`,
@@ -1416,12 +1493,23 @@ exports.downloadSupplierPaymentReceipt = async (req, res) => {
 
 exports.getSupplierNotifications = async (req, res) => {
   try {
-    const { data, error } = await req.supplierDb
-      .from('supplier_notifications')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (error) return res.status(500).json({ success: false, message: error.message });
-    return res.json({ success: true, notifications: data || [] });
+    let dbRows = [];
+    try {
+      const { data, error } = await req.supplierDb
+        .from('supplier_notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && Array.isArray(data)) dbRows = data;
+    } catch (e) {}
+
+    const localRes = moduleNotifications.getNotifications({
+      module: 'supplier',
+      supplierId: req.supplierId,
+      limit: 50
+    });
+    const combined = dbRows.length > 0 ? dbRows : localRes.notifications;
+    const unreadCount = combined.filter(n => !n.is_read).length;
+    return res.json({ success: true, notifications: combined, unread_count: unreadCount });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed loading notifications.' });
   }
@@ -1429,8 +1517,14 @@ exports.getSupplierNotifications = async (req, res) => {
 
 exports.markNotificationRead = async (req, res) => {
   try {
-    const id = Number(req.params.id);
-    if (!id) return res.status(400).json({ success: false, message: 'Invalid notification ID.' });
+    const rawId = String(req.params.id || '').trim();
+    if (!rawId) return res.status(400).json({ success: false, message: 'Invalid notification ID.' });
+    if (rawId.startsWith('NTF-')) {
+      const updated = moduleNotifications.markNotificationRead(rawId, { module: 'supplier', supplierId: req.supplierId });
+      if (!updated) return res.status(404).json({ success: false, message: 'Notification not found.' });
+      return res.json({ success: true, notification: updated });
+    }
+    const id = Number(rawId);
     const { data, error } = await req.supplierDb
       .from('supplier_notifications')
       .update({ is_read: true })
@@ -1447,11 +1541,13 @@ exports.markNotificationRead = async (req, res) => {
 
 exports.markAllNotificationsRead = async (req, res) => {
   try {
-    const { error } = await req.supplierDb
-      .from('supplier_notifications')
-      .update({ is_read: true })
-      .eq('is_read', false);
-    if (error) return res.status(400).json({ success: false, message: error.message });
+    moduleNotifications.markAllRead({ module: 'supplier', supplierId: req.supplierId });
+    try {
+      await req.supplierDb
+        .from('supplier_notifications')
+        .update({ is_read: true })
+        .eq('is_read', false);
+    } catch (e) {}
     return res.json({ success: true, message: 'All notifications marked as read.' });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed marking notifications read.' });
@@ -2418,6 +2514,17 @@ exports.erpConfirmDeliveryReceived = async (req, res) => {
       related_id: deliveryId
     });
 
+    moduleNotifications.notify({
+      targetModules: ['finance_invoices', 'finance'],
+      sourceModule: 'inventory',
+      senderName: actorName,
+      title: `GRN ${grnNumber} Forwarded to Finance for Supplier Payment`,
+      message: `${actorName} confirmed delivery ${delivery.delivery_number} (${confirmedQty} units) for ${po?.po_number || `PO-${delivery.po_id}`}. Forwarded to Finance Manager.`,
+      severity: 'info',
+      refNo: grnNumber,
+      actionModule: 'finance_invoices'
+    });
+
     return res.json({
       success: true,
       message: `Delivery ${delivery.delivery_number} confirmed (${confirmedQty} received, ${totalOutstanding} outstanding). GRN ${grnNumber} generated, stock updated & forwarded to Finance Manager.`,
@@ -2613,6 +2720,19 @@ exports.erpReviewInvoice = async (req, res) => {
       related_type: 'invoice',
       related_id: invoiceId
     });
+
+    if (action !== 'reject') {
+      moduleNotifications.notify({
+        targetModules: ['finance_invoices', 'finance'],
+        sourceModule: 'inventory',
+        senderName: actorName,
+        title: `Supplier Invoice ${inv.invoice_number} Passed to Finance`,
+        message: `${actorName} verified invoice ${inv.invoice_number} (KES ${Number(inv.total_amount).toLocaleString()}) — Ready for Finance payment.`,
+        severity: 'warning',
+        refNo: inv.invoice_number,
+        actionModule: 'finance_invoices'
+      });
+    }
 
     return res.json({
       success: true,

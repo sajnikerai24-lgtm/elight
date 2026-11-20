@@ -71,6 +71,24 @@ function closeModal(id) {
   if (el) el.style.display = 'none';
 }
 
+let __supNotifWidgetPromise = null;
+function ensureSupplierNotificationsWidget() {
+  if (typeof window.refreshSupplierNotifications === 'function') {
+    return Promise.resolve();
+  }
+  if (!__supNotifWidgetPromise) {
+    __supNotifWidgetPromise = new Promise(resolve => {
+      const s = document.createElement('script');
+      s.id = 'elightModuleNotifsScript';
+      s.src = '/js/module_notifications.js';
+      s.onload = () => resolve();
+      s.onerror = () => resolve();
+      document.head.appendChild(s);
+    });
+  }
+  return __supNotifWidgetPromise;
+}
+
 // Initialize header, active tab, and supplier identity
 async function initSupplierHeader(activeTab) {
   const token = getAuthToken();
@@ -123,6 +141,11 @@ async function initSupplierHeader(activeTab) {
       if (welcomeEl) {
         welcomeEl.textContent = sName;
       }
+      ensureSupplierNotificationsWidget().then(() => {
+        if (typeof window.refreshSupplierNotifications === 'function') {
+          window.refreshSupplierNotifications();
+        }
+      });
       return currentSupplierProfile;
     }
   } catch (err) {
@@ -140,7 +163,18 @@ document.addEventListener('DOMContentLoaded', () => {
     (typeof window.loadPaymentsPage === 'function' && window.loadPaymentsPage) ||
     null;
   if (loader) {
-    startElightLiveSync(() => loader());
+    startElightLiveSync(async () => {
+      await loader();
+      if (typeof window.refreshSupplierNotifications === 'function') {
+        window.refreshSupplierNotifications();
+      }
+    });
+  } else {
+    startElightLiveSync(() => {
+      if (typeof window.refreshSupplierNotifications === 'function') {
+        window.refreshSupplierNotifications();
+      }
+    });
   }
 });
 

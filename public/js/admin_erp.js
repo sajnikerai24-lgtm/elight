@@ -214,6 +214,9 @@ let currentActiveERPModule = 'overview';
 const NON_BG_SYNC_MODULES = new Set(['new_sale', 'settings', 'help', 'about']);
 
 function loadERPModuleData(moduleName, isBackground = false) {
+  if (typeof refreshErpModuleNotifications === 'function') {
+    refreshErpModuleNotifications(moduleName);
+  }
   if (isBackground && NON_BG_SYNC_MODULES.has(moduleName)) return;
 
   if (moduleName === 'overview') loadOverviewKPIs();

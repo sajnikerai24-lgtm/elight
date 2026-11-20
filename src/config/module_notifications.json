@@ -1,0 +1,160 @@
+[
+  {
+    "notification_id": "NTF-1795164191655-850",
+    "target_module": "customer",
+    "target_modules": [
+      "customer"
+    ],
+    "source_module": "cashier",
+    "sender_name": "Esther Karimi",
+    "title": "Receipt RCP-344201 Issued (EL-344201)",
+    "message": "Paid KES 1,200 for EL-344201. Remaining balance due: KES 1,200. Submitted to Finance confirmation.",
+    "severity": "warning",
+    "ref_no": "EL-344201",
+    "action_module": "customer",
+    "action_url": "",
+    "recipient_phone": "0733000994",
+    "recipient_email": "",
+    "recipient_name": "POS Balance Customer",
+    "supplier_id": null,
+    "is_read": false,
+    "read_by": [],
+    "created_at": "2026-11-20T08:43:11.655Z"
+  },
+  {
+    "notification_id": "NTF-1795164191638-281",
+    "target_module": "finance",
+    "target_modules": [
+      "finance",
+      "finance_releases"
+    ],
+    "source_module": "cashier",
+    "sender_name": "Esther Karimi",
+    "title": "⚠️ Order EL-344201 Sent to Finance — Customer Balance: KES 1,200",
+    "message": "Cashier Esther Karimi served POS Balance Customer: Paid KES 1,200 of KES 2,400 (M-Pesa). Customer Balance Due: KES 1,200. Note: POS partial balance agreement",
+    "severity": "warning",
+    "ref_no": "EL-344201",
+    "action_module": "finance_releases",
+    "action_url": "",
+    "recipient_phone": "",
+    "recipient_email": "",
+    "recipient_name": "",
+    "supplier_id": null,
+    "is_read": false,
+    "read_by": [],
+    "created_at": "2026-11-20T08:43:11.638Z"
+  },
+  {
+    "notification_id": "NTF-1795164183973-420",
+    "target_module": "inventory",
+    "target_modules": [
+      "inventory",
+      "overview"
+    ],
+    "source_module": "inventory",
+    "sender_name": "Stock Guard",
+    "title": "⚠️ Low Stock Alert: undefined",
+    "message": "\"undefined\" is down to 0 unit(s) (Reorder Level: 5). Consider creating a Purchase Order.",
+    "severity": "danger",
+    "ref_no": "PRD-999901",
+    "action_module": "inventory",
+    "action_url": "",
+    "recipient_phone": "",
+    "recipient_email": "",
+    "recipient_name": "",
+    "supplier_id": null,
+    "is_read": false,
+    "read_by": [],
+    "created_at": "2026-11-20T08:43:03.974Z"
+  },
+  {
+    "notification_id": "NTF-1795164183868-888",
+    "target_module": "customer",
+    "target_modules": [
+      "customer"
+    ],
+    "source_module": "cashier",
+    "sender_name": "Esther Karimi",
+    "title": "Payment Recorded for Order EL-TEST-BAL-992",
+    "message": "Cashier confirmed KES 1,500. Remaining balance due: KES 3,500. Sent to Finance confirmation.",
+    "severity": "warning",
+    "ref_no": "EL-TEST-BAL-992",
+    "action_module": "customer",
+    "action_url": "",
+    "recipient_phone": "0722000992",
+    "recipient_email": "",
+    "recipient_name": "Test Customer Balance",
+    "supplier_id": null,
+    "is_read": false,
+    "read_by": [],
+    "created_at": "2026-11-20T08:43:03.868Z"
+  },
+  {
+    "notification_id": "NTF-1795164183860-874",
+    "target_module": "finance",
+    "target_modules": [
+      "finance",
+      "finance_releases"
+    ],
+    "source_module": "cashier",
+    "sender_name": "Esther Karimi",
+    "title": "⚠️ Order EL-TEST-BAL-992 Passed to Finance — Balance Due: KES 3,500",
+    "message": "Cashier Esther Karimi served Test Customer Balance: Paid KES 1,500 of KES 5,000 (M-Pesa Ref: SLK882011Q). Unpaid Balance: KES 3,500. Note: Pays KES 3500 Friday",
+    "severity": "warning",
+    "ref_no": "EL-TEST-BAL-992",
+    "action_module": "finance_releases",
+    "action_url": "",
+    "recipient_phone": "",
+    "recipient_email": "",
+    "recipient_name": "",
+    "supplier_id": null,
+    "is_read": false,
+    "read_by": [],
+    "created_at": "2026-11-20T08:43:03.860Z"
+  },
+  {
+    "notification_id": "NTF-1795164176625-757",
+    "target_module": "customer",
+    "target_modules": [
+      "customer"
+    ],
+    "source_module": "cashier",
+    "sender_name": "Esther Karimi",
+    "title": "Payment Recorded for Order EL-TEST-FULL-991",
+    "message": "Payment of KES 2,000 settled in full (RCP-TEST-FULL-991). Sent to Finance confirmation.",
+    "severity": "success",
+    "ref_no": "EL-TEST-FULL-991",
+    "action_module": "customer",
+    "action_url": "",
+    "recipient_phone": "0711000991",
+    "recipient_email": "",
+    "recipient_name": "Test Customer Full",
+    "supplier_id": null,
+    "is_read": false,
+    "read_by": [],
+    "created_at": "2026-11-20T08:42:56.626Z"
+  },
+  {
+    "notification_id": "NTF-1795164176624-191",
+    "target_module": "finance",
+    "target_modules": [
+      "finance",
+      "finance_releases"
+    ],
+    "source_module": "cashier",
+    "sender_name": "Esther Karimi",
+    "title": "Order EL-TEST-FULL-991 Passed to Finance for Confirmation",
+    "message": "Cashier Esther Karimi served Test Customer Full: Paid KES 2,000 of KES 2,000 (M-Pesa Ref: SLK991042P). Settled in full.",
+    "severity": "info",
+    "ref_no": "EL-TEST-FULL-991",
+    "action_module": "finance_releases",
+    "action_url": "",
+    "recipient_phone": "",
+    "recipient_email": "",
+    "recipient_name": "",
+    "supplier_id": null,
+    "is_read": false,
+    "read_by": [],
+    "created_at": "2026-11-20T08:42:56.624Z"
+  }
+]

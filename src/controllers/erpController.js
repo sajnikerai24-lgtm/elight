@@ -6,6 +6,7 @@ const { buildOfficialReceiptPdf } = require('../utils/pdfReceiptGenerator');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 const { validatePaymentReference, validateBankAccountNumber } = require('../utils/paymentValidation');
 const { sortByLatest } = require('../utils/sortLatest');
+const moduleNotifications = require('../utils/moduleNotifications');
 
 const SETTINGS_PATH = path.join(__dirname, '../config/system_settings.json');
 const CASHIER_ORDERS_PATH = path.join(__dirname, '../config/cashier_orders.json');
@@ -1067,6 +1068,29 @@ const erpController = {
         .insert([{ customer_id: Number(customer_id), product_name, serial_no, start_date, expiry_date, status: 'active' }])
         .select();
       if (error) throw error;
+
+      try {
+        const { data: cust } = await supabase
+          .from('customers')
+          .select('full_name, phone, email')
+          .eq('customer_id', Number(customer_id))
+          .maybeSingle();
+        if (cust) {
+          moduleNotifications.notify({
+            targetModules: ['customer'],
+            sourceModule: 'customers',
+            senderName: 'Elight Customer Desk',
+            title: `Product Warranty Activated: ${product_name}`,
+            message: `Your warranty (Serial: ${serial_no}) is active until ${expiry_date}.`,
+            severity: 'success',
+            refNo: serial_no || `WRN-${data[0]?.warranty_id || ''}`,
+            recipientPhone: cust.phone || '',
+            recipientEmail: cust.email || '',
+            recipientName: cust.full_name || ''
+          });
+        }
+      } catch (e) {}
+
       res.status(201).json({ success: true, warranty: data[0] });
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
@@ -2039,6 +2063,31 @@ const erpController = {
           'Finance & Treasury'
         );
 
+        moduleNotifications.notify({
+          targetModules: ['cashier'],
+          sourceModule: 'finance',
+          senderName: cleanOfficer,
+          title: `Balance Payment Recorded (${order.order_no})`,
+          message: `Finance received KES ${amt.toLocaleString()} (${payMethod}). Remaining customer balance: KES ${balance.toLocaleString()}.`,
+          severity: balance === 0 ? 'success' : 'info',
+          refNo: order.order_no,
+          actionModule: 'cashier'
+        });
+
+        moduleNotifications.notify({
+          targetModules: ['customer'],
+          sourceModule: 'finance',
+          senderName: cleanOfficer,
+          title: `Payment of KES ${amt.toLocaleString()} Confirmed (${order.order_no})`,
+          message: balance === 0
+            ? `Your order ${order.order_no} balance is now fully settled.`
+            : `Received KES ${amt.toLocaleString()}. Remaining balance: KES ${balance.toLocaleString()}.`,
+          severity: 'success',
+          refNo: order.order_no,
+          recipientPhone: order.customer_phone || '',
+          recipientName: order.customer_name || ''
+        });
+
         return res.json({ success: true, order, message: `Payment of KES ${amt.toLocaleString()} recorded. Remaining balance: KES ${balance.toLocaleString()}.` });
       }
 
@@ -2056,6 +2105,29 @@ const erpController = {
           'Finance & Treasury'
         );
 
+        moduleNotifications.notify({
+          targetModules: ['cashier'],
+          sourceModule: 'finance',
+          senderName: cleanOfficer,
+          title: `⚠️ Payment Verification Failed (${order.order_no})`,
+          message: `Finance flagged payment on Order ${order.order_no} (${order.customer_name}): ${order.finance_release_notes}`,
+          severity: 'danger',
+          refNo: order.order_no,
+          actionModule: 'cashier'
+        });
+
+        moduleNotifications.notify({
+          targetModules: ['customer'],
+          sourceModule: 'finance',
+          senderName: cleanOfficer,
+          title: `Payment Issue on Order ${order.order_no}`,
+          message: `We could not verify payment for ${order.order_no}: ${order.finance_release_notes}. Please contact Cashier.`,
+          severity: 'warning',
+          refNo: order.order_no,
+          recipientPhone: order.customer_phone || '',
+          recipientName: order.customer_name || ''
+        });
+
         return res.json({ success: true, order, message: `Order ${order.order_no} payment flagged as failed.` });
       }
 
@@ -2072,6 +2144,29 @@ const erpController = {
           `${cleanOfficer} (Finance)`,
           'Finance & Treasury'
         );
+
+        moduleNotifications.notify({
+          targetModules: ['cashier'],
+          sourceModule: 'finance',
+          senderName: cleanOfficer,
+          title: `🛑 Order ${order.order_no} Placed on Credit Hold`,
+          message: `Finance held Order ${order.order_no} (${order.customer_name}, Balance Due: KES ${balance.toLocaleString()}): ${order.finance_release_notes}`,
+          severity: 'warning',
+          refNo: order.order_no,
+          actionModule: 'cashier'
+        });
+
+        moduleNotifications.notify({
+          targetModules: ['customer'],
+          sourceModule: 'finance',
+          senderName: cleanOfficer,
+          title: `Order ${order.order_no} On Credit Hold`,
+          message: `Order ${order.order_no} has a remaining balance of KES ${balance.toLocaleString()} awaiting settlement before release.`,
+          severity: 'warning',
+          refNo: order.order_no,
+          recipientPhone: order.customer_phone || '',
+          recipientName: order.customer_name || ''
+        });
 
         return res.json({ success: true, order, message: `Order ${order.order_no} placed on credit hold.` });
       }
@@ -2202,6 +2297,48 @@ const erpController = {
           `${cleanOfficer} (Finance)`,
           'Finance & Treasury'
         );
+
+        if (fType === 'product_collection') {
+          moduleNotifications.notify({
+            targetModules: ['cashier'],
+            sourceModule: 'finance',
+            senderName: cleanOfficer,
+            title: `Order ${order.order_no} Released for Shop Collection`,
+            message: `Finance confirmed & released Order ${order.order_no} (${order.customer_name}) for customer shop counter collection.`,
+            severity: 'success',
+            refNo: order.order_no,
+            actionModule: 'cashier'
+          });
+        }
+
+        if (wantsInst) {
+          moduleNotifications.notify({
+            targetModules: ['services'],
+            sourceModule: 'finance',
+            senderName: cleanOfficer,
+            title: `Installation Order ${order.order_no} Released by Finance`,
+            message: `Order ${order.order_no} (${order.customer_name}) released by Finance and queued for electrical installation.`,
+            severity: 'info',
+            refNo: order.order_no,
+            actionModule: 'services'
+          });
+        }
+
+        moduleNotifications.notify({
+          targetModules: ['customer'],
+          sourceModule: 'finance',
+          senderName: cleanOfficer,
+          title: fType === 'product_collection'
+            ? `Order ${order.order_no} Ready for Shop Collection`
+            : `Order ${order.order_no} Confirmed & Released for Dispatch`,
+          message: fType === 'product_collection'
+            ? `Finance confirmed your order ${order.order_no}. You may collect it at Elight Electrical Shop counter.`
+            : `Finance confirmed your order ${order.order_no} and forwarded it to Dispatch.${balance > 0 ? ` Remaining balance: KES ${balance.toLocaleString()}.` : ''}`,
+          severity: 'success',
+          refNo: order.order_no,
+          recipientPhone: order.customer_phone || '',
+          recipientName: order.customer_name || ''
+        });
 
         return res.json({
           success: true,
@@ -2836,6 +2973,33 @@ const erpController = {
         'Cashier & Sales'
       );
 
+      moduleNotifications.notify({
+        targetModules: ['finance', 'finance_releases'],
+        sourceModule: 'cashier',
+        senderName: cleanCashier,
+        title: hasUnpaidBalance
+          ? `⚠️ Order ${orderNo} Sent to Finance — Customer Balance: KES ${balanceDue.toLocaleString()}`
+          : `Order ${orderNo} Sent to Finance for Confirmation`,
+        message: `Cashier ${cleanCashier} served ${cleanCustomer}: Paid KES ${cleanPaid.toLocaleString()} of KES ${totalAmount.toLocaleString()} (${cleanMethod}).${hasUnpaidBalance ? ` Customer Balance Due: KES ${balanceDue.toLocaleString()}.${newOrder.balance_note ? ` Note: ${newOrder.balance_note}` : ''}` : ' Full payment settled.'}`,
+        severity: hasUnpaidBalance ? 'warning' : 'info',
+        refNo: orderNo,
+        actionModule: 'finance_releases'
+      });
+
+      moduleNotifications.notify({
+        targetModules: ['customer'],
+        sourceModule: 'cashier',
+        senderName: cleanCashier,
+        title: `Receipt ${receiptNo} Issued (${orderNo})`,
+        message: hasUnpaidBalance
+          ? `Paid KES ${cleanPaid.toLocaleString()} for ${orderNo}. Remaining balance due: KES ${balanceDue.toLocaleString()}. Submitted to Finance confirmation.`
+          : `Paid KES ${cleanPaid.toLocaleString()} in full for ${orderNo}. Submitted to Finance confirmation.`,
+        severity: hasUnpaidBalance ? 'warning' : 'success',
+        refNo: orderNo,
+        recipientPhone: cleanPhone,
+        recipientName: cleanCustomer
+      });
+
       res.status(201).json({ success: true, order: newOrder });
     } catch (err) {
       console.error('recordCashierSale error:', err);
@@ -3148,6 +3312,33 @@ const erpController = {
         'Cashier & Sales'
       );
 
+      moduleNotifications.notify({
+        targetModules: ['finance', 'finance_releases'],
+        sourceModule: 'cashier',
+        senderName: cleanCashier,
+        title: hasUnpaid
+          ? `⚠️ Order ${order.order_no} Passed to Finance — Balance Due: KES ${balanceDue.toLocaleString()}`
+          : `Order ${order.order_no} Passed to Finance for Confirmation`,
+        message: `Cashier ${cleanCashier} served ${order.customer_name}: Paid KES ${amountPaid.toLocaleString()} of KES ${totalAmount.toLocaleString()} (${cleanMethod} Ref: ${refCode}).${hasUnpaid ? ` Unpaid Balance: KES ${balanceDue.toLocaleString()}.${order.balance_note ? ` Note: ${order.balance_note}` : ''}` : ' Settled in full.'}`,
+        severity: hasUnpaid ? 'warning' : 'info',
+        refNo: order.order_no,
+        actionModule: 'finance_releases'
+      });
+
+      moduleNotifications.notify({
+        targetModules: ['customer'],
+        sourceModule: 'cashier',
+        senderName: cleanCashier,
+        title: `Payment Recorded for Order ${order.order_no}`,
+        message: hasUnpaid
+          ? `Cashier confirmed KES ${amountPaid.toLocaleString()}. Remaining balance due: KES ${balanceDue.toLocaleString()}. Sent to Finance confirmation.`
+          : `Payment of KES ${amountPaid.toLocaleString()} settled in full (${order.receipt_no}). Sent to Finance confirmation.`,
+        severity: hasUnpaid ? 'warning' : 'success',
+        refNo: order.order_no,
+        recipientPhone: order.customer_phone || '',
+        recipientName: order.customer_name || ''
+      });
+
       res.json({ success: true, order });
     } catch (err) {
       console.error('confirmOrderPayment error:', err);
@@ -3250,6 +3441,29 @@ const erpController = {
           `${cleanCashier} (Cashier)`,
           'Dispatch & Delivery'
         );
+
+        moduleNotifications.notify({
+          targetModules: ['dispatch'],
+          sourceModule: 'cashier',
+          senderName: cleanCashier,
+          title: `Order ${order.order_no} Dispatched by Cashier`,
+          message: `Cashier forwarded Order ${order.order_no} (${order.customer_name}) to Dispatch for delivery at ${cleanAddr}.`,
+          severity: 'info',
+          refNo: order.order_no,
+          actionModule: 'dispatch'
+        });
+
+        moduleNotifications.notify({
+          targetModules: ['customer'],
+          sourceModule: 'dispatch',
+          senderName: cleanCashier,
+          title: `Order ${order.order_no} Sent to Delivery Dispatch`,
+          message: `Your order ${order.order_no} is queued with Dispatch for delivery to ${cleanAddr}.`,
+          severity: 'info',
+          refNo: order.order_no,
+          recipientPhone: order.customer_phone || '',
+          recipientName: order.customer_name || ''
+        });
       } else if (action === 'ready_collection') {
         order.fulfillment_mode = 'collection';
         order.fulfillment_stage = 'collection';
@@ -3261,6 +3475,18 @@ const erpController = {
           `${cleanCashier} (Cashier)`,
           'Cashier & Sales'
         );
+
+        moduleNotifications.notify({
+          targetModules: ['customer'],
+          sourceModule: 'cashier',
+          senderName: cleanCashier,
+          title: `Order ${order.order_no} Ready for Collection`,
+          message: `Your order ${order.order_no} is ready for collection at Elight Electrical Shop counter.`,
+          severity: 'success',
+          refNo: order.order_no,
+          recipientPhone: order.customer_phone || '',
+          recipientName: order.customer_name || ''
+        });
       } else if (action === 'mark_collected') {
         order.fulfillment_mode = 'collection';
         order.fulfillment_status = 'collected';
@@ -3431,6 +3657,31 @@ const erpController = {
         'Dispatch & Delivery'
       );
 
+      moduleNotifications.notify({
+        targetModules: ['driver'],
+        sourceModule: 'dispatch',
+        senderName: actor || 'Dispatch Manager',
+        title: `Dispatch #DSP-${dispatchId} (${disp.order_no}) Packing: ${cleanStatus.toUpperCase()}`,
+        message: `Order ${disp.order_no} (${disp.customer_name}) at ${disp.delivery_address} marked packing ${cleanStatus}.`,
+        severity: cleanStatus === 'ready' || cleanStatus === 'packed' ? 'success' : 'info',
+        refNo: `#DSP-${dispatchId}`,
+        actionModule: 'driver'
+      });
+
+      if (cleanStatus === 'ready' || cleanStatus === 'packed') {
+        moduleNotifications.notify({
+          targetModules: ['customer'],
+          sourceModule: 'dispatch',
+          senderName: actor || 'Dispatch Manager',
+          title: `Order ${disp.order_no} Packed & Ready for Delivery`,
+          message: `Your order ${disp.order_no} has been packed and is preparing for delivery.`,
+          severity: 'info',
+          refNo: disp.order_no,
+          recipientPhone: disp.customer_phone || '',
+          recipientName: disp.customer_name || ''
+        });
+      }
+
       res.json({ success: true, dispatch: disp, message: `Packing readiness updated to ${cleanStatus}.` });
     } catch (err) {
       console.error('updateDispatchPacking error:', err);
@@ -3510,6 +3761,81 @@ const erpController = {
       res.json({ success: true, task: updated, message: `Customer care review logged for Order #${updated.order_no}.` });
     } catch (err) {
       console.error('completeCustomerCareTask error:', err);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  // ==========================================
+  // MODULE NOTIFICATIONS CENTER
+  // ==========================================
+  getModuleNotifications: async (req, res) => {
+    try {
+      const moduleName = String(req.query.module || 'all').trim().toLowerCase();
+      const rawAllowed = String(req.query.allowed_modules || '').trim();
+      const allowedModules = rawAllowed
+        ? rawAllowed.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+        : null;
+
+      if (moduleName === 'customer') {
+        const customerPhone = String(req.query.customer_phone || '').trim();
+        const customerEmail = String(req.query.customer_email || '').trim();
+        const customerName = String(req.query.customer_name || '').trim();
+        if (!customerPhone && !customerEmail && !customerName) {
+          return res.json({ success: true, notifications: [], unread_count: 0, counts_by_module: {} });
+        }
+        const result = moduleNotifications.getNotifications({
+          module: 'customer',
+          customerPhone,
+          customerEmail,
+          customerName,
+          limit: Number(req.query.limit || 50)
+        });
+        return res.json({ success: true, ...result });
+      }
+
+      const result = moduleNotifications.getNotifications({
+        module: moduleName,
+        allowedModules,
+        limit: Number(req.query.limit || 60)
+      });
+      res.json({ success: true, ...result });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  markModuleNotificationRead: async (req, res) => {
+    try {
+      const id = String(req.params.id || '').trim();
+      const updated = moduleNotifications.markNotificationRead(id, {
+        module: req.body?.module || req.query?.module || '',
+        customerPhone: req.body?.customer_phone || '',
+        customerEmail: req.body?.customer_email || '',
+        customerName: req.body?.customer_name || ''
+      });
+      if (!updated) return res.status(404).json({ success: false, message: 'Notification not found.' });
+      res.json({ success: true, notification: updated });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  markAllModuleNotificationsRead: async (req, res) => {
+    try {
+      const moduleName = String(req.body?.module || 'all').trim().toLowerCase();
+      const rawAllowed = req.body?.allowed_modules;
+      const allowedModules = Array.isArray(rawAllowed)
+        ? rawAllowed
+        : (typeof rawAllowed === 'string' && rawAllowed.trim() ? rawAllowed.split(',').map(s => s.trim()) : null);
+      const count = moduleNotifications.markAllRead({
+        module: moduleName,
+        allowedModules,
+        customerPhone: req.body?.customer_phone || '',
+        customerEmail: req.body?.customer_email || '',
+        customerName: req.body?.customer_name || ''
+      });
+      res.json({ success: true, marked_count: count });
+    } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
   }

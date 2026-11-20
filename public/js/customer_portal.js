@@ -148,12 +148,37 @@ function verifyCustomerSession() {
   return true;
 }
 
+let __custNotifWidgetPromise = null;
+function ensureCustomerNotificationsWidget() {
+  if (typeof window.refreshCustomerNotifications === 'function') {
+    return Promise.resolve();
+  }
+  if (!__custNotifWidgetPromise) {
+    __custNotifWidgetPromise = new Promise(resolve => {
+      const s = document.createElement('script');
+      s.id = 'elightModuleNotifsScript';
+      s.src = '/js/module_notifications.js';
+      s.onload = () => resolve();
+      s.onerror = () => resolve();
+      document.head.appendChild(s);
+    });
+  }
+  return __custNotifWidgetPromise;
+}
+
 async function loadMyCustomerPortal() {
-  const params = new URLSearchParams({
+  const custQueryInfo = {
     email: loggedCustomerUser.email || '',
     phone: loggedCustomerUser.phone || '',
     name: loggedCustomerUser.full_name || ''
+  };
+  ensureCustomerNotificationsWidget().then(() => {
+    if (typeof window.refreshCustomerNotifications === 'function') {
+      window.refreshCustomerNotifications(custQueryInfo);
+    }
   });
+
+  const params = new URLSearchParams(custQueryInfo);
 
   try {
     const res = await fetch(`/api/customer/my-portal?${params.toString()}`);
