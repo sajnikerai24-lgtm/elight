@@ -216,6 +216,14 @@ async function loadMyCustomerPortal() {
             .map(i => `${escapeHTML(i.product_name)} <strong>(×${i.quantity})</strong>`)
             .join(', ');
           const isPaid = o.payment_status === 'paid';
+          const balDue = Number(o.balance_due || 0);
+          const isPartial = o.payment_status === 'partial' || (balDue > 0 && Number(o.amount_paid || 0) > 0);
+          const payBadgeStyle = isPaid
+            ? 'background:#dcfce7; color:#15803d;'
+            : (isPartial ? 'background:#fef3c7; color:#b45309;' : 'background:#fee2e2; color:#b91c1c;');
+          const payBadgeText = isPaid
+            ? '✓ Paid'
+            : (isPartial ? `⚠️ Partial (Bal: KES ${balDue.toLocaleString('en-KE')})` : '⏳ Pending');
           const isCollection = o.fulfillment_type === 'product_collection' || o.fulfillment_mode === 'collection';
           const delBadge = (isCollection && o.fulfillment_status === 'collected')
             ? { label: '✔️ Collected at Shop', bg: '#dcfce7', color: '#15803d' }
@@ -228,7 +236,12 @@ async function loadMyCustomerPortal() {
               <td><strong style="font-family:monospace; color:var(--primary);">${escapeHTML(o.order_no)}</strong></td>
               <td>${itemsHtml || 'Shop Product'}</td>
               <td><strong>KES ${Number(o.total_amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
-              <td><span class="badge-tag" style="background:${isPaid ? '#dcfce7' : '#fee2e2'}; color:${isPaid ? '#15803d' : '#b91c1c'}; font-weight:700;">${isPaid ? '✓ Paid' : '⏳ Pending'}</span></td>
+              <td>
+                <span class="badge-tag" style="${payBadgeStyle} font-weight:700;">${payBadgeText}</span>
+                ${o.finance_release_status === 'pending_finance' || o.finance_release_status === 'pending_credit_review'
+                  ? '<div style="font-size:0.7rem; color:#64748b; margin-top:2px;">⏳ Pending Finance Confirmation</div>'
+                  : ''}
+              </td>
               <td>${escapeHTML(o.payment_method || 'M-Pesa')}</td>
               <td><span class="badge-tag" style="background:${delBadge.bg}; color:${delBadge.color}; font-weight:700;">${delBadge.label}</span></td>
               <td><span class="badge-tag" style="background:${instBadge.bg}; color:${instBadge.color}; font-weight:700;">${instBadge.label}</span></td>

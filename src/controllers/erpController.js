@@ -2695,7 +2695,7 @@ const erpController = {
               {
                 type: 'sale',
                 category: 'Shop Sale',
-                description: `Sale ${orderNo} (${cleanCustomer}) [Split Payment — Cash Portion]: ${summaryText} [Cashier: ${cleanCashier}]`,
+                description: `Sale ${orderNo} (${cleanCustomer}) [Split Payment — Cash Portion: KES ${splitCash.toLocaleString()}]${creditNoteSuffix}: ${summaryText} [Cashier: ${cleanCashier}]`,
                 amount: splitCash,
                 payment_method: 'Cash',
                 reference_no: `CASH-${stamp}`,
@@ -2704,7 +2704,7 @@ const erpController = {
               {
                 type: 'sale',
                 category: 'Shop Sale',
-                description: `Sale ${orderNo} (${cleanCustomer}) [Split Payment — M-Pesa Portion]: ${summaryText} [Cashier: ${cleanCashier}]`,
+                description: `Sale ${orderNo} (${cleanCustomer}) [Split Payment — M-Pesa Portion: KES ${splitMpesa.toLocaleString()}]${creditNoteSuffix}: ${summaryText} [Cashier: ${cleanCashier}]`,
                 amount: splitMpesa,
                 payment_method: 'M-Pesa',
                 reference_no: refCode,
@@ -2814,6 +2814,11 @@ const erpController = {
         finance_released_by: null,
         finance_released_at: null,
         credit_policy_notes: String(credit_policy_notes || ''),
+        balance_note: hasUnpaidBalance
+          ? (String(credit_policy_notes || '').trim() || `Customer has unpaid balance of KES ${balanceDue.toLocaleString()} (Noted by Cashier ${cleanCashier})`)
+          : '',
+        cashier_served: true,
+        cashier_served_at: nowIso,
         cashier_name: cleanCashier,
         stock_deducted: true,
         created_at: nowIso,
@@ -2919,6 +2924,12 @@ const erpController = {
           message: 'Cannot accept a KSh 0 payment amount. Payment amount must be greater than KSh 0.'
         });
       }
+      if (rawPaid > totalAmount) {
+        return res.status(400).json({
+          success: false,
+          message: `Amount paid (KES ${rawPaid.toLocaleString()}) cannot exceed order total (KES ${totalAmount.toLocaleString()}). Use Cash Tendered for change.`
+        });
+      }
       const confirmRefCheck = validatePaymentReference(cleanMethod, payment_ref, { required: false, label: 'Payment reference' });
       if (!confirmRefCheck.valid) {
         return res.status(400).json({ success: false, message: confirmRefCheck.message });
@@ -2926,6 +2937,7 @@ const erpController = {
       const amountPaid = rawPaid;
       const balanceDue = Math.max(0, totalAmount - amountPaid);
       const hasUnpaid = balanceDue > 0;
+      const cleanBalanceNote = String(req.body.credit_policy_notes || req.body.balance_note || '').trim();
 
       const isSplit = cleanMethod === 'Split' || /split|half/i.test(cleanMethod);
       const splitCash = isSplit
@@ -2948,6 +2960,7 @@ const erpController = {
         : (cleanMethod === 'Cash' ? `CASH-${stamp}` : `MPESA-${stamp}`);
 
       const finalMethodLabel = isSplit ? 'Split (Cash + M-Pesa)' : cleanMethod;
+      const servedAtIso = new Date().toISOString();
 
       order.amount_paid = amountPaid;
       order.balance_due = balanceDue;
@@ -2958,10 +2971,18 @@ const erpController = {
       order.cash_tendered = tendered;
       order.change_due = changeDue;
       order.cashier_name = cleanCashier;
-      order.paid_at = new Date().toISOString();
+      order.cashier_served = true;
+      order.cashier_served_at = servedAtIso;
+      order.paid_at = servedAtIso;
+      order.credit_policy_notes = hasUnpaid
+        ? (cleanBalanceNote || order.credit_policy_notes || '')
+        : '';
+      order.balance_note = hasUnpaid
+        ? (cleanBalanceNote || `Customer has unpaid balance of KES ${balanceDue.toLocaleString()} (Noted by Cashier ${cleanCashier})`)
+        : '';
 
       // Enforce Finance Gate:
-      // If order not yet released by Finance, it must wait for Finance release / credit check
+      // Once served by Cashier, order passes to Finance Manager for confirmation / credit balance review.
       if (order.finance_release_status !== 'released') {
         order.finance_release_status = hasUnpaid ? 'pending_credit_review' : 'pending_finance';
         order.fulfillment_stage = 'finance';
@@ -2979,7 +3000,7 @@ const erpController = {
       if (!order.receipt_no) {
         order.receipt_no = 'RCP-' + String(order.order_no).replace(/^EL-|^BK-/i, '');
       }
-      if (order.fulfillment_status === 'awaiting_payment') {
+      if (order.finance_release_status === 'released' && order.fulfillment_status === 'awaiting_payment') {
         order.fulfillment_status = 'paid_awaiting_handoff';
       }
 
@@ -2999,8 +3020,11 @@ const erpController = {
         order.stock_deducted = true;
       }
 
-      // 2. FINANCE MANAGER CONNECTION: Confirm or insert sale in finance_records
+      // 2. FINANCE MANAGER CONNECTION: Confirm or insert sale in finance_records and pass to Finance confirmation
       const itemSummary = (order.items || []).map(i => `${i.quantity}x ${i.product_name}`).join(', ');
+      const finBalanceNote = hasUnpaid
+        ? ` [UNPAID BALANCE: KES ${balanceDue.toLocaleString()} - Pending Finance Confirmation${cleanBalanceNote ? ` | Note: ${cleanBalanceNote}` : ''}]`
+        : ' [Paid in Full - Pending Finance Confirmation]';
       const localFin = readFinanceRecords();
       if (isSplit) {
         localFin.unshift(
@@ -3008,45 +3032,44 @@ const erpController = {
             record_id: Date.now(),
             type: 'sale',
             category: 'Customer Order Payment',
-            description: `Confirmed Order ${order.order_no} (${order.customer_name}) [Split Payment — Cash Portion]: ${itemSummary} [Cashier: ${cleanCashier}]`,
+            description: `Confirmed Order ${order.order_no} (${order.customer_name}) [Split Payment — Cash Portion: KES ${splitCash.toLocaleString()}]${finBalanceNote}: ${itemSummary} [Cashier: ${cleanCashier}]`,
             amount: splitCash,
             payment_method: 'Cash',
             reference_no: `CASH-${stamp}`,
             status: 'confirmed',
-            created_at: new Date().toISOString()
+            created_at: servedAtIso
           },
           {
             record_id: Date.now() + 1,
             type: 'sale',
             category: 'Customer Order Payment',
-            description: `Confirmed Order ${order.order_no} (${order.customer_name}) [Split Payment — M-Pesa Portion]: ${itemSummary} [Cashier: ${cleanCashier}]`,
+            description: `Confirmed Order ${order.order_no} (${order.customer_name}) [Split Payment — M-Pesa Portion: KES ${splitMpesa.toLocaleString()}]${finBalanceNote}: ${itemSummary} [Cashier: ${cleanCashier}]`,
             amount: splitMpesa,
             payment_method: 'M-Pesa',
             reference_no: refCode,
             status: 'confirmed',
-            created_at: new Date().toISOString()
+            created_at: servedAtIso
           }
         );
       } else {
         const existingFinLocal = localFin.find(f => String(f.reference_no).toUpperCase() === String(order.order_no).toUpperCase() || String(f.reference_no).toUpperCase() === String(refCode).toUpperCase());
         if (existingFinLocal) {
           existingFinLocal.status = 'confirmed';
+          existingFinLocal.amount = amountPaid;
           existingFinLocal.payment_method = cleanMethod;
           existingFinLocal.reference_no = refCode;
-          if (!/\[Cashier:/i.test(existingFinLocal.description || '')) {
-            existingFinLocal.description += ` [Cashier: ${cleanCashier}]`;
-          }
+          existingFinLocal.description = `${String(existingFinLocal.description || '').replace(/\s*\[UNPAID BALANCE:[^\]]*\]/gi, '').replace(/\s*\[Paid in Full[^\]]*\]/gi, '')}${finBalanceNote}${!/\[Cashier:/i.test(existingFinLocal.description || '') ? ` [Cashier: ${cleanCashier}]` : ''}`;
         } else {
           localFin.unshift({
             record_id: Date.now(),
             type: 'sale',
             category: 'Customer Order Payment',
-            description: `Confirmed Order ${order.order_no} (${order.customer_name}): ${itemSummary} [Cashier: ${cleanCashier}]`,
-            amount: totalAmount,
+            description: `Confirmed Order ${order.order_no} (${order.customer_name}) [Paid: KES ${amountPaid.toLocaleString()} via ${cleanMethod}]${finBalanceNote}: ${itemSummary} [Cashier: ${cleanCashier}]`,
+            amount: amountPaid,
             payment_method: cleanMethod,
             reference_no: refCode,
             status: 'confirmed',
-            created_at: new Date().toISOString()
+            created_at: servedAtIso
           });
         }
       }
@@ -3060,13 +3083,13 @@ const erpController = {
           .maybeSingle();
 
         if (existingFin) {
-          const descWithCashier = /\[Cashier:/i.test(existingFin.description || '')
-            ? existingFin.description
-            : `${existingFin.description} [Cashier: ${cleanCashier}]`;
+          const baseDesc = String(existingFin.description || '').replace(/\s*\[UNPAID BALANCE:[^\]]*\]/gi, '').replace(/\s*\[Paid in Full[^\]]*\]/gi, '');
+          const descWithCashier = `${baseDesc}${finBalanceNote}${/\[Cashier:/i.test(baseDesc) ? '' : ` [Cashier: ${cleanCashier}]`}`;
           await supabase
             .from('finance_records')
             .update({
               status: 'confirmed',
+              amount: amountPaid,
               payment_method: cleanMethod,
               reference_no: refCode,
               description: descWithCashier
@@ -3076,8 +3099,8 @@ const erpController = {
           await supabase.from('finance_records').insert([{
             type: 'sale',
             category: 'Customer Order Payment',
-            description: `Confirmed Order ${order.order_no} (${order.customer_name}): ${itemSummary} [Cashier: ${cleanCashier}]`,
-            amount: totalAmount,
+            description: `Confirmed Order ${order.order_no} (${order.customer_name}) [Paid: KES ${amountPaid.toLocaleString()} via ${cleanMethod}]${finBalanceNote}: ${itemSummary} [Cashier: ${cleanCashier}]`,
+            amount: amountPaid,
             payment_method: cleanMethod,
             reference_no: refCode,
             status: 'confirmed'
@@ -3096,7 +3119,7 @@ const erpController = {
           );
           if (b) {
             b.status = 'completed';
-            b.confirmation_note = `Payment confirmed by Cashier ${cleanCashier} (Ref: ${refCode}). Handed over to customer.`;
+            b.confirmation_note = `Served by Cashier ${cleanCashier} (${hasUnpaid ? `Paid KES ${amountPaid.toLocaleString()}, Balance Due KES ${balanceDue.toLocaleString()}` : `Paid KES ${amountPaid.toLocaleString()}`}, Ref: ${refCode}). Passed to Finance for confirmation.`;
             writeJsonFile(BOOKINGS_PATH, bookings);
           }
         } catch (e) {}
@@ -3119,8 +3142,8 @@ const erpController = {
       writeCashierOrders(orders);
 
       appendAuditLog(
-        'Customer Payment Confirmed',
-        `Confirmed KES ${totalAmount.toLocaleString()} (${cleanMethod} Ref: ${refCode}) for Order ${order.order_no} (${order.customer_name}).`,
+        'Cashier Served Order — Passed to Finance',
+        `Order ${order.order_no} (${order.customer_name}): Paid KES ${amountPaid.toLocaleString()} of KES ${totalAmount.toLocaleString()} (${cleanMethod} Ref: ${refCode})${hasUnpaid ? ` • Balance Due: KES ${balanceDue.toLocaleString()}` : ' • Settled in full'}. Passed to Finance for confirmation.`,
         `${cleanCashier} (Cashier)`,
         'Cashier & Sales'
       );

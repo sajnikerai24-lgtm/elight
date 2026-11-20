@@ -1772,13 +1772,13 @@ function renderCashierOrdersTable() {
         if (Number(o.balance_due || 0) > 0) {
           actions.push(`
             <span class="badge-tag" style="background:#fef3c7; color:#b45309; font-weight:700; font-size:0.74rem;">
-              🛡️ Finance Credit Gate
+              🛡️ Passed to Finance (Balance: ${formatKES(o.balance_due)})
             </span>
           `);
         } else {
           actions.push(`
             <span class="badge-tag" style="background:#dbeafe; color:#1e40af; font-weight:700; font-size:0.74rem;">
-              ⏳ Awaiting Finance Release
+              ⏳ Passed to Finance Confirmation
             </span>
           `);
         }
@@ -2406,7 +2406,12 @@ async function handleRecordCashierSale(e) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || 'Failed to record sale');
 
-    showToast(`Sale ${data.order.order_no} recorded! Inventory & Finance updated.`, 'success');
+    const orderBal = Number(data.order?.balance_due || 0);
+    if (orderBal > 0) {
+      showToast(`Sale ${data.order.order_no} served! Customer Balance Due: ${formatKES(orderBal)} — Passed to Finance for confirmation.`, 'success');
+    } else {
+      showToast(`Sale ${data.order.order_no} served! Inventory updated & Passed to Finance for confirmation.`, 'success');
+    }
     await loadNewSaleModule();
     openCashierReceiptFromData(data.order);
     loadOverviewKPIs();
@@ -2436,8 +2441,17 @@ function openConfirmPaymentModal(orderNo) {
     return;
   }
 
+  const totalAmt = Number(order.total_amount || 0);
   document.getElementById('confirm_order_no').value = order.order_no;
-  document.getElementById('confirm_order_amount').value = order.total_amount;
+  document.getElementById('confirm_order_amount').value = totalAmt;
+
+  const termsEl = document.getElementById('confirm_payment_terms');
+  if (termsEl) termsEl.value = 'full';
+  const paidInputEl = document.getElementById('confirm_amount_paid');
+  if (paidInputEl) paidInputEl.value = totalAmt;
+  const noteInputEl = document.getElementById('confirm_balance_note');
+  if (noteInputEl) noteInputEl.value = order.credit_policy_notes || '';
+
   const confirmMethod = order.payment_method === 'Cash'
     ? 'Cash'
     : (order.payment_method === 'Split' ? 'Split' : (/bank/i.test(order.payment_method || '') ? 'Bank Transfer' : 'M-Pesa'));
@@ -2447,7 +2461,7 @@ function openConfirmPaymentModal(orderNo) {
     ? 'CASH-COUNTER'
     : (/pending|awaiting|pay on/i.test(rawOrderRef) ? '' : rawOrderRef);
   document.getElementById('confirm_payment_ref').value = safeInitialRef;
-  document.getElementById('confirm_cash_tendered').value = order.total_amount;
+  document.getElementById('confirm_cash_tendered').value = totalAmt;
 
   const splitCashInput = document.getElementById('confirm_split_cash_amount');
   const splitMpesaInput = document.getElementById('confirm_split_mpesa_amount');
@@ -2468,12 +2482,55 @@ function openConfirmPaymentModal(orderNo) {
       <div><strong>Order #:</strong> <span style="font-family:monospace; color:#1d4ed8;">${escapeHTML(order.order_no)}</span></div>
       <div><strong>Customer:</strong> ${escapeHTML(order.customer_name)} ${order.customer_phone ? `(${escapeHTML(order.customer_phone)})` : ''}</div>
       <div><strong>Items:</strong> ${itemsText}</div>
-      <div style="margin-top:6px; font-size:1rem; font-weight:800; color:#087443;">Amount Due: ${formatKES(order.total_amount)}</div>
+      <div style="margin-top:6px; font-size:1rem; font-weight:800; color:#087443;">Order Total: ${formatKES(totalAmt)}</div>
     `;
   }
 
+  toggleConfirmPaymentTerms();
   toggleConfirmCashFields();
   openModal('cashier-confirm-modal');
+}
+
+function getConfirmAmountPayingNow() {
+  const orderTotal = Number(document.getElementById('confirm_order_amount')?.value || 0);
+  const terms = document.getElementById('confirm_payment_terms')?.value || 'full';
+  if (terms !== 'partial') return orderTotal;
+  const rawPaid = Number(document.getElementById('confirm_amount_paid')?.value || 0);
+  return Math.max(0, Math.min(orderTotal, rawPaid));
+}
+
+function toggleConfirmPaymentTerms() {
+  const terms = document.getElementById('confirm_payment_terms')?.value || 'full';
+  const orderTotal = Number(document.getElementById('confirm_order_amount')?.value || 0);
+  const partialPanel = document.getElementById('confirm_partial_panel');
+  const paidInput = document.getElementById('confirm_amount_paid');
+  if (partialPanel) {
+    partialPanel.style.display = terms === 'partial' ? 'block' : 'none';
+  }
+  if (terms === 'partial' && paidInput && (!paidInput.value || Number(paidInput.value) >= orderTotal)) {
+    paidInput.value = Math.max(1, Math.round(orderTotal / 2));
+  } else if (terms === 'full' && paidInput) {
+    paidInput.value = orderTotal;
+  }
+  updateConfirmBalancePreview();
+}
+
+function updateConfirmBalancePreview() {
+  const orderTotal = Number(document.getElementById('confirm_order_amount')?.value || 0);
+  const payingNow = getConfirmAmountPayingNow();
+  const balanceDue = Math.max(0, orderTotal - payingNow);
+  const balDueLbl = document.getElementById('confirm_balance_due_lbl');
+  const cashTenderedInput = document.getElementById('confirm_cash_tendered');
+  if (balDueLbl) {
+    balDueLbl.textContent = formatKES(balanceDue);
+  }
+  if (cashTenderedInput && document.getElementById('confirm_payment_terms')?.value === 'partial') {
+    cashTenderedInput.value = payingNow;
+  }
+  if (document.getElementById('confirm_payment_method')?.value === 'Split') {
+    initConfirmSplitAmounts();
+  }
+  updateConfirmChangePreview();
 }
 
 function toggleConfirmCashFields() {
@@ -2504,7 +2561,7 @@ function toggleConfirmCashFields() {
 }
 
 function initConfirmSplitAmounts() {
-  const due = Number(document.getElementById('confirm_order_amount')?.value || 0);
+  const due = getConfirmAmountPayingNow();
   const cashInput = document.getElementById('confirm_split_cash_amount');
   const mpesaInput = document.getElementById('confirm_split_mpesa_amount');
   if (cashInput && mpesaInput && due > 0) {
@@ -2520,7 +2577,7 @@ function initConfirmSplitAmounts() {
 }
 
 function handleConfirmSplitCashChange() {
-  const due = Number(document.getElementById('confirm_order_amount')?.value || 0);
+  const due = getConfirmAmountPayingNow();
   const cashVal = Math.max(0, Number(document.getElementById('confirm_split_cash_amount')?.value || 0));
   const mpesaInput = document.getElementById('confirm_split_mpesa_amount');
   if (mpesaInput) {
@@ -2530,7 +2587,7 @@ function handleConfirmSplitCashChange() {
 }
 
 function handleConfirmSplitMpesaChange() {
-  const due = Number(document.getElementById('confirm_order_amount')?.value || 0);
+  const due = getConfirmAmountPayingNow();
   const mpesaVal = Math.max(0, Number(document.getElementById('confirm_split_mpesa_amount')?.value || 0));
   const cashInput = document.getElementById('confirm_split_cash_amount');
   if (cashInput) {
@@ -2540,7 +2597,7 @@ function handleConfirmSplitMpesaChange() {
 }
 
 function updateConfirmSplitPreview() {
-  const due = Number(document.getElementById('confirm_order_amount')?.value || 0);
+  const due = getConfirmAmountPayingNow();
   const cashVal = Number(document.getElementById('confirm_split_cash_amount')?.value || 0);
   const mpesaVal = Number(document.getElementById('confirm_split_mpesa_amount')?.value || 0);
   const tendered = Number(document.getElementById('confirm_split_cash_tendered')?.value || 0);
@@ -2577,7 +2634,7 @@ function updateConfirmSplitPreview() {
 }
 
 function updateConfirmChangePreview() {
-  const due = Number(document.getElementById('confirm_order_amount')?.value || 0);
+  const due = getConfirmAmountPayingNow();
   const tendered = Number(document.getElementById('confirm_cash_tendered')?.value || 0);
   const prev = document.getElementById('confirm_change_preview');
   if (!prev) return;
@@ -2586,7 +2643,7 @@ function updateConfirmChangePreview() {
     prev.textContent = `Change Due: ${formatKES(tendered - due)}`;
   } else {
     prev.style.color = '#dc2626';
-    prev.textContent = `Balance Remaining: ${formatKES(due - tendered)}`;
+    prev.textContent = `Cash Short by: ${formatKES(due - tendered)}`;
   }
 }
 
@@ -2604,25 +2661,38 @@ async function handleConfirmCustomerPayment(e) {
   }
 
   const orderNo = document.getElementById('confirm_order_no').value;
-  const due = Number(document.getElementById('confirm_order_amount').value || 0);
+  const orderTotal = Number(document.getElementById('confirm_order_amount').value || 0);
+  const terms = document.getElementById('confirm_payment_terms')?.value || 'full';
+  const payingNow = terms === 'partial'
+    ? Number(document.getElementById('confirm_amount_paid')?.value || 0)
+    : orderTotal;
+  const balanceNote = (document.getElementById('confirm_balance_note')?.value || '').trim();
   const method = document.getElementById('confirm_payment_method').value;
   const ref = document.getElementById('confirm_payment_ref').value.trim();
-  const tendered = Number(document.getElementById('confirm_cash_tendered').value || due);
+  const tendered = Number(document.getElementById('confirm_cash_tendered').value || payingNow);
 
-  if (Number.isNaN(due) || due <= 0) {
+  if (Number.isNaN(orderTotal) || orderTotal <= 0) {
     showToast('Cannot accept or confirm payment for a sale with KSh 0 amount.', 'error');
     return;
   }
+  if (Number.isNaN(payingNow) || payingNow <= 0) {
+    showToast('Amount paid now must be greater than KSh 0.', 'error');
+    return;
+  }
+  if (payingNow > orderTotal) {
+    showToast(`Amount paid (${formatKES(payingNow)}) cannot exceed order total (${formatKES(orderTotal)}).`, 'error');
+    return;
+  }
 
-  if (method === 'Cash' && (tendered <= 0 || tendered < due)) {
-    showToast('Cash received must be greater than KSh 0 and cannot be less than the order amount due.', 'error');
+  if (method === 'Cash' && (tendered <= 0 || tendered < payingNow)) {
+    showToast('Cash received must be greater than KSh 0 and cannot be less than the amount being paid now.', 'error');
     return;
   }
 
   let splitCash = 0;
   let splitMpesa = 0;
   let splitRef = '';
-  let finalTendered = method === 'Cash' ? tendered : due;
+  let finalTendered = method === 'Cash' ? tendered : payingNow;
 
   if (method === 'Split') {
     splitCash = Number(document.getElementById('confirm_split_cash_amount')?.value || 0);
@@ -2630,8 +2700,8 @@ async function handleConfirmCustomerPayment(e) {
     const splitTenderedRaw = Number(document.getElementById('confirm_split_cash_tendered')?.value || 0);
     splitRef = (document.getElementById('confirm_split_payment_ref')?.value || '').trim();
 
-    if (splitCash + splitMpesa !== due) {
-      showToast(`Split amounts (${formatKES(splitCash)} Cash + ${formatKES(splitMpesa)} M-Pesa) must equal ${formatKES(due)}.`, 'error');
+    if (splitCash + splitMpesa !== payingNow) {
+      showToast(`Split amounts (${formatKES(splitCash)} Cash + ${formatKES(splitMpesa)} M-Pesa) must equal ${formatKES(payingNow)}.`, 'error');
       return;
     }
     if (splitMpesa > 0 && !splitRef) {
@@ -2674,6 +2744,8 @@ async function handleConfirmCustomerPayment(e) {
       body: JSON.stringify({
         payment_method: method,
         payment_ref: method === 'Split' ? splitRef : validatedRef,
+        amount_paid: payingNow,
+        credit_policy_notes: terms === 'partial' ? balanceNote : '',
         cash_tendered: finalTendered,
         split_cash_amount: splitCash,
         split_mpesa_amount: splitMpesa,
@@ -2685,7 +2757,12 @@ async function handleConfirmCustomerPayment(e) {
     if (!res.ok || !data.success) throw new Error(data.message || 'Payment confirmation failed');
 
     closeModal('cashier-confirm-modal');
-    showToast(`Payment confirmed for ${orderNo}! Receipt generated.`, 'success');
+    const bal = Number(data.order?.balance_due || 0);
+    if (bal > 0) {
+      showToast(`Order ${orderNo} served! Customer Balance Due: ${formatKES(bal)} — Passed to Finance for confirmation.`, 'success');
+    } else {
+      showToast(`Order ${orderNo} confirmed & receipt generated! Passed to Finance for confirmation.`, 'success');
+    }
     await loadCashierDesk();
     openCashierReceiptFromData(data.order);
     loadOverviewKPIs();
@@ -2836,9 +2913,20 @@ function openCashierReceiptFromData(order) {
           <span>Meru Delivery Fee:</span><span>${formatKES(order.delivery_fee)}</span>
         </div>
       ` : ''}
-      <div style="display:flex; justify-content:space-between; font-size:1rem; font-weight:900; color:#087443; margin:4px 0;">
-        <span>TOTAL PAID:</span><span>${formatKES(order.total_amount)}</span>
+      <div style="display:flex; justify-content:space-between; font-size:0.86rem; font-weight:700; color:#334155; margin:4px 0 2px;">
+        <span>ORDER TOTAL:</span><span>${formatKES(order.total_amount)}</span>
       </div>
+      <div style="display:flex; justify-content:space-between; font-size:1rem; font-weight:900; color:#087443; margin:2px 0 4px;">
+        <span>AMOUNT PAID:</span><span>${formatKES(order.amount_paid !== undefined ? order.amount_paid : order.total_amount)}</span>
+      </div>
+      ${Number(order.balance_due || 0) > 0 ? `
+        <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:6px 8px; margin:6px 0; color:#b91c1c; font-size:0.8rem;">
+          <div style="display:flex; justify-content:space-between; font-weight:900;">
+            <span>⚠️ UNPAID BALANCE DUE:</span><span>${formatKES(order.balance_due)}</span>
+          </div>
+          ${(order.balance_note || order.credit_policy_notes) ? `<div style="font-size:0.74rem; color:#7f1d1d; margin-top:2px;">Note: ${escapeHTML(order.balance_note || order.credit_policy_notes)}</div>` : ''}
+        </div>
+      ` : ''}
       ${order.split_details ? `
         <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:8px 10px; margin:6px 0; font-size:0.77rem;">
           <div style="font-weight:800; color:#1e3a8a; margin-bottom:4px;">⚖️ SPLIT PAYMENT:</div>
@@ -2877,6 +2965,7 @@ function openCashierReceiptFromData(order) {
 
     <div style="margin-top:12px; padding-top:8px; border-top:1px dashed #94a3b8; text-align:center; font-size:0.74rem; color:#475569;">
       <div>Served by Cashier: <strong>${escapeHTML(order.cashier_name || currentUser?.full_name || 'Esther Karimi')}</strong></div>
+      ${order.finance_release_status !== 'released' ? `<div style="margin-top:3px; color:#b45309; font-weight:700;">⏳ Passed to Finance for Confirmation${Number(order.balance_due || 0) > 0 ? ' (Unpaid Balance Noted)' : ''}</div>` : ''}
       <div style="margin-top:3px;">Thank you for shopping at Elight Electrical Shop — Meru County!</div>
     </div>
   `;
@@ -3418,7 +3507,7 @@ function renderFinanceReleasesTable() {
   const tbody = document.getElementById('fin-releases-tbody');
   if (!tbody) return;
 
-  const filter = document.getElementById('fin-releases-filter')?.value || 'all';
+  const filter = document.getElementById('fin-releases-filter')?.value || 'all_pending';
   const query = (document.getElementById('fin-releases-search')?.value || '').toLowerCase().trim();
 
   let list = [...allFinanceReleases];
@@ -3472,19 +3561,16 @@ function renderFinanceReleasesTable() {
     }
 
     let policyDisplay = '';
-    if (order.unpaid_balance) {
-      if (order.credit_policy_notes || order.credit_policy_type) {
-        policyDisplay = `
-          <div style="font-size:0.8rem; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:6px 8px; margin-top:4px;">
-            <strong style="color:#b45309;">${escapeHTML(order.credit_policy_type || 'Policy Terms')}:</strong>
-            <div style="color:#475569; margin-top:2px;">${escapeHTML(order.credit_policy_notes || 'None')}</div>
-          </div>
-        `;
-      } else {
-        policyDisplay = `<span style="font-size:0.78rem; color:#dc2626; font-weight:700;">⚠️ Terms required before release (Rule 5)</span>`;
-      }
+    if (order.unpaid_balance || Number(order.balance_due || 0) > 0) {
+      const noteText = order.credit_policy_notes || order.balance_note || '';
+      policyDisplay = `
+        <div style="font-size:0.8rem; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:6px 8px; margin-top:4px;">
+          <div style="color:#b91c1c; font-weight:800;">⚠️ Customer Has Balance: ${formatKES(order.balance_due || 0)}</div>
+          <div style="color:#475569; margin-top:2px;">${noteText ? escapeHTML(noteText) : 'Flagged by Cashier — Awaiting Finance credit terms &amp; confirmation'}</div>
+        </div>
+      `;
     } else {
-      policyDisplay = `<span style="font-size:0.8rem; color:#16a34a; font-weight:600;">Full Payment Settled at Counter</span>`;
+      policyDisplay = `<span style="font-size:0.8rem; color:#16a34a; font-weight:600;">Full Payment Settled — Passed by Cashier</span>`;
     }
 
     let actionButtons = '';
