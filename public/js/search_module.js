@@ -52,6 +52,15 @@ const ElightSearch = (() => {
   function resolveImage(product) {
     if (product.image_url) return product.image_url;
     const name = String(product.product_name || '').toLowerCase();
+    if (name.includes('shower')) return 'images/instant-shower.jpg';
+    if (name.includes('charge controller') || name.includes('mppt')) return 'images/solar-controller.jpg';
+    if (name.includes('inverter')) return 'images/power-inverter.jpg';
+    if (name.includes('changeover')) return 'images/changeover-switch.jpg';
+    if (name.includes('single core')) return 'images/single-core-cable.jpg';
+    if (name.includes('armoured')) return 'images/armoured-cable.jpg';
+    if (name.includes('touch') && name.includes('switch')) return 'images/touch-switch.jpg';
+    if (name.includes('outdoor') && name.includes('socket')) return 'images/outdoor-socket.jpg';
+    if (name.includes('exhaust') || name.includes('ventilation fan')) return 'images/exhaust-fan.jpg';
     if (name.includes('chandelier')) return 'images/chandelier.jpg';
     if (name.includes('strip')) return 'images/strip-light.jpg';
     if (name.includes('kettle')) return 'images/kettle.jpg';

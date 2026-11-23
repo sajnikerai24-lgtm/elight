@@ -11,6 +11,15 @@ const cartCount = document.getElementById('cart-count');
 
 function getProductImage(name) {
   const text = String(name || '').toLowerCase();
+  if (text.includes('shower')) return 'images/instant-shower.jpg';
+  if (text.includes('charge controller') || text.includes('mppt')) return 'images/solar-controller.jpg';
+  if (text.includes('inverter')) return 'images/power-inverter.jpg';
+  if (text.includes('changeover')) return 'images/changeover-switch.jpg';
+  if (text.includes('single core')) return 'images/single-core-cable.jpg';
+  if (text.includes('armoured')) return 'images/armoured-cable.jpg';
+  if (text.includes('touch') && text.includes('switch')) return 'images/touch-switch.jpg';
+  if (text.includes('outdoor') && text.includes('socket')) return 'images/outdoor-socket.jpg';
+  if (text.includes('exhaust') || text.includes('ventilation fan')) return 'images/exhaust-fan.jpg';
   if (text.includes('chandelier')) return 'images/chandelier.jpg';
   if (text.includes('strip light') || text.includes('led strip')) return 'images/strip-light.jpg';
   if (text.includes('kettle')) return 'images/kettle.jpg';
