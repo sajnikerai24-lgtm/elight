@@ -13,8 +13,6 @@ const productList = document.getElementById('product-list');
 const statusText = document.getElementById('status');
 const searchInput = document.getElementById('search');
 const categoryFilter = document.getElementById('category-filter');
-const minPriceInput = document.getElementById('min-price');
-const maxPriceInput = document.getElementById('max-price');
 const sortSelect = document.getElementById('sort-select');
 const resetFiltersBtn = document.getElementById('reset-filters-btn');
 const categoryChips = document.getElementById('category-chips');
@@ -84,14 +82,10 @@ function initFromUrlParams() {
   const urlParams = new URLSearchParams(window.location.search);
   const q = urlParams.get('q');
   const cat = urlParams.get('category');
-  const minP = urlParams.get('minPrice');
-  const maxP = urlParams.get('maxPrice');
   const sort = urlParams.get('sort');
 
   if (q && searchInput) searchInput.value = q;
   if (cat) activeCategory = cat;
-  if (minP && minPriceInput) minPriceInput.value = minP;
-  if (maxP && maxPriceInput) maxPriceInput.value = maxP;
   if (sort && sortSelect) {
     sortOrder = sort;
     sortSelect.value = sort;
@@ -104,13 +98,9 @@ function initFromUrlParams() {
 function syncUrlParams() {
   const params = new URLSearchParams();
   const q = searchInput ? searchInput.value.trim() : '';
-  const minP = minPriceInput ? minPriceInput.value.trim() : '';
-  const maxP = maxPriceInput ? maxPriceInput.value.trim() : '';
 
   if (q) params.set('q', q);
   if (activeCategory && activeCategory !== 'All') params.set('category', activeCategory);
-  if (minP) params.set('minPrice', minP);
-  if (maxP) params.set('maxPrice', maxP);
 
   const qs = params.toString();
   const newUrl = qs ? `/products?${qs}` : '/products';
@@ -121,10 +111,8 @@ function updateResetButtonVisibility() {
   if (!resetFiltersBtn) return;
   const hasQuery = Boolean(searchInput && searchInput.value.trim());
   const hasCategory = activeCategory !== 'All';
-  const hasMin = Boolean(minPriceInput && minPriceInput.value.trim());
-  const hasMax = Boolean(maxPriceInput && maxPriceInput.value.trim());
 
-  resetFiltersBtn.style.display = (hasQuery || hasCategory || hasMin || hasMax)
+  resetFiltersBtn.style.display = (hasQuery || hasCategory)
     ? 'inline-block'
     : 'none';
 }
@@ -193,8 +181,6 @@ function updateActiveChip() {
 // Query the backend Product Search Module API
 async function executeProductSearch() {
   const q = searchInput ? searchInput.value.trim() : '';
-  const minP = minPriceInput ? minPriceInput.value.trim() : '';
-  const maxP = maxPriceInput ? maxPriceInput.value.trim() : '';
 
   updateResetButtonVisibility();
   syncUrlParams();
@@ -202,8 +188,6 @@ async function executeProductSearch() {
   const apiParams = new URLSearchParams();
   if (q) apiParams.set('q', q);
   if (activeCategory && activeCategory !== 'All') apiParams.set('category', activeCategory);
-  if (minP) apiParams.set('minPrice', minP);
-  if (maxP) apiParams.set('maxPrice', maxP);
   apiParams.set('sort', sortOrder);
 
   try {
@@ -347,20 +331,6 @@ if (categoryFilter) {
   });
 }
 
-if (minPriceInput) {
-  minPriceInput.addEventListener('input', () => {
-    clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(executeProductSearch, 220);
-  });
-}
-
-if (maxPriceInput) {
-  maxPriceInput.addEventListener('input', () => {
-    clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(executeProductSearch, 220);
-  });
-}
-
 if (sortSelect) {
   sortSelect.addEventListener('change', () => {
     sortOrder = sortSelect.value;
@@ -371,8 +341,6 @@ if (sortSelect) {
 if (resetFiltersBtn) {
   resetFiltersBtn.addEventListener('click', () => {
     if (searchInput) searchInput.value = '';
-    if (minPriceInput) minPriceInput.value = '';
-    if (maxPriceInput) maxPriceInput.value = '';
     activeCategory = 'All';
     sortOrder = 'name-asc';
     if (categoryFilter) categoryFilter.value = 'All';
