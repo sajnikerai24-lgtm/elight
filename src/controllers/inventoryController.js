@@ -1,6 +1,9 @@
 const supabase = require('../config/supabase');
 const interModuleSync = require('../utils/interModuleSync');
 const { sortByLatest } = require('../utils/sortLatest');
+const productDetailsCatalog = require('../utils/productDetailsCatalog');
+const moduleNotifications = require('../utils/moduleNotifications');
+const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 
 // Sample initial products for fallback preview when table is not yet created in Supabase
 const sampleProducts = [
@@ -162,7 +165,10 @@ const inventoryController = {
       if (products.length === 0) {
         products = await interModuleSync.getProducts();
       }
-      products = sortByLatest(products, 'product_id');
+      products = sortByLatest(products, 'product_id').map(p => ({
+        ...p,
+        ...productDetailsCatalog.getCardMetadata(p)
+      }));
 
       res.json({
         success: true,
@@ -303,7 +309,10 @@ const inventoryController = {
       });
 
       const totalMatches = scored.length;
-      const finalProducts = (limit ? scored.slice(0, limit) : scored).map(entry => entry.item);
+      const finalProducts = (limit ? scored.slice(0, limit) : scored).map(entry => ({
+        ...entry.item,
+        ...productDetailsCatalog.getCardMetadata(entry.item)
+      }));
 
       res.json({
         success: true,
@@ -575,6 +584,171 @@ const inventoryController = {
       res.status(500).json({
         success: false,
         message: 'Failed to delete product: ' + err.message
+      });
+    }
+  },
+
+  // Fetch complete product details, technical specifications, warranty coverage, and customer reviews
+  getProductDetails: async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!id || Number.isNaN(id)) {
+        return res.status(400).json({ success: false, message: 'Valid product ID is required.' });
+      }
+
+      let product = null;
+      try {
+        const { data, error } = await withTimeout(
+          supabase.from('inventory').select('*').eq('product_id', id).maybeSingle()
+        );
+        if (!error && data) product = data;
+      } catch (e) {}
+
+      if (!product) {
+        const allProds = await interModuleSync.getProducts();
+        product = allProds.find(p => Number(p.product_id) === id) || null;
+      }
+
+      if (!product) {
+        return res.status(404).json({ success: false, message: 'Product not found.' });
+      }
+
+      const details = productDetailsCatalog.getProductDetailsAndWarranty(product);
+      const { reviews, reviewSummary } = productDetailsCatalog.getReviewsForProduct(product);
+
+      res.json({
+        success: true,
+        product: {
+          ...product,
+          ...productDetailsCatalog.getCardMetadata(product)
+        },
+        details: {
+          sku: details.sku,
+          brand: details.brand,
+          description: details.description,
+          highlights: details.highlights,
+          specs: details.specs
+        },
+        warranty: details.warranty,
+        reviewSummary,
+        reviews
+      });
+    } catch (err) {
+      console.error('Error fetching product details:', err.message);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to load product details: ' + err.message
+      });
+    }
+  },
+
+  // Submit a customer review for a specific catalog product
+  createProductReview: async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!id || Number.isNaN(id)) {
+        return res.status(400).json({ success: false, message: 'Valid product ID is required.' });
+      }
+
+      const { customer_name, customer_location, rating, title, comment } = req.body || {};
+      const cleanName = String(customer_name || '').trim();
+      const cleanComment = String(comment || '').trim();
+      const cleanRating = Math.min(5, Math.max(1, parseInt(rating, 10) || 5));
+
+      if (cleanName.length < 2) {
+        return res.status(400).json({ success: false, message: 'Please enter your name (at least 2 characters).' });
+      }
+      if (cleanComment.length < 5) {
+        return res.status(400).json({ success: false, message: 'Please write a short review comment (at least 5 characters).' });
+      }
+
+      let product = null;
+      try {
+        const { data, error } = await withTimeout(
+          supabase.from('inventory').select('*').eq('product_id', id).maybeSingle()
+        );
+        if (!error && data) product = data;
+      } catch (e) {}
+
+      if (!product) {
+        const allProds = await interModuleSync.getProducts();
+        product = allProds.find(p => Number(p.product_id) === id) || null;
+      }
+
+      if (!product) {
+        return res.status(404).json({ success: false, message: 'Product not found.' });
+      }
+
+      const newReview = productDetailsCatalog.addReviewForProduct(product, {
+        customer_name: cleanName,
+        customer_location: customer_location || 'Meru County',
+        rating: cleanRating,
+        title: title || `${product.product_name} Review`,
+        comment: cleanComment
+      });
+
+      // Mirror into feedback_data.json & Supabase customer_feedback + ERP notifications
+      try {
+        const path = require('path');
+        const feedbackPath = path.join(__dirname, '../config/feedback_data.json');
+        const fbList = readJsonFile(feedbackPath, []);
+        const nextFbId = fbList.length > 0 ? Math.max(...fbList.map(f => Number(f.feedback_id) || 0)) + 1 : 1;
+        const subjectText = `[#${id}] ${product.product_name} — ${newReview.title}`;
+        const fbEntry = {
+          feedback_id: nextFbId,
+          product_id: id,
+          customer_name: newReview.customer_name,
+          customer_email: null,
+          customer_phone: null,
+          feedback_type: 'review',
+          module_tag: 'inventory',
+          rating: cleanRating,
+          subject: subjectText,
+          message: newReview.comment,
+          status: 'published',
+          admin_reply: null,
+          created_at: newReview.created_at
+        };
+        fbList.unshift(fbEntry);
+        writeJsonFile(feedbackPath, fbList);
+
+        await supabase.from('customer_feedback').insert([{
+          customer_name: fbEntry.customer_name,
+          customer_email: null,
+          feedback_type: 'review',
+          rating: cleanRating,
+          subject: subjectText,
+          message: fbEntry.message,
+          status: 'published'
+        }]);
+      } catch (e) {}
+
+      try {
+        moduleNotifications.notify({
+          targetModules: ['feedback', 'inventory'],
+          sourceModule: 'feedback',
+          department: 'inventory',
+          senderName: newReview.customer_name,
+          title: `New Product Review (${cleanRating}★): ${product.product_name}`,
+          message: `${newReview.customer_name}: "${newReview.comment}"`,
+          severity: 'info',
+          refNo: `PRD-${id}`
+        });
+      } catch (e) {}
+
+      const { reviews, reviewSummary } = productDetailsCatalog.getReviewsForProduct(product);
+      res.status(201).json({
+        success: true,
+        message: 'Thank you! Your product review has been published.',
+        review: newReview,
+        reviewSummary,
+        reviews
+      });
+    } catch (err) {
+      console.error('Error submitting product review:', err.message);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to submit review: ' + err.message
       });
     }
   }

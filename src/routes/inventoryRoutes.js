@@ -10,6 +10,8 @@ router.get('/db-test', inventoryController.testConnection);
 router.get('/inventory', inventoryController.getAllProducts);
 router.get('/inventory/search', inventoryController.searchProducts);
 router.get('/inventory/low-stock', inventoryController.getLowStockProducts);
+router.get('/inventory/:id/details', inventoryController.getProductDetails);
+router.post('/inventory/:id/reviews', inventoryController.createProductReview);
 router.post('/inventory', blockSuppliersFromStaff, inventoryController.createProduct);
 router.put('/inventory/:id', blockSuppliersFromStaff, inventoryController.updateProduct);
 router.delete('/inventory/:id', blockSuppliersFromStaff, inventoryController.deleteProduct);

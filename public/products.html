@@ -96,10 +96,26 @@
     </div>
   </div>
 
+  <!-- Product Details, Warranty & Customer Reviews Modal -->
+  <div class="modal-overlay" id="product-detail-modal" aria-hidden="true" role="dialog" aria-labelledby="pdm-title">
+    <div class="modal-box product-detail-modal">
+      <div class="modal-header pdm-header">
+        <div>
+          <span class="pdm-cat-pill" id="pdm-category">Electrical</span>
+          <h3 id="pdm-title">Product Details</h3>
+        </div>
+        <button type="button" class="modal-close" id="pdm-close-btn" aria-label="Close product details">✕</button>
+      </div>
+      <div id="pdm-body" class="pdm-body">
+        <div class="pdm-loading">Loading product details, warranty &amp; customer reviews...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Search Module & Dedicated Products Page Script -->
   <script src="js/live_sync.js"></script>
   <script src="js/search_module.js"></script>
-  <script src="js/products.js?v=2"></script>
+  <script src="js/products.js?v=3"></script>
   <script>
     (function () {
       try {
