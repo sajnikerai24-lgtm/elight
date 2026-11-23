@@ -20,6 +20,12 @@ const cartCount = document.getElementById('cart-count');
 
 function getProductImage(name) {
   const text = String(name || '').toLowerCase();
+  if (text.includes('desk lamp') || text.includes('study')) return 'images/desk-lamp.jpg';
+  if (text.includes('table lamp')) return 'images/table-lamp.jpg';
+  if (text.includes('floor lamp')) return 'images/floor-lamp.jpg';
+  if (text.includes('pendant lamp') || text.includes('nordic pendant')) return 'images/pendant-lamp.jpg';
+  if (text.includes('edison') || text.includes('filament')) return 'images/edison-lamp.jpg';
+  if (text.includes('lantern')) return 'images/wall-lantern-lamp.jpg';
   if (text.includes('shower')) return 'images/instant-shower.jpg';
   if (text.includes('charge controller') || text.includes('mppt')) return 'images/solar-controller.jpg';
   if (text.includes('inverter')) return 'images/power-inverter.jpg';

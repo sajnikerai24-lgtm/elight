@@ -1,5 +1,77 @@
 [
   {
+    "product_id": 45,
+    "product_name": "Weatherproof Outdoor Wall Lantern Lamp",
+    "category_id": 1,
+    "category_name": "Lighting",
+    "buying_price": 1750,
+    "selling_price": 2550,
+    "quantity_in_stock": 14,
+    "reorder_level": 4,
+    "created_at": "2026-11-23T06:39:08.177172+00:00",
+    "image_url": "images/wall-lantern-lamp.jpg"
+  },
+  {
+    "product_id": 44,
+    "product_name": "Vintage Warm Edison Filament LED Lamp 8W (E27)",
+    "category_id": 1,
+    "category_name": "Lighting",
+    "buying_price": 480,
+    "selling_price": 750,
+    "quantity_in_stock": 30,
+    "reorder_level": 8,
+    "created_at": "2026-11-23T06:39:08.177172+00:00",
+    "image_url": "images/edison-lamp.jpg"
+  },
+  {
+    "product_id": 43,
+    "product_name": "Nordic Pendant Hanging Lamp Fixture",
+    "category_id": 1,
+    "category_name": "Lighting",
+    "buying_price": 2950,
+    "selling_price": 4200,
+    "quantity_in_stock": 10,
+    "reorder_level": 3,
+    "created_at": "2026-11-23T06:39:08.177172+00:00",
+    "image_url": "images/pendant-lamp.jpg"
+  },
+  {
+    "product_id": 42,
+    "product_name": "Minimalist Standing Corner Floor Lamp",
+    "category_id": 1,
+    "category_name": "Lighting",
+    "buying_price": 3800,
+    "selling_price": 5400,
+    "quantity_in_stock": 8,
+    "reorder_level": 2,
+    "created_at": "2026-11-23T06:39:08.177172+00:00",
+    "image_url": "images/floor-lamp.jpg"
+  },
+  {
+    "product_id": 41,
+    "product_name": "Modern Bedside Shade Table Lamp (Warm Glow)",
+    "category_id": 1,
+    "category_name": "Lighting",
+    "buying_price": 1900,
+    "selling_price": 2800,
+    "quantity_in_stock": 12,
+    "reorder_level": 4,
+    "created_at": "2026-11-23T06:39:08.177172+00:00",
+    "image_url": "images/table-lamp.jpg"
+  },
+  {
+    "product_id": 40,
+    "product_name": "Adjustable LED Study & Architect Desk Lamp (12W)",
+    "category_id": 1,
+    "category_name": "Lighting",
+    "buying_price": 1250,
+    "selling_price": 1850,
+    "quantity_in_stock": 18,
+    "reorder_level": 5,
+    "created_at": "2026-11-23T06:39:08.177172+00:00",
+    "image_url": "images/desk-lamp.jpg"
+  },
+  {
     "product_id": 39,
     "product_name": "Ceiling Exhaust Ventilation Fan 8-Inch",
     "category_id": 5,

@@ -52,6 +52,12 @@ const ElightSearch = (() => {
   function resolveImage(product) {
     if (product.image_url) return product.image_url;
     const name = String(product.product_name || '').toLowerCase();
+    if (name.includes('desk lamp') || name.includes('study')) return 'images/desk-lamp.jpg';
+    if (name.includes('table lamp')) return 'images/table-lamp.jpg';
+    if (name.includes('floor lamp')) return 'images/floor-lamp.jpg';
+    if (name.includes('pendant lamp') || name.includes('nordic pendant')) return 'images/pendant-lamp.jpg';
+    if (name.includes('edison') || name.includes('filament')) return 'images/edison-lamp.jpg';
+    if (name.includes('lantern')) return 'images/wall-lantern-lamp.jpg';
     if (name.includes('shower')) return 'images/instant-shower.jpg';
     if (name.includes('charge controller') || name.includes('mppt')) return 'images/solar-controller.jpg';
     if (name.includes('inverter')) return 'images/power-inverter.jpg';
