@@ -2991,11 +2991,50 @@ async function openOrderInvoiceModal(orderNo) {
   openModal('cashier-invoice-modal');
 
   try {
-    const res = await fetch(`/api/cashier/orders/${encodeURIComponent(orderNo)}/invoice`);
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message || 'Failed to load invoice');
-
-    const inv = data.invoice;
+    let inv = null;
+    try {
+      const cleanOrderNo = String(orderNo || '').trim().replace(/^#/, '');
+      const res = await fetch(`/api/cashier/orders/${encodeURIComponent(cleanOrderNo)}/invoice`);
+      const data = await res.json();
+      if (res.ok && data.success && data.invoice) {
+        inv = data.invoice;
+      } else {
+        throw new Error(data.message || 'Failed to load invoice');
+      }
+    } catch (apiErr) {
+      const upper = String(orderNo || '').trim().replace(/^#/, '').toUpperCase();
+      const localMatch = (Array.isArray(cashierOrdersList) ? cashierOrdersList : []).find(o =>
+        [o.order_no, o.order_number, o.payment_ref, o.receipt_no].some(v => String(v || '').trim().toUpperCase() === upper)
+      );
+      if (!localMatch) throw apiErr;
+      inv = {
+        invoice_no: localMatch.invoice_no || `INV-${String(localMatch.order_no || upper).replace(/^EL-/, '')}`,
+        order_no: localMatch.order_no || orderNo,
+        receipt_no: localMatch.receipt_no || '',
+        customer_name: localMatch.customer_name || 'Walk-in Customer',
+        customer_phone: localMatch.customer_phone || '-',
+        customer_location: localMatch.customer_location || 'Meru County',
+        items: (localMatch.items || []).map(it => {
+          const qty = Number(it.quantity || 1);
+          const unit = Number(it.unit_price ?? it.selling_price ?? 0);
+          return { ...it, quantity: qty, unit_price: unit, total: qty * unit };
+        }),
+        subtotal: localMatch.subtotal || localMatch.total_amount,
+        delivery_fee: localMatch.delivery_fee || 0,
+        installation_fee: localMatch.installation_fee || 0,
+        total_amount: localMatch.total_amount,
+        amount_paid: localMatch.amount_paid !== undefined ? localMatch.amount_paid : (localMatch.payment_status === 'paid' ? localMatch.total_amount : 0),
+        balance_due: localMatch.balance_due || 0,
+        payment_status: localMatch.payment_status || 'unpaid',
+        payment_method: localMatch.payment_method || 'M-Pesa / Cash',
+        payment_ref: localMatch.payment_ref || (localMatch.payment_status === 'paid' ? 'Verified' : 'Pending'),
+        order_status: localMatch.order_status || 'processing',
+        delivery_status: localMatch.delivery_status || 'not_scheduled',
+        installation_status: localMatch.installation_status || 'not_requested',
+        fulfillment_mode: localMatch.fulfillment_mode || (localMatch.fulfillment_type === 'product_delivery' ? 'delivery' : 'collection'),
+        created_at: localMatch.created_at || new Date().toISOString()
+      };
+    }
     const itemsHtml = (inv.items || []).map((it, idx) => `
       <tr>
         <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0; text-align:center; color:#64748b;">${idx + 1}</td>

@@ -3563,36 +3563,245 @@ const erpController = {
 
   getOrderInvoice: async (req, res) => {
     try {
-      const orderNo = String(req.params.orderNo || '').trim();
-      const orders = readCashierOrders();
-      const order = orders.find(o => String(o.order_no || o.order_number || '').toUpperCase() === orderNo.toUpperCase());
-      if (!order) return res.status(404).json({ success: false, message: `Order #${orderNo} not found.` });
-
-      if (!order.invoice_no) {
-        order.invoice_no = `INV-${String(order.order_no).replace(/^EL-/, '') || Date.now().toString().slice(-6)}`;
-        writeCashierOrders(orders);
+      const orderNo = String(req.params.orderNo || '').trim().replace(/^#/, '');
+      const upperNo = orderNo.toUpperCase();
+      if (!upperNo) {
+        return res.status(400).json({ success: false, message: 'Order number is required.' });
       }
 
+      const orders = readCashierOrders();
+      let order = orders.find(o => {
+        const candidates = [
+          o.order_no,
+          o.order_number,
+          o.receipt_no,
+          o.invoice_no,
+          o.payment_ref,
+          o.split_details?.mpesa_ref
+        ];
+        return candidates.some(v => String(v || '').trim().toUpperCase() === upperNo);
+      });
+
+      // Fallback 1: Lookup historical sale records from finance_records (Supabase or local store)
+      if (!order) {
+        let finRecords = [];
+        try {
+          const { data } = await supabase
+            .from('finance_records')
+            .select('*')
+            .eq('type', 'sale')
+            .order('record_id', { ascending: false })
+            .limit(100);
+          if (Array.isArray(data) && data.length > 0) finRecords = data;
+        } catch (e) {}
+        if (finRecords.length === 0) {
+          finRecords = readFinanceRecords().filter(f => String(f.type || '').toLowerCase() === 'sale');
+        }
+
+        const matchedFin = finRecords.find(r => {
+          const ref = String(r.reference_no || `SALE-${r.record_id}`).trim().toUpperCase();
+          const saleIdRef = `SALE-${r.record_id}`.toUpperCase();
+          return ref === upperNo || saleIdRef === upperNo;
+        });
+
+        if (matchedFin) {
+          let linkedDisp = null;
+          try {
+            const { data: dRows } = await supabase
+              .from('dispatches')
+              .select('*')
+              .ilike('order_no', orderNo)
+              .limit(1);
+            if (Array.isArray(dRows) && dRows.length > 0) linkedDisp = dRows[0];
+          } catch (e) {}
+          if (!linkedDisp) {
+            linkedDisp = readDispatches().find(d => String(d.order_no || '').trim().toUpperCase() === upperNo) || null;
+          }
+
+          const cashierMatch = String(matchedFin.description || '').match(/\[Cashier:\s*([^\]]+)\]/i);
+          const cleanDesc = String(matchedFin.description || 'Shop Sale').replace(/\s*\[Cashier:[^\]]+\]/i, '').trim();
+          const amt = Number(matchedFin.amount || 0);
+          const ref = String(matchedFin.reference_no || `SALE-${matchedFin.record_id}`);
+
+          order = {
+            order_no: ref,
+            receipt_no: `RCP-${matchedFin.record_id}`,
+            source: matchedFin.category || 'Shop Sale',
+            customer_name: linkedDisp?.customer_name || 'Walk-In / Shop Customer',
+            customer_phone: linkedDisp?.customer_phone || '-',
+            customer_location: linkedDisp?.delivery_address || 'Meru Town Showroom',
+            items: [{ product_id: null, product_name: cleanDesc || 'Electrical Purchase', quantity: 1, unit_price: amt }],
+            subtotal: amt,
+            delivery_fee: 0,
+            installation_fee: 0,
+            total_amount: amt,
+            amount_paid: String(matchedFin.status || 'confirmed').toLowerCase() === 'pending' ? 0 : amt,
+            balance_due: String(matchedFin.status || 'confirmed').toLowerCase() === 'pending' ? amt : 0,
+            payment_status: String(matchedFin.status || 'confirmed').toLowerCase() === 'pending' ? 'pending' : 'paid',
+            payment_method: matchedFin.payment_method || 'M-Pesa',
+            payment_ref: ref,
+            order_status: 'completed',
+            fulfillment_mode: linkedDisp ? 'delivery' : 'collection',
+            fulfillment_type: linkedDisp ? 'product_delivery' : 'product_collection',
+            delivery_status: linkedDisp ? (linkedDisp.status || 'pending_dispatch') : 'collected',
+            installation_status: 'not_requested',
+            cashier_name: cashierMatch ? cashierMatch[1].trim() : 'Esther Karimi',
+            created_at: matchedFin.created_at || new Date().toISOString()
+          };
+        }
+      }
+
+      // Fallback 2: Lookup customer bookings (Supabase or local store)
+      if (!order) {
+        let bookingsList = [];
+        try {
+          const { data } = await supabase
+            .from('bookings')
+            .select('*')
+            .order('booking_id', { ascending: false })
+            .limit(100);
+          if (Array.isArray(data) && data.length > 0) bookingsList = data;
+        } catch (e) {}
+        if (bookingsList.length === 0) {
+          bookingsList = readJsonFile(BOOKINGS_PATH, []);
+        }
+
+        const bk = (Array.isArray(bookingsList) ? bookingsList : []).find(b => {
+          const bRef = String(b.booking_ref || `BK-${b.booking_id}`).trim().toUpperCase();
+          return bRef === upperNo || `BK-${b.booking_id}`.toUpperCase() === upperNo;
+        });
+
+        if (bk) {
+          const isPaid = String(bk.status || '').toLowerCase() === 'completed';
+          const amt = Number(bk.estimated_amount || 0);
+          const qty = Number(bk.quantity || 1);
+          const ref = String(bk.booking_ref || `BK-${bk.booking_id}`);
+
+          order = {
+            order_no: ref,
+            receipt_no: isPaid ? `RCP-${ref}` : '',
+            source: bk.booking_type === 'product' ? 'Customer Product Booking' : 'Customer Service Booking',
+            customer_name: bk.customer_name || 'Customer',
+            customer_phone: bk.customer_phone || '-',
+            customer_location: bk.location_or_notes || 'Meru County',
+            items: [{
+              product_id: bk.product_id || null,
+              product_name: bk.item_or_service_name || 'Electrical Order',
+              quantity: qty,
+              unit_price: qty > 0 ? amt / qty : amt
+            }],
+            subtotal: amt,
+            delivery_fee: 0,
+            installation_fee: 0,
+            total_amount: amt,
+            amount_paid: isPaid ? amt : 0,
+            balance_due: isPaid ? 0 : amt,
+            payment_status: isPaid ? 'paid' : 'pending',
+            payment_method: 'M-Pesa / Cash',
+            payment_ref: isPaid ? ref : 'Pending Confirmation',
+            order_status: isPaid ? 'completed' : 'processing',
+            fulfillment_mode: bk.booking_type === 'product' ? 'collection' : 'service',
+            fulfillment_type: bk.booking_type === 'product' ? 'product_collection' : 'installation_only',
+            delivery_status: isPaid ? 'collected' : 'not_scheduled',
+            installation_status: bk.booking_type === 'service' ? (isPaid ? 'completed' : 'pending') : 'not_requested',
+            created_at: bk.created_at || bk.preferred_date || new Date().toISOString()
+          };
+        }
+      }
+
+      // Fallback 3: Lookup standalone dispatch records by order_no
+      if (!order) {
+        let dispRow = null;
+        try {
+          const { data } = await supabase
+            .from('dispatches')
+            .select('*')
+            .ilike('order_no', orderNo)
+            .limit(1);
+          if (Array.isArray(data) && data.length > 0) dispRow = data[0];
+        } catch (e) {}
+        if (!dispRow) {
+          dispRow = readDispatches().find(d => String(d.order_no || '').trim().toUpperCase() === upperNo) || null;
+        }
+        if (dispRow) {
+          const amt = Number(dispRow.total_amount || 0);
+          order = {
+            order_no: dispRow.order_no,
+            receipt_no: `RCP-${dispRow.order_no}`,
+            customer_name: dispRow.customer_name || 'Customer',
+            customer_phone: dispRow.customer_phone || '-',
+            customer_location: dispRow.delivery_address || 'Meru County',
+            items: Array.isArray(dispRow.items) && dispRow.items.length > 0
+              ? dispRow.items
+              : [{ product_id: null, product_name: dispRow.item_summary || 'Order Dispatch', quantity: 1, unit_price: amt }],
+            subtotal: amt,
+            delivery_fee: 0,
+            installation_fee: 0,
+            total_amount: amt,
+            amount_paid: amt,
+            balance_due: 0,
+            payment_status: 'paid',
+            payment_method: 'M-Pesa / Cash',
+            payment_ref: dispRow.order_no,
+            order_status: dispRow.status === 'delivered' ? 'completed' : 'processing',
+            fulfillment_mode: 'delivery',
+            fulfillment_type: 'product_delivery',
+            delivery_status: dispRow.status || 'pending_dispatch',
+            installation_status: 'not_requested',
+            created_at: dispRow.created_at || new Date().toISOString()
+          };
+        }
+      }
+
+      if (!order) return res.status(404).json({ success: false, message: `Order #${orderNo} not found.` });
+
+      const normalizedOrder = normalizeOrderDualStatuses(order);
+      if (!normalizedOrder.invoice_no) {
+        normalizedOrder.invoice_no = `INV-${String(normalizedOrder.order_no).replace(/^EL-/, '') || Date.now().toString().slice(-6)}`;
+        if (orders.includes(order)) {
+          order.invoice_no = normalizedOrder.invoice_no;
+          writeCashierOrders(orders);
+        }
+      }
+
+      const cleanItems = (normalizedOrder.items || []).map(it => {
+        const qty = Number(it.quantity || 1);
+        const unit = Number(it.unit_price ?? it.selling_price ?? 0);
+        return {
+          ...it,
+          product_name: it.product_name || 'Electrical Item',
+          quantity: qty,
+          unit_price: unit,
+          total: it.total !== undefined ? Number(it.total) : qty * unit
+        };
+      });
+
       const invoiceData = {
-        invoice_no: order.invoice_no,
-        order_no: order.order_no,
-        receipt_no: order.receipt_no || '',
-        customer_name: order.customer_name || 'Walk-in Customer',
-        customer_phone: order.customer_phone || '-',
-        customer_location: order.customer_location || 'Meru County',
-        items: order.items || [],
-        subtotal: order.subtotal || order.total_amount,
-        delivery_fee: order.delivery_fee || 0,
-        total_amount: order.total_amount,
-        amount_paid: order.amount_paid || 0,
-        balance_due: order.balance_due || 0,
-        payment_status: order.payment_status || 'unpaid',
-        payment_method: order.payment_method || 'M-Pesa / Cash',
-        fulfillment_type: order.fulfillment_type || 'product_delivery',
-        created_at: order.created_at || new Date().toISOString()
+        invoice_no: normalizedOrder.invoice_no,
+        order_no: normalizedOrder.order_no,
+        receipt_no: normalizedOrder.receipt_no || '',
+        customer_name: normalizedOrder.customer_name || 'Walk-in Customer',
+        customer_phone: normalizedOrder.customer_phone || '-',
+        customer_location: normalizedOrder.customer_location || 'Meru County',
+        items: cleanItems,
+        subtotal: normalizedOrder.subtotal || normalizedOrder.total_amount,
+        delivery_fee: normalizedOrder.delivery_fee || 0,
+        installation_fee: normalizedOrder.installation_fee || 0,
+        total_amount: normalizedOrder.total_amount,
+        amount_paid: normalizedOrder.amount_paid || 0,
+        balance_due: normalizedOrder.balance_due || 0,
+        payment_status: normalizedOrder.payment_status || 'unpaid',
+        payment_method: normalizedOrder.payment_method || 'M-Pesa / Cash',
+        payment_ref: normalizedOrder.payment_ref || (normalizedOrder.payment_status === 'paid' ? 'Verified' : 'Pending'),
+        order_status: normalizedOrder.order_status || 'processing',
+        delivery_status: normalizedOrder.delivery_status || 'not_scheduled',
+        installation_status: normalizedOrder.installation_status || 'not_requested',
+        fulfillment_mode: normalizedOrder.fulfillment_mode || (normalizedOrder.fulfillment_type === 'product_delivery' ? 'delivery' : 'collection'),
+        fulfillment_type: normalizedOrder.fulfillment_type || 'product_delivery',
+        created_at: normalizedOrder.created_at || new Date().toISOString()
       };
 
-      res.json({ success: true, invoice: invoiceData, order });
+      res.json({ success: true, invoice: invoiceData, order: normalizedOrder });
     } catch (err) {
       console.error('getOrderInvoice error:', err);
       res.status(500).json({ success: false, message: err.message });
