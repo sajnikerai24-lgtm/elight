@@ -349,8 +349,7 @@ function inferSpecsFromProduct(product) {
       'Physical impact damage, crushed housing, water ingress outside IP rating, or cut power cords',
       'Damage caused by lightning strikes, extreme KPLC surges without surge protection, or overload beyond rated amps/watts',
       'Tampered warranty seals or unauthorized third-party repairs'
-    ],
-    claimProcess: 'Present your Elight Order # or Receipt at our Meru Town Showroom (or call +254 700 123 456 / open My Account → Warranties) for rapid testing and swap-out.'
+    ]
   };
 
   const sku = `ELG-${String(category || 'GEN').replace(/[^A-Z]/gi, '').slice(0, 3).toUpperCase()}-${String(id).padStart(4, '0')}`;

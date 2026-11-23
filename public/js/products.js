@@ -486,9 +486,6 @@ function renderProductDetailsModalContent(payload) {
           <ul>${exclusionsHtml}</ul>
         </div>
       </div>
-      <div class="pdm-warranty-claim">
-        <strong>How to Claim Warranty:</strong> ${escapeHTML(warranty.claimProcess || '')}
-      </div>
     </section>
 
     <section class="pdm-section" id="pdm-section-reviews">
