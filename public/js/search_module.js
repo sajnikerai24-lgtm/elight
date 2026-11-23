@@ -80,75 +80,6 @@ const ElightSearch = (() => {
     localStorage.removeItem(RECENT_STORAGE_KEY);
   }
 
-  function quickAddToCart(product) {
-    const stock = Number(product.quantity_in_stock || 0);
-    if (stock <= 0) return;
-
-    let currentCart = [];
-    try {
-      currentCart = JSON.parse(localStorage.getItem('elight_cart') || '[]');
-    } catch {
-      currentCart = [];
-    }
-
-    const existing = currentCart.find(item => item.product_id === product.product_id);
-    if (existing) {
-      if (existing.quantity >= stock) {
-        notifyToast(`Maximum available stock (${stock}) reached!`, 'error');
-        return;
-      }
-      existing.quantity += 1;
-    } else {
-      currentCart.push({
-        product_id: product.product_id,
-        product_name: product.product_name,
-        category_name: product.category_name || 'General',
-        selling_price: Number(product.selling_price || 0),
-        quantity: 1,
-        stock,
-        image_url: resolveImage(product)
-      });
-    }
-
-    localStorage.setItem('elight_cart', JSON.stringify(currentCart));
-
-    // Sync global cart variable if page script uses one
-    if (typeof window.cart !== 'undefined' && Array.isArray(window.cart)) {
-      window.cart = currentCart;
-    }
-    const totalCount = currentCart.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-    document.querySelectorAll('#cart-count').forEach(el => {
-      el.textContent = totalCount;
-    });
-
-    notifyToast(
-      `Added <strong>${escapeHTML(product.product_name)}</strong> to cart! <a href="/cart" style="color:#ffc107; font-weight:700; margin-left:8px; text-decoration:underline;">View Cart →</a>`,
-      'success'
-    );
-  }
-
-  function notifyToast(html, type = 'info') {
-    if (typeof window.showToast === 'function') {
-      window.showToast(html, type);
-      return;
-    }
-    let container = document.getElementById('toast-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'toast-container';
-      container.className = 'toast-container';
-      document.body.appendChild(container);
-    }
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = html;
-    container.appendChild(toast);
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      setTimeout(() => toast.remove(), 300);
-    }, 3200);
-  }
-
   function navigateToCatalogSearch(query) {
     const clean = String(query || '').trim();
     if (clean) saveRecentSearch(clean);
@@ -288,9 +219,6 @@ const ElightSearch = (() => {
               </div>
               <div class="search-dd-right">
                 <div class="search-dd-price">${formatKES(prod.selling_price)}</div>
-                <button type="button" class="search-dd-cart-btn" data-cart-idx="${idx}" ${stock <= 0 ? 'disabled' : ''}>
-                  ${stock > 0 ? '+ Cart' : 'Sold Out'}
-                </button>
               </div>
             </div>
           `;
@@ -306,8 +234,7 @@ const ElightSearch = (() => {
 
         // Bind item click
         dropdown.querySelectorAll('.search-dd-item').forEach(row => {
-          row.addEventListener('click', (e) => {
-            if (e.target.closest('[data-cart-idx]')) return;
+          row.addEventListener('click', () => {
             const idx = Number(row.getAttribute('data-idx'));
             const prod = currentItems[idx];
             if (prod) {
@@ -315,16 +242,6 @@ const ElightSearch = (() => {
               closeDropdown();
               navigateToCatalogSearch(prod.product_name);
             }
-          });
-        });
-
-        // Bind quick +Cart click
-        dropdown.querySelectorAll('[data-cart-idx]').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const idx = Number(btn.getAttribute('data-cart-idx'));
-            const prod = currentItems[idx];
-            if (prod) quickAddToCart(prod);
           });
         });
 
