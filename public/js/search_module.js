@@ -1,3 +1,4 @@
+
 /**
  * Elight Electrical Shop - Global Product Search Module
  * Provides live instant-autocomplete search, keyword highlighting,
