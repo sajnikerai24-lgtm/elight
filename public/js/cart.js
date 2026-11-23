@@ -287,7 +287,7 @@ async function handleCheckout(e) {
   // If M-Pesa is selected, validate phone number
   if (paymentVal === 'mpesa') {
     if (!rawPhone || rawPhone.length < 9) {
-      showToast('Please enter your M-Pesa phone number to proceed.', 'error');
+      showToast('Please enter your phone number to proceed.', 'error');
       phoneInput?.focus();
       return;
     }
