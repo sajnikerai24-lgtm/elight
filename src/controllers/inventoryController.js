@@ -286,6 +286,14 @@ const inventoryController = {
         if (sort === 'relevance' && tokens.length > 0 && b.score !== a.score) {
           return b.score - a.score;
         }
+        if (sort === 'latest') {
+          const timeB = b.item.created_at ? new Date(b.item.created_at).getTime() : 0;
+          const timeA = a.item.created_at ? new Date(a.item.created_at).getTime() : 0;
+          if (!Number.isNaN(timeB) && !Number.isNaN(timeA) && timeB !== timeA) {
+            return timeB - timeA;
+          }
+          return Number(b.item.product_id || 0) - Number(a.item.product_id || 0);
+        }
         if (sort === 'price-asc') return priceA - priceB;
         if (sort === 'price-desc') return priceB - priceA;
         if (sort === 'stock-desc') return stockB - stockA;

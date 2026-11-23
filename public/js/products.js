@@ -5,7 +5,7 @@
 let allProducts = [];
 let cart = JSON.parse(localStorage.getItem('elight_cart') || '[]');
 let activeCategory = 'All';
-let sortOrder = 'relevance';
+let sortOrder = 'latest';
 let searchDebounce = null;
 
 // DOM Elements
@@ -86,12 +86,12 @@ function initFromUrlParams() {
 
   if (q && searchInput) searchInput.value = q;
   if (cat) activeCategory = cat;
-  if (sort && sortSelect) {
+  if (sort && sort !== 'name-asc' && sortSelect) {
     sortOrder = sort;
     sortSelect.value = sort;
   } else if (!q && sortSelect) {
-    sortOrder = 'name-asc';
-    sortSelect.value = 'name-asc';
+    sortOrder = 'latest';
+    sortSelect.value = 'latest';
   }
 }
 
@@ -304,7 +304,7 @@ window.triggerCatalogSearch = function(query) {
   if (searchInput) {
     searchInput.value = query;
   }
-  if (query && sortSelect && sortOrder === 'name-asc') {
+  if (query && sortSelect && sortOrder === 'latest') {
     sortOrder = 'relevance';
     sortSelect.value = 'relevance';
   }
@@ -315,7 +315,7 @@ window.triggerCatalogSearch = function(query) {
 if (searchInput) {
   searchInput.addEventListener('input', () => {
     clearTimeout(searchDebounce);
-    if (searchInput.value.trim() && sortSelect && sortOrder === 'name-asc') {
+    if (searchInput.value.trim() && sortSelect && sortOrder === 'latest') {
       sortOrder = 'relevance';
       sortSelect.value = 'relevance';
     }
@@ -342,9 +342,9 @@ if (resetFiltersBtn) {
   resetFiltersBtn.addEventListener('click', () => {
     if (searchInput) searchInput.value = '';
     activeCategory = 'All';
-    sortOrder = 'name-asc';
+    sortOrder = 'latest';
     if (categoryFilter) categoryFilter.value = 'All';
-    if (sortSelect) sortSelect.value = 'name-asc';
+    if (sortSelect) sortSelect.value = 'latest';
     updateActiveChip();
     executeProductSearch();
   });
