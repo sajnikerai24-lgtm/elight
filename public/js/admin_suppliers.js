@@ -545,10 +545,17 @@
   window.downloadErpDocProxy = downloadErpSupplierDoc;
 
   function suggestProductMaxPrice(prod) {
+    const explicit = Number(prod?.max_unit_price || 0);
+    if (!Number.isNaN(explicit) && explicit > 0) return Number(explicit.toFixed(2));
     const buy = Number(prod?.buying_price || 0);
     const sell = Number(prod?.selling_price || 0);
     const base = buy > 0 ? buy : (sell > 0 ? Math.round(sell * 0.72) : 200);
-    return Math.max(10, Math.round(base * 1.15));
+    let computed = Math.max(10, Math.round(base * 1.15));
+    if (sell > 0 && computed >= sell) {
+      const ceiling = Math.round(sell * 0.92);
+      computed = buy > 0 ? Math.max(buy, ceiling) : Math.max(10, ceiling);
+    }
+    return computed;
   }
 
   window.onPOItemProductChange = function (selectEl) {
@@ -557,7 +564,7 @@
     const opt = selectEl.options[selectEl.selectedIndex];
     const maxInput = row.querySelector('.po-item-max');
     if (opt && maxInput) {
-      maxInput.value = Number(opt.dataset.max || 1500);
+      maxInput.value = Number(opt.dataset.max || 200);
     }
   };
 

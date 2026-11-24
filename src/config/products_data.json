@@ -9,7 +9,8 @@
     "quantity_in_stock": 14,
     "reorder_level": 4,
     "created_at": "2026-11-23T06:39:08.177172+00:00",
-    "image_url": "images/wall-lantern-lamp.jpg"
+    "image_url": "images/wall-lantern-lamp.jpg",
+    "max_unit_price": 2012
   },
   {
     "product_id": 44,
@@ -21,7 +22,8 @@
     "quantity_in_stock": 30,
     "reorder_level": 8,
     "created_at": "2026-11-23T06:39:08.177172+00:00",
-    "image_url": "images/edison-lamp.jpg"
+    "image_url": "images/edison-lamp.jpg",
+    "max_unit_price": 552
   },
   {
     "product_id": 43,
@@ -33,7 +35,8 @@
     "quantity_in_stock": 10,
     "reorder_level": 3,
     "created_at": "2026-11-23T06:39:08.177172+00:00",
-    "image_url": "images/pendant-lamp.jpg"
+    "image_url": "images/pendant-lamp.jpg",
+    "max_unit_price": 3392
   },
   {
     "product_id": 42,
@@ -45,7 +48,8 @@
     "quantity_in_stock": 8,
     "reorder_level": 2,
     "created_at": "2026-11-23T06:39:08.177172+00:00",
-    "image_url": "images/floor-lamp.jpg"
+    "image_url": "images/floor-lamp.jpg",
+    "max_unit_price": 4370
   },
   {
     "product_id": 41,
@@ -57,7 +61,8 @@
     "quantity_in_stock": 12,
     "reorder_level": 4,
     "created_at": "2026-11-23T06:39:08.177172+00:00",
-    "image_url": "images/table-lamp.jpg"
+    "image_url": "images/table-lamp.jpg",
+    "max_unit_price": 2185
   },
   {
     "product_id": 40,
@@ -69,7 +74,8 @@
     "quantity_in_stock": 18,
     "reorder_level": 5,
     "created_at": "2026-11-23T06:39:08.177172+00:00",
-    "image_url": "images/desk-lamp.jpg"
+    "image_url": "images/desk-lamp.jpg",
+    "max_unit_price": 1438
   },
   {
     "product_id": 39,
@@ -81,7 +87,8 @@
     "quantity_in_stock": 11,
     "reorder_level": 3,
     "created_at": "2026-11-23T06:31:00.799997+00:00",
-    "image_url": "images/exhaust-fan.jpg"
+    "image_url": "images/exhaust-fan.jpg",
+    "max_unit_price": 2415
   },
   {
     "product_id": 38,
@@ -93,7 +100,8 @@
     "quantity_in_stock": 15,
     "reorder_level": 4,
     "created_at": "2026-11-23T06:31:00.799997+00:00",
-    "image_url": "images/outdoor-socket.jpg"
+    "image_url": "images/outdoor-socket.jpg",
+    "max_unit_price": 1265
   },
   {
     "product_id": 37,
@@ -105,7 +113,8 @@
     "quantity_in_stock": 24,
     "reorder_level": 6,
     "created_at": "2026-11-23T06:31:00.799997+00:00",
-    "image_url": "images/touch-switch.jpg"
+    "image_url": "images/touch-switch.jpg",
+    "max_unit_price": 977
   },
   {
     "product_id": 36,
@@ -117,7 +126,8 @@
     "quantity_in_stock": 6,
     "reorder_level": 2,
     "created_at": "2026-11-23T06:31:00.799997+00:00",
-    "image_url": "images/armoured-cable.jpg"
+    "image_url": "images/armoured-cable.jpg",
+    "max_unit_price": 16675
   },
   {
     "product_id": 35,
@@ -129,7 +139,8 @@
     "quantity_in_stock": 20,
     "reorder_level": 5,
     "created_at": "2026-11-23T06:31:00.799997+00:00",
-    "image_url": "images/single-core-cable.jpg"
+    "image_url": "images/single-core-cable.jpg",
+    "max_unit_price": 2760
   },
   {
     "product_id": 34,
@@ -141,7 +152,8 @@
     "quantity_in_stock": 9,
     "reorder_level": 3,
     "created_at": "2026-11-23T06:31:00.799997+00:00",
-    "image_url": "images/changeover-switch.jpg"
+    "image_url": "images/changeover-switch.jpg",
+    "max_unit_price": 3680
   },
   {
     "product_id": 33,
@@ -153,7 +165,8 @@
     "quantity_in_stock": 7,
     "reorder_level": 2,
     "created_at": "2026-11-23T06:31:00.799997+00:00",
-    "image_url": "images/power-inverter.jpg"
+    "image_url": "images/power-inverter.jpg",
+    "max_unit_price": 11270
   },
   {
     "product_id": 32,
@@ -165,7 +178,8 @@
     "quantity_in_stock": 12,
     "reorder_level": 3,
     "created_at": "2026-11-23T06:31:00.799997+00:00",
-    "image_url": "images/solar-controller.jpg"
+    "image_url": "images/solar-controller.jpg",
+    "max_unit_price": 3335
   },
   {
     "product_id": 31,
@@ -177,7 +191,8 @@
     "quantity_in_stock": 14,
     "reorder_level": 4,
     "created_at": "2026-11-23T06:31:00.799997+00:00",
-    "image_url": "images/instant-shower.jpg"
+    "image_url": "images/instant-shower.jpg",
+    "max_unit_price": 4370
   },
   {
     "product_id": 30,
@@ -189,7 +204,8 @@
     "quantity_in_stock": 6,
     "reorder_level": 2,
     "created_at": "2026-11-15T17:31:08.425225+00:00",
-    "image_url": "images/panel-light.jpg"
+    "image_url": "images/panel-light.jpg",
+    "max_unit_price": 5635
   },
   {
     "product_id": 29,
@@ -201,7 +217,8 @@
     "quantity_in_stock": 10,
     "reorder_level": 3,
     "created_at": "2026-11-15T17:31:08.425225+00:00",
-    "image_url": "images/floodlight.jpg"
+    "image_url": "images/floodlight.jpg",
+    "max_unit_price": 2128
   },
   {
     "product_id": 28,
@@ -213,7 +230,8 @@
     "quantity_in_stock": 12,
     "reorder_level": 4,
     "created_at": "2026-11-15T17:31:08.425225+00:00",
-    "image_url": "images/chandelier.jpg"
+    "image_url": "images/chandelier.jpg",
+    "max_unit_price": 1323
   },
   {
     "product_id": 27,
@@ -225,7 +243,8 @@
     "quantity_in_stock": 18,
     "reorder_level": 3,
     "created_at": "2026-11-15T17:31:08.425225+00:00",
-    "image_url": "images/solar-light.jpg"
+    "image_url": "images/solar-light.jpg",
+    "max_unit_price": 4830
   },
   {
     "product_id": 26,
@@ -237,7 +256,8 @@
     "quantity_in_stock": 20,
     "reorder_level": 6,
     "created_at": "2026-11-15T17:31:08.425225+00:00",
-    "image_url": "images/bulb.jpg"
+    "image_url": "images/bulb.jpg",
+    "max_unit_price": 782
   },
   {
     "product_id": 25,
@@ -249,7 +269,8 @@
     "quantity_in_stock": 27,
     "reorder_level": 8,
     "created_at": "2026-11-15T17:31:08.425225+00:00",
-    "image_url": "images/track-light.jpg"
+    "image_url": "images/track-light.jpg",
+    "max_unit_price": 598
   },
   {
     "product_id": 24,
@@ -261,7 +282,8 @@
     "quantity_in_stock": 14,
     "reorder_level": 4,
     "created_at": "2026-11-15T17:31:08.425225+00:00",
-    "image_url": "images/solar-light.jpg"
+    "image_url": "images/solar-light.jpg",
+    "max_unit_price": 1897
   },
   {
     "product_id": 23,
@@ -273,7 +295,8 @@
     "quantity_in_stock": 9,
     "reorder_level": 3,
     "created_at": "2026-11-15T17:31:08.425225+00:00",
-    "image_url": "images/chandelier.jpg"
+    "image_url": "images/chandelier.jpg",
+    "max_unit_price": 2990
   },
   {
     "product_id": 22,
@@ -285,7 +308,8 @@
     "quantity_in_stock": 18,
     "reorder_level": 5,
     "created_at": "2026-11-15T17:31:08.425225+00:00",
-    "image_url": "images/floodlight.jpg"
+    "image_url": "images/floodlight.jpg",
+    "max_unit_price": 862
   },
   {
     "product_id": 21,
@@ -297,7 +321,8 @@
     "quantity_in_stock": 35,
     "reorder_level": 10,
     "created_at": "2026-11-15T17:31:08.425225+00:00",
-    "image_url": "images/panel-light.jpg"
+    "image_url": "images/panel-light.jpg",
+    "max_unit_price": 483
   },
   {
     "product_id": 20,
@@ -309,7 +334,8 @@
     "quantity_in_stock": 6,
     "reorder_level": 2,
     "created_at": "2026-10-30T12:50:02.230564+00:00",
-    "image_url": "images/heat-gun.jpg"
+    "image_url": "images/heat-gun.jpg",
+    "max_unit_price": 2530
   },
   {
     "product_id": 19,
@@ -321,7 +347,8 @@
     "quantity_in_stock": 8,
     "reorder_level": 3,
     "created_at": "2026-10-30T12:50:02.230564+00:00",
-    "image_url": "images/flex-cable.jpg"
+    "image_url": "images/flex-cable.jpg",
+    "max_unit_price": 4140
   },
   {
     "product_id": 18,
@@ -333,7 +360,8 @@
     "quantity_in_stock": 12,
     "reorder_level": 3,
     "created_at": "2026-10-30T12:50:02.230564+00:00",
-    "image_url": "images/rccb-breaker.jpg"
+    "image_url": "images/rccb-breaker.jpg",
+    "max_unit_price": 2185
   },
   {
     "product_id": 17,
@@ -345,7 +373,8 @@
     "quantity_in_stock": 7,
     "reorder_level": 2,
     "created_at": "2026-10-30T12:50:02.230564+00:00",
-    "image_url": "images/consumer-unit.jpg"
+    "image_url": "images/consumer-unit.jpg",
+    "max_unit_price": 3220
   },
   {
     "product_id": 16,
@@ -357,7 +386,8 @@
     "quantity_in_stock": 11,
     "reorder_level": 4,
     "created_at": "2026-10-30T12:50:02.230564+00:00",
-    "image_url": "images/track-light.jpg"
+    "image_url": "images/track-light.jpg",
+    "max_unit_price": 1840
   },
   {
     "product_id": 15,
@@ -369,7 +399,8 @@
     "quantity_in_stock": 30,
     "reorder_level": 5,
     "created_at": "2026-10-30T12:50:02.230564+00:00",
-    "image_url": "images/voltage-guard.jpg"
+    "image_url": "images/voltage-guard.jpg",
+    "max_unit_price": 977
   },
   {
     "product_id": 14,
@@ -381,7 +412,8 @@
     "quantity_in_stock": 24,
     "reorder_level": 6,
     "created_at": "2026-10-30T12:50:02.230564+00:00",
-    "image_url": "images/heater-switch.jpg"
+    "image_url": "images/heater-switch.jpg",
+    "max_unit_price": 518
   },
   {
     "product_id": 13,
@@ -393,7 +425,8 @@
     "quantity_in_stock": 5,
     "reorder_level": 3,
     "created_at": "2026-10-30T12:50:02.230564+00:00",
-    "image_url": "images/multimeter.jpg"
+    "image_url": "images/multimeter.jpg",
+    "max_unit_price": 1265
   },
   {
     "product_id": 12,
@@ -405,7 +438,8 @@
     "quantity_in_stock": 22,
     "reorder_level": 6,
     "created_at": "2026-10-30T12:50:02.230564+00:00",
-    "image_url": "images/extension-socket.jpg"
+    "image_url": "images/extension-socket.jpg",
+    "max_unit_price": 1035
   },
   {
     "product_id": 11,
@@ -417,7 +451,8 @@
     "quantity_in_stock": 16,
     "reorder_level": 5,
     "created_at": "2026-10-30T12:50:02.230564+00:00",
-    "image_url": "images/solar-light.jpg"
+    "image_url": "images/solar-light.jpg",
+    "max_unit_price": 1610
   },
   {
     "product_id": 10,
@@ -429,7 +464,8 @@
     "quantity_in_stock": 14,
     "reorder_level": 4,
     "created_at": "2026-10-30T12:50:02.230564+00:00",
-    "image_url": "images/floodlight.jpg"
+    "image_url": "images/floodlight.jpg",
+    "max_unit_price": 2070
   },
   {
     "product_id": 9,
@@ -441,7 +477,8 @@
     "quantity_in_stock": 10,
     "reorder_level": 3,
     "created_at": "2026-10-30T12:24:46.242215+00:00",
-    "image_url": "images/kettle.jpg"
+    "image_url": "images/kettle.jpg",
+    "max_unit_price": 1725
   },
   {
     "product_id": 8,
@@ -453,7 +490,8 @@
     "quantity_in_stock": 20,
     "reorder_level": 5,
     "created_at": "2026-10-30T12:24:46.242215+00:00",
-    "image_url": "images/strip-light.jpg"
+    "image_url": "images/strip-light.jpg",
+    "max_unit_price": 1380
   },
   {
     "product_id": 7,
@@ -465,7 +503,8 @@
     "quantity_in_stock": 4,
     "reorder_level": 2,
     "created_at": "2026-10-30T12:24:46.242215+00:00",
-    "image_url": "images/chandelier.jpg"
+    "image_url": "images/chandelier.jpg",
+    "max_unit_price": 13800
   },
   {
     "product_id": 6,
@@ -477,7 +516,8 @@
     "quantity_in_stock": 54,
     "reorder_level": 4,
     "created_at": "2026-10-30T12:24:46.242215+00:00",
-    "image_url": "images/panel-light.jpg"
+    "image_url": "images/panel-light.jpg",
+    "max_unit_price": 805
   },
   {
     "product_id": 5,
@@ -489,7 +529,8 @@
     "quantity_in_stock": 26,
     "reorder_level": 6,
     "created_at": "2026-10-30T12:24:46.242215+00:00",
-    "image_url": "images/mcb-breaker.jpg"
+    "image_url": "images/mcb-breaker.jpg",
+    "max_unit_price": 368
   },
   {
     "product_id": 4,
@@ -501,7 +542,8 @@
     "quantity_in_stock": 38,
     "reorder_level": 5,
     "created_at": "2026-10-30T12:24:46.242215+00:00",
-    "image_url": "images/double-socket.jpg"
+    "image_url": "images/double-socket.jpg",
+    "max_unit_price": 747
   },
   {
     "product_id": 3,
@@ -513,7 +555,8 @@
     "quantity_in_stock": 31,
     "reorder_level": 3,
     "created_at": "2026-10-30T12:24:46.242215+00:00",
-    "image_url": "images/cable-roll.jpg"
+    "image_url": "images/cable-roll.jpg",
+    "max_unit_price": 5175
   },
   {
     "product_id": 2,
@@ -525,7 +568,8 @@
     "quantity_in_stock": 29,
     "reorder_level": 8,
     "created_at": "2026-10-30T12:24:46.242215+00:00",
-    "image_url": "images/wall-switch.jpg"
+    "image_url": "images/wall-switch.jpg",
+    "max_unit_price": 173
   },
   {
     "product_id": 1,
@@ -537,6 +581,7 @@
     "quantity_in_stock": 235,
     "reorder_level": 10,
     "created_at": "2026-10-30T12:24:46.242215+00:00",
-    "image_url": "images/bulb.jpg"
+    "image_url": "images/bulb.jpg",
+    "max_unit_price": 207
   }
 ]

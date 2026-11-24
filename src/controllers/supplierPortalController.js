@@ -11,7 +11,7 @@ const moduleNotifications = require('../utils/moduleNotifications');
 
 const BUCKET_NAME = 'supplier-documents';
 const MAX_DOC_BYTES = 5 * 1024 * 1024; // 5 MB
-const MAX_QUOTATION_UNIT_PRICE = 1500; // Fallback cap only for legacy PO items without an explicit max_unit_price
+const MAX_QUOTATION_UNIT_PRICE = 1500; // Legacy fallback only when a product cannot be matched in inventory/catalog
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'png', 'jpg', 'jpeg', 'webp', 'txt', 'csv', 'doc', 'docx']);
 const FINANCE_RECORDS_PATH = path.join(__dirname, '../config/finance_records.json');
 
@@ -19,15 +19,77 @@ function formatKshNumber(val) {
   return Number(val || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function resolvePurchaseItemBounds(poItem) {
+function computeCatalogMaxUnitPrice(prod) {
+  if (!prod) return null;
+  const explicit = Number(prod.max_unit_price || 0);
+  if (!Number.isNaN(explicit) && explicit > 0) return Number(explicit.toFixed(2));
+  const buy = Number(prod.buying_price || 0);
+  const sell = Number(prod.selling_price || 0);
+  if (buy <= 0 && sell <= 0) return null;
+  const base = buy > 0 ? buy : Math.round(sell * 0.72);
+  let computed = Math.max(10, Math.round(base * 1.15));
+  if (sell > 0 && computed >= sell) {
+    const ceiling = Math.round(sell * 0.92);
+    computed = buy > 0 ? Math.max(buy, ceiling) : Math.max(10, ceiling);
+  }
+  return Number(computed.toFixed(2));
+}
+
+async function loadCatalogLookup() {
+  const byId = new Map();
+  const byName = new Map();
+  let list = [];
+  try {
+    const { data, error } = await supabase.from('inventory').select('*');
+    if (!error && Array.isArray(data) && data.length > 0) {
+      list = data;
+    }
+  } catch (e) {}
+  if (list.length === 0) {
+    list = await interModuleSync.getProducts();
+  }
+  for (const p of list || []) {
+    if (p.product_id) byId.set(Number(p.product_id), p);
+    const nm = String(p.product_name || '').trim().toLowerCase();
+    if (nm) byName.set(nm, p);
+  }
+  return { byId, byName, list: list || [] };
+}
+
+function findCatalogProduct(catalogLookup, item) {
+  if (!catalogLookup || !item) return null;
+  const pid = item.product_id ? Number(item.product_id) : null;
+  if (pid && catalogLookup.byId.has(pid)) return catalogLookup.byId.get(pid);
+  const nm = String(item.product_name || '').trim().toLowerCase();
+  if (nm && catalogLookup.byName.has(nm)) return catalogLookup.byName.get(nm);
+  return null;
+}
+
+function resolvePurchaseItemBounds(poItem, catalogLookup = null) {
   const rawMax = poItem && poItem.max_unit_price !== null && poItem.max_unit_price !== undefined
     ? Number(poItem.max_unit_price)
     : null;
   const hasExplicitMax = rawMax !== null && !Number.isNaN(rawMax) && rawMax > 0;
+  if (hasExplicitMax) {
+    return {
+      min_unit_price: null,
+      max_unit_price: Number(rawMax.toFixed(2)),
+      has_explicit_limits: true
+    };
+  }
+  const catalogProd = findCatalogProduct(catalogLookup, poItem);
+  const catalogMax = computeCatalogMaxUnitPrice(catalogProd);
+  if (catalogMax !== null && catalogMax > 0) {
+    return {
+      min_unit_price: null,
+      max_unit_price: catalogMax,
+      has_explicit_limits: true
+    };
+  }
   return {
     min_unit_price: null,
-    max_unit_price: hasExplicitMax ? Number(rawMax.toFixed(2)) : MAX_QUOTATION_UNIT_PRICE,
-    has_explicit_limits: hasExplicitMax
+    max_unit_price: MAX_QUOTATION_UNIT_PRICE,
+    has_explicit_limits: false
   };
 }
 
@@ -555,9 +617,10 @@ exports.getSupplierDashboard = async (req, res) => {
 exports.getSupplierPurchaseOrders = async (req, res) => {
   try {
     const db = req.supplierDb;
-    const [posRes, itemsRes] = await Promise.all([
+    const [posRes, itemsRes, catalogLookup] = await Promise.all([
       db.from('purchase_orders').select('*').order('po_id', { ascending: false }),
-      db.from('purchase_items').select('*').order('purchase_item_id', { ascending: true })
+      db.from('purchase_items').select('*').order('purchase_item_id', { ascending: true }),
+      loadCatalogLookup()
     ]);
     if (posRes.error) return res.status(500).json({ success: false, message: posRes.error.message });
     if (itemsRes.error) return res.status(500).json({ success: false, message: itemsRes.error.message });
@@ -566,7 +629,7 @@ exports.getSupplierPurchaseOrders = async (req, res) => {
     for (const item of itemsRes.data || []) {
       const k = Number(item.po_id);
       if (!itemsByPo[k]) itemsByPo[k] = [];
-      const bounds = resolvePurchaseItemBounds(item);
+      const bounds = resolvePurchaseItemBounds(item, catalogLookup);
       itemsByPo[k].push({
         ...item,
         min_unit_price: bounds.min_unit_price,
@@ -602,11 +665,12 @@ exports.getSupplierPurchaseOrderById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Purchase order not found for your supplier account.' });
     }
 
-    const [itemsRes, quotesRes, delRes, invRes] = await Promise.all([
+    const [itemsRes, quotesRes, delRes, invRes, catalogLookup] = await Promise.all([
       db.from('purchase_items').select('*').eq('po_id', poId).order('purchase_item_id', { ascending: true }),
       db.from('quotations').select('*').eq('po_id', poId).order('quotation_id', { ascending: false }),
       db.from('supplier_deliveries').select('*').eq('po_id', poId).order('delivery_id', { ascending: false }),
-      db.from('supplier_invoices').select('*').eq('po_id', poId).order('invoice_id', { ascending: false })
+      db.from('supplier_invoices').select('*').eq('po_id', poId).order('invoice_id', { ascending: false }),
+      loadCatalogLookup()
     ]);
 
     return res.json({
@@ -614,7 +678,7 @@ exports.getSupplierPurchaseOrderById = async (req, res) => {
       purchase_order: {
         ...po,
         items: (itemsRes.data || []).map(item => {
-          const bounds = resolvePurchaseItemBounds(item);
+          const bounds = resolvePurchaseItemBounds(item, catalogLookup);
           return {
             ...item,
             min_unit_price: bounds.min_unit_price,
@@ -753,6 +817,7 @@ exports.submitSupplierQuotation = async (req, res) => {
       poItemsForOrder = poItemRows || [];
     }
 
+    const catalogLookup = await loadCatalogLookup();
     const normalizedItems = [];
     const validationErrors = [];
     let totalAmount = 0;
@@ -771,7 +836,7 @@ exports.submitSupplierQuotation = async (req, res) => {
         });
       }
 
-      // Strictly use DB maximum price limit (never trust any limits submitted by supplier client)
+      // Strictly use DB / catalog maximum price limit (never trust any limits submitted by supplier client)
       const matchedPoItem = poId ? findMatchingPurchaseItem(poItemsForOrder, item) : null;
       if (poId && poItemsForOrder.length > 0 && !matchedPoItem) {
         return res.status(400).json({
@@ -780,7 +845,7 @@ exports.submitSupplierQuotation = async (req, res) => {
         });
       }
 
-      const bounds = resolvePurchaseItemBounds(matchedPoItem);
+      const bounds = resolvePurchaseItemBounds(matchedPoItem || item, catalogLookup);
       if (rawPrice === undefined || rawPrice === null || String(rawPrice).trim() === '' || Number.isNaN(unitPrice) || unitPrice <= 0) {
         validationErrors.push(`Enter a valid unit price greater than KSh 0 for "${productName}".`);
         continue;
@@ -1993,8 +2058,9 @@ exports.erpGetProcurementOverview = async (req, res) => {
       interModuleSync.getProducts()
     ]);
 
+    const catalogLookup = await loadCatalogLookup();
     const purchaseItems = (piRes.data || []).map(pi => {
-      const bounds = resolvePurchaseItemBounds(pi);
+      const bounds = resolvePurchaseItemBounds(pi, catalogLookup);
       return {
         ...pi,
         min_unit_price: bounds.min_unit_price,
@@ -2021,7 +2087,7 @@ exports.erpGetProcurementOverview = async (req, res) => {
       const hasOwnMax = qi.max_unit_price !== null && qi.max_unit_price !== undefined && Number(qi.max_unit_price) > 0;
       const bounds = hasOwnMax
         ? { min_unit_price: null, max_unit_price: Number(qi.max_unit_price) }
-        : resolvePurchaseItemBounds(matchedPoItem);
+        : resolvePurchaseItemBounds(matchedPoItem || qi, catalogLookup);
 
       const check = evaluateQuotationPrice(
         qi.product_name,
@@ -2077,6 +2143,7 @@ exports.erpCreatePurchaseOrder = async (req, res) => {
       .maybeSingle();
     if (!supplier) return res.status(404).json({ success: false, message: 'Selected supplier not found.' });
 
+    const catalogLookup = await loadCatalogLookup();
     let totalAmount = 0;
     const summaryParts = [];
     const normalizedItems = [];
@@ -2084,7 +2151,14 @@ exports.erpCreatePurchaseOrder = async (req, res) => {
       const productName = String(item.product_name || '').trim();
       const orderedQty = parseInt(item.ordered_qty ?? 0, 10);
       const unitCost = Math.max(0, Number(item.unit_cost ?? 0) || 0);
-      const maxPrice = Number(item.max_unit_price);
+      const rawMaxInput = (item.max_unit_price !== undefined && item.max_unit_price !== null && String(item.max_unit_price).trim() !== '')
+        ? Number(item.max_unit_price)
+        : null;
+      const catalogProd = findCatalogProduct(catalogLookup, { product_id: item.product_id, product_name: productName });
+      const catalogDerivedMax = computeCatalogMaxUnitPrice(catalogProd);
+      const maxPrice = (rawMaxInput !== null && !Number.isNaN(rawMaxInput) && rawMaxInput > 0)
+        ? rawMaxInput
+        : (catalogDerivedMax || MAX_QUOTATION_UNIT_PRICE);
 
       if (!productName) {
         return res.status(400).json({ success: false, message: 'Each PO line item must specify a product name.' });
@@ -2092,7 +2166,7 @@ exports.erpCreatePurchaseOrder = async (req, res) => {
       if (Number.isNaN(orderedQty) || orderedQty < 1) {
         return res.status(400).json({ success: false, message: `Requested quantity for "${productName}" must be at least 1.` });
       }
-      if (item.max_unit_price === undefined || item.max_unit_price === null || String(item.max_unit_price).trim() === '' || Number.isNaN(maxPrice) || maxPrice <= 0) {
+      if (Number.isNaN(maxPrice) || maxPrice <= 0) {
         return res.status(400).json({
           success: false,
           message: `Maximum acceptable unit price (KES) for "${productName}" must be greater than KSh 0.`
@@ -2202,20 +2276,19 @@ exports.erpReviewQuotation = async (req, res) => {
         });
       }
 
+      const catalogLookup = await loadCatalogLookup();
       for (const qi of preloadedQItems) {
         const matchedPoItem = findMatchingPurchaseItem(poItems || [], qi);
         const hasOwnMax = qi.max_unit_price !== null && qi.max_unit_price !== undefined && Number(qi.max_unit_price) > 0;
-        if (matchedPoItem || hasOwnMax) {
-          const bounds = hasOwnMax
-            ? { max_unit_price: Number(qi.max_unit_price) }
-            : resolvePurchaseItemBounds(matchedPoItem);
-          const check = evaluateQuotationPrice(qi.product_name, qi.unit_price, bounds.max_unit_price);
-          if (!check.valid) {
-            return res.status(400).json({
-              success: false,
-              message: `Cannot approve quotation: ${check.message}`
-            });
-          }
+        const bounds = hasOwnMax
+          ? { max_unit_price: Number(qi.max_unit_price) }
+          : resolvePurchaseItemBounds(matchedPoItem || qi, catalogLookup);
+        const check = evaluateQuotationPrice(qi.product_name, qi.unit_price, bounds.max_unit_price);
+        if (!check.valid) {
+          return res.status(400).json({
+            success: false,
+            message: `Cannot approve quotation: ${check.message}`
+          });
         }
       }
     }
