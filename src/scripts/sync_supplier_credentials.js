@@ -35,22 +35,14 @@ function makeUsernameFromSupplier(sup) {
   return base || `supplier${sup.supplier_id}`;
 }
 
-const KNOWN_CREDENTIALS = {
-  1: { username: 'philips', password: 'PhilipsSup#2026' },
-  2: { username: 'schneider', password: 'SchneiderSup#2026' },
-  3: { username: 'metsec', password: 'MetsecSup#2026' }
-};
+const DEFAULT_SUPPLIER_PASSWORD = 'supplier123';
 
-async function detectExistingPassword(email, candidates) {
-  for (const pwd of candidates) {
-    if (!pwd) continue;
-    try {
-      const { data, error } = await createVerifyClient().auth.signInWithPassword({ email, password: pwd });
-      if (!error && data?.session) return pwd;
-    } catch (e) {}
-  }
-  return null;
-}
+const KNOWN_USERNAMES = {
+  1: 'philips',
+  2: 'schneider',
+  3: 'metsec',
+  4: 'shreerangk'
+};
 
 async function main() {
   const pg = new Client({
@@ -60,13 +52,15 @@ async function main() {
   await pg.connect();
   console.log('Connected to Supabase PostgreSQL...');
 
-  // 1. Add username and password columns on public.suppliers
+  // 1. Add username and password columns on public.suppliers with default 'supplier123'
   await pg.query(`
     ALTER TABLE public.suppliers
       ADD COLUMN IF NOT EXISTS username TEXT UNIQUE,
-      ADD COLUMN IF NOT EXISTS password TEXT;
+      ADD COLUMN IF NOT EXISTS password TEXT DEFAULT 'supplier123';
+    ALTER TABLE public.suppliers
+      ALTER COLUMN password SET DEFAULT 'supplier123';
   `);
-  console.log('Columns username and password ensured on public.suppliers.');
+  console.log('Columns username and password (default: supplier123) ensured on public.suppliers.');
 
   const { rows: suppliers } = await pg.query('SELECT * FROM public.suppliers ORDER BY supplier_id ASC');
   const usedUsernames = new Set();
@@ -74,30 +68,16 @@ async function main() {
   for (const sup of suppliers) {
     const supId = Number(sup.supplier_id);
     const email = String(sup.email || '').trim().toLowerCase();
-    const known = KNOWN_CREDENTIALS[supId] || {};
 
     let username = sup.username
       ? String(sup.username).trim().toLowerCase()
-      : (known.username || makeUsernameFromSupplier(sup));
+      : (KNOWN_USERNAMES[supId] || makeUsernameFromSupplier(sup));
     if (usedUsernames.has(username)) {
       username = `${username}${supId}`;
     }
     usedUsernames.add(username);
 
-    let finalPassword = sup.password ? String(sup.password).trim() : '';
-    if (!finalPassword && email) {
-      const detected = await detectExistingPassword(email, [
-        known.password,
-        'supplier123',
-        'Supplier#2026!',
-        `${username}123`,
-        `${username.charAt(0).toUpperCase() + username.slice(1)}Sup#2026`
-      ]);
-      finalPassword = detected || known.password || `${username.charAt(0).toUpperCase() + username.slice(1)}Sup#2026`;
-    }
-    if (!finalPassword) {
-      finalPassword = known.password || 'Supplier#2026!';
-    }
+    const finalPassword = DEFAULT_SUPPLIER_PASSWORD;
 
     // Ensure Supabase Auth account exists and password matches
     let authUserId = sup.auth_user_id || null;

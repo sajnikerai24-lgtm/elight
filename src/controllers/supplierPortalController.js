@@ -1654,7 +1654,7 @@ exports.erpRegisterSupplier = async (req, res) => {
       });
     }
 
-    const effectivePassword = initialPassword || `${crypto.randomBytes(9).toString('base64url')}#A9`;
+    const effectivePassword = initialPassword || 'supplier123';
     let effectiveUsername = rawUsername || generateSupplierUsername(supplierName || email);
 
     const { data: usernameHit } = await supabase
