@@ -197,19 +197,24 @@ function normalizeOrderDualStatuses(o) {
   const paid = o.amount_paid !== undefined ? Number(o.amount_paid) : (o.payment_status === 'paid' ? total : 0);
   const balance = o.balance_due !== undefined ? Number(o.balance_due) : Math.max(0, total - paid);
   const hasUnpaid = balance > 0;
-  const fType = o.fulfillment_type || (o.fulfillment_mode === 'collection' ? 'product_collection' : 'product_delivery');
+  const isServiceOrder = o.fulfillment_type === 'service_only' || o.fulfillment_mode === 'service' || /service booking/i.test(String(o.source || ''));
+  const fType = o.fulfillment_type || (isServiceOrder ? 'service_only' : (o.fulfillment_mode === 'collection' ? 'product_collection' : 'product_delivery'));
 
   let relStatus = o.finance_release_status;
   if (!relStatus) {
-    if (hasUnpaid) relStatus = 'pending_credit_review';
+    if (!o.cashier_served && o.source === 'Online Customer Order' && paid === 0) relStatus = 'awaiting_cashier';
+    else if (hasUnpaid) relStatus = 'pending_credit_review';
     else if (['delivered', 'collected', 'installed_and_completed'].includes(o.fulfillment_status)) relStatus = 'released';
     else relStatus = 'pending_finance';
   }
 
   let stage = o.fulfillment_stage;
-  if (!stage) {
-    if (relStatus === 'released') {
+  if (!stage || (relStatus === 'awaiting_cashier' && stage !== 'cashier')) {
+    if (relStatus === 'awaiting_cashier') {
+      stage = 'cashier';
+    } else if (relStatus === 'released') {
       if (['delivered', 'collected', 'installed_and_completed'].includes(o.fulfillment_status)) stage = 'completed';
+      else if (fType === 'service_only') stage = 'installation';
       else if (fType === 'product_collection') stage = 'collection';
       else stage = 'delivery';
     } else {
@@ -222,11 +227,13 @@ function normalizeOrderDualStatuses(o) {
 
   let ordStatus = o.order_status || o.status || 'processing';
   if (o.status === 'cancelled' || o.order_status === 'cancelled') ordStatus = 'cancelled';
+  else if (relStatus === 'awaiting_cashier') ordStatus = 'awaiting_cashier';
   else if (['delivered', 'collected', 'installed_and_completed'].includes(o.fulfillment_status) || stage === 'completed') ordStatus = 'completed';
   else if (o.fulfillment_status === 'ready_for_collection') ordStatus = 'ready';
 
   let payStatus = o.payment_status;
   if (relStatus === 'payment_failed') payStatus = 'failed';
+  else if (relStatus === 'awaiting_cashier') payStatus = 'pending';
   else if (!payStatus || payStatus === 'pending') {
     if (paid === 0) payStatus = 'unpaid';
     else if (relStatus === 'released') payStatus = hasUnpaid ? 'partially_paid' : 'paid';
@@ -1942,7 +1949,10 @@ const erpController = {
       const orders = readCashierOrders();
       const normalized = orders.map(normalizeOrderDualStatuses);
 
-      const sortedNormalized = sortByLatest(normalized);
+      const sortedAll = sortByLatest(normalized);
+      const awaitingCashier = sortedAll.filter(o => o.finance_release_status === 'awaiting_cashier');
+      // Finance only reviews & confirms orders that Cashier has confirmed and passed to Finance
+      const sortedNormalized = sortedAll.filter(o => o.finance_release_status !== 'awaiting_cashier');
       const pendingFinance = sortedNormalized.filter(o => o.finance_release_status === 'pending_finance');
       const pendingCredit = sortedNormalized.filter(o => o.finance_release_status === 'pending_credit_review');
       const released = sortedNormalized.filter(o => o.finance_release_status === 'released');
@@ -1953,6 +1963,7 @@ const erpController = {
         success: true,
         orders: sortedNormalized,
         counts: {
+          awaiting_cashier: awaitingCashier.length,
           pending_finance: pendingFinance.length,
           pending_credit_review: pendingCredit.length,
           released: released.length,
@@ -1997,10 +2008,16 @@ const erpController = {
       // and/or Service Manager (if electrical service / installation is requested).
       async function finalizeFinanceConfirmedRouting(targetOrder, officer, releaseNote) {
         const routedTo = [];
-        const fType = targetOrder.fulfillment_type || (targetOrder.fulfillment_mode === 'collection' ? 'product_collection' : 'product_delivery');
+        const isServiceOnly = targetOrder.fulfillment_type === 'service_only' ||
+          targetOrder.fulfillment_mode === 'service' ||
+          /service booking/i.test(String(targetOrder.source || ''));
+        const fType = isServiceOnly
+          ? 'service_only'
+          : (targetOrder.fulfillment_type || (targetOrder.fulfillment_mode === 'collection' ? 'product_collection' : 'product_delivery'));
         targetOrder.fulfillment_type = fType;
 
         const wantsInst = Boolean(
+          isServiceOnly ||
           targetOrder.requires_installation ||
           fType === 'product_delivery_install' ||
           fType === 'product_install_later' ||
@@ -2010,7 +2027,7 @@ const erpController = {
         targetOrder.installation_status = wantsInst ? 'approved' : 'not_requested';
 
         // 1. Dispatch Manager routing (for any order requiring delivery dispatch)
-        const needsDispatch = fType !== 'product_collection' && fType !== 'service_only' && targetOrder.fulfillment_mode !== 'collection';
+        const needsDispatch = !isServiceOnly && fType !== 'product_collection' && targetOrder.fulfillment_mode !== 'collection';
         if (needsDispatch) {
           targetOrder.fulfillment_stage = 'delivery';
           targetOrder.fulfillment_status = 'sent_to_dispatch';
@@ -2021,7 +2038,7 @@ const erpController = {
           });
           routedTo.push('Dispatch Manager');
         } else if (fType === 'product_collection') {
-          targetOrder.fulfillment_stage = 'collection';
+          targetOrder.fulfillment_stage = wantsInst ? 'installation' : 'collection';
           targetOrder.fulfillment_status = 'ready_for_collection';
           targetOrder.delivery_status = 'not_scheduled';
           moduleNotifications.notify({
@@ -2034,17 +2051,22 @@ const erpController = {
             refNo: targetOrder.order_no,
             actionModule: 'cashier'
           });
+        } else if (isServiceOnly) {
+          targetOrder.fulfillment_stage = 'installation';
+          targetOrder.fulfillment_status = 'installation_pending';
+          targetOrder.delivery_status = 'not_scheduled';
         }
 
         // 2. Service Manager routing (only when a service or installation is requested)
         if (wantsInst) {
           const isLater = fType === 'product_install_later' || Boolean(targetOrder.schedule_install_later);
-          const reqPrefix = isLater ? 'SCH' : 'INS';
+          const reqPrefix = isLater ? 'SCH' : (isServiceOnly ? 'SRV' : 'INS');
           const sRequests = readServiceRequests();
           const existingInst = sRequests.find(s =>
             s.order_no === targetOrder.order_no ||
             s.booking_ref === `INS-${targetOrder.order_no}` ||
-            s.booking_ref === `SCH-${targetOrder.order_no}`
+            s.booking_ref === `SCH-${targetOrder.order_no}` ||
+            s.booking_ref === `SRV-${targetOrder.order_no}`
           );
           if (!existingInst) {
             const nextReqId = sRequests.length > 0 ? Math.max(...sRequests.map(s => s.request_id || 0)) + 1 : 101;
@@ -2058,14 +2080,14 @@ const erpController = {
               location: targetOrder.customer_location || 'Meru County',
               service_type: isLater
                 ? 'Scheduled Product Installation'
-                : (targetOrder.service_type || 'Product Installation'),
+                : (targetOrder.service_type || (isServiceOnly ? (itemsSummary || 'Electrical Service') : 'Product Installation')),
               description: isLater
                 ? `Scheduled Installation for Order ${targetOrder.order_no} (${itemsSummary || 'Electrical Products'}). Finance confirmed (${releaseNote}). Customer will confirm preferred installation appointment date.`
-                : `Product Installation for Order ${targetOrder.order_no} (${itemsSummary || 'Electrical Products'}). Finance confirmed (${releaseNote}). Tracked independently from product delivery.`,
+                : `${isServiceOnly ? 'Electrical Service' : 'Product Installation'} for Order ${targetOrder.order_no} (${itemsSummary || 'Electrical Products'}). Finance confirmed (${releaseNote}).`,
               scheduled_date: isLater ? 'Pending Customer Booking' : (targetOrder.scheduled_date || 'TBD'),
               status: 'pending',
-              site_ready: fType === 'product_collection',
-              site_ready_for_installation: fType === 'product_collection',
+              site_ready: isServiceOnly || fType === 'product_collection',
+              site_ready_for_installation: isServiceOnly || fType === 'product_collection',
               assigned_technician_id: null,
               assigned_technician_name: '',
               technician_name: '',
@@ -2105,6 +2127,7 @@ const erpController = {
           routedTo.push('Service Manager');
         }
 
+        targetOrder.routed_to = routedTo;
         return routedTo;
       }
       const orders = readCashierOrders();
@@ -2112,6 +2135,13 @@ const erpController = {
 
       if (!order) {
         return res.status(404).json({ success: false, message: `Order ${targetNo} not found.` });
+      }
+
+      if (order.finance_release_status === 'awaiting_cashier' || (!order.cashier_served && order.source === 'Online Customer Order' && Number(order.amount_paid || 0) === 0)) {
+        return res.status(400).json({
+          success: false,
+          message: `Cashier Confirmation Required: Order ${order.order_no} must be confirmed by the Cashier first and passed to Finance before payment confirmation.`
+        });
       }
 
       const total = Number(order.total_amount || 0);
@@ -2563,8 +2593,14 @@ const erpController = {
           payment_ref: isPaid ? ref : 'Awaiting Payment at Counter / M-Pesa',
           cash_tendered: isPaid ? amt : 0,
           change_due: 0,
+          fulfillment_type: b.booking_type === 'product' ? 'product_collection' : 'service_only',
           fulfillment_mode: b.booking_type === 'product' ? 'collection' : 'service',
-          fulfillment_status: isPaid ? 'collected' : 'awaiting_payment',
+          fulfillment_stage: isPaid ? 'collection' : 'cashier',
+          fulfillment_status: isPaid ? 'collected' : 'awaiting_cashier_confirmation',
+          finance_release_status: isPaid ? 'released' : 'awaiting_cashier',
+          requires_installation: b.booking_type !== 'product',
+          cashier_confirmed: isPaid,
+          cashier_served: isPaid,
           cashier_name: isPaid ? 'Esther Karimi' : '',
           stock_deducted: isPaid,
           booking_id: b.booking_id,
@@ -3156,9 +3192,12 @@ const erpController = {
       order.cash_tendered = tendered;
       order.change_due = changeDue;
       order.cashier_name = cleanCashier;
+      order.cashier_confirmed = true;
       order.cashier_served = true;
       order.cashier_served_at = servedAtIso;
       order.paid_at = servedAtIso;
+      order.order_status = 'processing';
+      order.status = 'processing';
       order.credit_policy_notes = hasUnpaid
         ? (cleanBalanceNote || order.credit_policy_notes || '')
         : '';
@@ -3237,13 +3276,19 @@ const erpController = {
           }
         );
       } else {
-        const existingFinLocal = localFin.find(f => String(f.reference_no).toUpperCase() === String(order.order_no).toUpperCase() || String(f.reference_no).toUpperCase() === String(refCode).toUpperCase());
+        const subRefUpper = String(order.submitted_payment_ref || '').trim().toUpperCase();
+        const existingFinLocal = localFin.find(f => {
+          const fRef = String(f.reference_no || '').trim().toUpperCase();
+          return fRef === String(order.order_no).toUpperCase() ||
+            fRef === String(refCode).toUpperCase() ||
+            (subRefUpper && fRef === subRefUpper);
+        });
         if (existingFinLocal) {
           existingFinLocal.status = 'confirmed';
           existingFinLocal.amount = amountPaid;
           existingFinLocal.payment_method = cleanMethod;
           existingFinLocal.reference_no = refCode;
-          existingFinLocal.description = `${String(existingFinLocal.description || '').replace(/\s*\[UNPAID BALANCE:[^\]]*\]/gi, '').replace(/\s*\[Paid in Full[^\]]*\]/gi, '')}${finBalanceNote}${!/\[Cashier:/i.test(existingFinLocal.description || '') ? ` [Cashier: ${cleanCashier}]` : ''}`;
+          existingFinLocal.description = `${String(existingFinLocal.description || '').replace(/\s*\[UNPAID BALANCE:[^\]]*\]/gi, '').replace(/\s*\[Paid in Full[^\]]*\]/gi, '').replace(/\s*\[Customer Ref:[^\]]*\]/gi, '').replace(/\s*\[Pending Cashier\]/gi, '')}${finBalanceNote}${!/\[Cashier:/i.test(existingFinLocal.description || '') ? ` [Cashier: ${cleanCashier}]` : ''}`;
         } else {
           localFin.unshift({
             record_id: Date.now(),
@@ -3261,14 +3306,22 @@ const erpController = {
       writeFinanceRecords(localFin);
 
       try {
-        const { data: existingFin } = await supabase
-          .from('finance_records')
-          .select('record_id, description')
-          .eq('reference_no', order.order_no)
-          .maybeSingle();
+        const refCandidates = [order.order_no, refCode, order.submitted_payment_ref].filter(Boolean);
+        let existingFin = null;
+        for (const cand of refCandidates) {
+          const { data: foundFin } = await supabase
+            .from('finance_records')
+            .select('record_id, description')
+            .eq('reference_no', cand)
+            .maybeSingle();
+          if (foundFin) {
+            existingFin = foundFin;
+            break;
+          }
+        }
 
         if (existingFin) {
-          const baseDesc = String(existingFin.description || '').replace(/\s*\[UNPAID BALANCE:[^\]]*\]/gi, '').replace(/\s*\[Paid in Full[^\]]*\]/gi, '');
+          const baseDesc = String(existingFin.description || '').replace(/\s*\[UNPAID BALANCE:[^\]]*\]/gi, '').replace(/\s*\[Paid in Full[^\]]*\]/gi, '').replace(/\s*\[Customer Ref:[^\]]*\]/gi, '').replace(/\s*\[Pending Cashier\]/gi, '');
           const descWithCashier = `${baseDesc}${finBalanceNote}${/\[Cashier:/i.test(baseDesc) ? '' : ` [Cashier: ${cleanCashier}]`}`;
           await supabase
             .from('finance_records')

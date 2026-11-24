@@ -1636,24 +1636,32 @@ function renderFulfillmentBadge(order) {
     (order.installation_status && order.installation_status !== 'not_requested')
   );
 
-  if (fType === 'product_collection') {
+  if (fType === 'service_only') {
+    flowTitle = 'Electrical service / installation';
+    flowPipeline = 'Cashier → Finance → Service Manager';
+    flowIcon = '🔧';
+  } else if (fType === 'product_collection') {
     flowTitle = needsInst ? 'Shop collection + installation' : 'Product collected from shop';
     flowPipeline = needsInst
-      ? 'Cashier → Finance → Collection | Installation (Independent)'
+      ? 'Cashier → Finance → Collection & Service Manager'
       : 'Cashier → Finance → Collection';
     flowIcon = needsInst ? '🏬🔧' : '🏬';
   } else if (fType === 'product_delivery_install') {
     flowTitle = 'Product + installation';
-    flowPipeline = 'Cashier → Finance → Delivery | Installation (Independent)';
+    flowPipeline = 'Cashier → Finance → Dispatch Manager & Service Manager';
     flowIcon = '🚚🔧';
   } else if (fType === 'product_install_later') {
     flowTitle = 'Product + installation booked later';
-    flowPipeline = 'Cashier → Finance → Delivery | Scheduled installation';
+    flowPipeline = 'Cashier → Finance → Dispatch Manager & Service Manager';
     flowIcon = '🚚📅';
+  } else {
+    flowPipeline = 'Cashier → Finance → Dispatch Manager';
   }
 
   let statusBadge = '';
-  if (relStatus === 'pending_credit_review' || balance > 0) {
+  if (relStatus === 'awaiting_cashier') {
+    statusBadge = `<div style="margin-top:3px;"><span class="badge-tag" style="background:#fef3c7; color:#92400e; font-weight:700; font-size:0.72rem;">🧾 Awaiting Cashier Confirmation</span></div>`;
+  } else if (relStatus === 'pending_credit_review' || balance > 0) {
     statusBadge = `<div style="margin-top:3px;"><span class="badge-tag" style="background:#fef3c7; color:#b45309; font-weight:700; font-size:0.72rem;">🛡️ Finance Credit Check Required (KES ${balance.toLocaleString()} Due)</span></div>`;
   } else if (relStatus === 'pending_finance') {
     statusBadge = `<div style="margin-top:3px;"><span class="badge-tag" style="background:#dbeafe; color:#1e40af; font-weight:700; font-size:0.72rem;">⏳ Awaiting Finance Release Gate</span></div>`;
@@ -1749,18 +1757,19 @@ function renderCashierOrdersTable() {
       .join('');
 
     const actions = [];
-    if (!isPaid && Number(o.amount_paid || 0) === 0) {
+    const awaitingCashier = o.finance_release_status === 'awaiting_cashier' || (!isPaid && Number(o.amount_paid || 0) === 0);
+    if (awaitingCashier) {
       if (Number(o.total_amount || 0) <= 0) {
         actions.push(`
           <button type="button" class="btn-sm" disabled style="background:#e2e8f0; color:#94a3b8; font-weight:700; padding:5px 10px; font-size:0.78rem; cursor:not-allowed;" title="Cannot accept a sale with KSh 0 amount">
-            ✅ Confirm Payment
+            ✅ Confirm &amp; Pass to Finance
           </button>
           <span style="color:#dc2626; font-size:0.72rem; font-weight:700;">⚠ KSh 0 amount</span>
         `);
       } else {
         actions.push(`
           <button type="button" class="btn-sm" style="background:#087443; color:#fff; font-weight:700; padding:5px 10px; font-size:0.78rem;" onclick="openConfirmPaymentModal('${escapeHTML(o.order_no)}')">
-            ✅ Confirm Payment
+            ✅ Confirm &amp; Pass to Finance
           </button>
         `);
       }
@@ -2459,7 +2468,7 @@ function openConfirmPaymentModal(orderNo) {
     ? 'Cash'
     : (order.payment_method === 'Split' ? 'Split' : (/bank/i.test(order.payment_method || '') ? 'Bank Transfer' : 'M-Pesa'));
   document.getElementById('confirm_payment_method').value = confirmMethod;
-  const rawOrderRef = String(order.payment_ref || '').trim();
+  const rawOrderRef = String(order.submitted_payment_ref || order.payment_ref || '').trim();
   const safeInitialRef = confirmMethod === 'Cash'
     ? 'CASH-COUNTER'
     : (/pending|awaiting|pay on/i.test(rawOrderRef) ? '' : rawOrderRef);
@@ -2481,10 +2490,14 @@ function openConfirmPaymentModal(orderNo) {
   const summaryEl = document.getElementById('confirm_order_summary');
   if (summaryEl) {
     const itemsText = (order.items || []).map(i => `${i.quantity}x ${escapeHTML(i.product_name)}`).join(', ');
+    const submittedNote = safeInitialRef && confirmMethod !== 'Cash'
+      ? `<div style="margin-top:4px; font-size:0.82rem; color:#047857; font-weight:700;">📲 Customer Submitted Ref: <code style="font-family:monospace;">${escapeHTML(safeInitialRef)}</code></div>`
+      : '';
     summaryEl.innerHTML = `
       <div><strong>Order #:</strong> <span style="font-family:monospace; color:#1d4ed8;">${escapeHTML(order.order_no)}</span></div>
       <div><strong>Customer:</strong> ${escapeHTML(order.customer_name)} ${order.customer_phone ? `(${escapeHTML(order.customer_phone)})` : ''}</div>
       <div><strong>Items:</strong> ${itemsText}</div>
+      ${submittedNote}
       <div style="margin-top:6px; font-size:1rem; font-weight:800; color:#087443;">Order Total: ${formatKES(totalAmt)}</div>
     `;
   }
@@ -3638,7 +3651,17 @@ function renderFinanceReleasesTable() {
           <button class="btn-sm" style="background:#047857; color:#fff; font-weight:600; padding:5px 9px;" onclick="openCreditReviewModal('${order.order_number}', 'balance')">💵 Receive Balance</button>
         `;
       } else {
-        actionButtons = `<span style="font-size:0.8rem; color:#16a34a; font-weight:700;">✅ Released to ${order.fulfillment_type === 'product_collection' ? 'Collection Counter' : 'Dispatch'}</span>`;
+        const destParts = [];
+        if (order.fulfillment_type === 'service_only') {
+          destParts.push('Service Manager');
+        } else if (order.fulfillment_type === 'product_collection') {
+          destParts.push('Collection Counter');
+          if (order.requires_installation) destParts.push('Service Manager');
+        } else {
+          destParts.push('Dispatch Manager');
+          if (order.requires_installation) destParts.push('Service Manager');
+        }
+        actionButtons = `<span style="font-size:0.8rem; color:#16a34a; font-weight:700;">✅ Forwarded to ${escapeHTML(destParts.join(' & '))}</span>`;
       }
     }
 

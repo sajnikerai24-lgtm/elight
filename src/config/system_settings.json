@@ -62,6 +62,62 @@
   },
   "audit_log": [
     {
+      "timestamp": "2026-11-24T05:21:55.636Z",
+      "department": "Finance & Treasury",
+      "actor": "Alice Muthoni (Finance)",
+      "action": "Order Released by Finance",
+      "details": "Order EL-TEST9993 (Service Only Customer) verified and RELEASED by Finance to Service Manager (Full payment verified and released by Finance Desk.)."
+    },
+    {
+      "timestamp": "2026-11-24T05:21:55.619Z",
+      "department": "Cashier & Sales",
+      "actor": "Esther Karimi (Cashier)",
+      "action": "Cashier Served Order — Passed to Finance",
+      "details": "Order EL-TEST9993 (Service Only Customer): Paid KES 2,200 of KES 2,200 (M-Pesa Ref: SVC9991113) • Settled in full. Passed to Finance for confirmation."
+    },
+    {
+      "timestamp": "2026-11-24T05:21:34.429Z",
+      "department": "Finance & Treasury",
+      "actor": "Alice Muthoni (Finance)",
+      "action": "Order Released by Finance",
+      "details": "Order EL-TEST9992 (Dispatch Only Customer) verified and RELEASED by Finance to Dispatch Manager (Full payment verified and released by Finance Desk.)."
+    },
+    {
+      "timestamp": "2026-11-24T05:21:34.421Z",
+      "department": "Dispatch & Deliveries",
+      "actor": "Order Fulfillment Sync",
+      "action": "Delivery Dispatch Run Created",
+      "details": "Auto-created Delivery Run #DSP-12 for Order EL-TEST9992 to Nkubu, Meru. Queued for driver assignment."
+    },
+    {
+      "timestamp": "2026-11-24T05:21:34.411Z",
+      "department": "Cashier & Sales",
+      "actor": "Esther Karimi (Cashier)",
+      "action": "Cashier Served Order — Passed to Finance",
+      "details": "Order EL-TEST9992 (Dispatch Only Customer): Paid KES 500 of KES 500 (M-Pesa Ref: DSP9991112) • Settled in full. Passed to Finance for confirmation."
+    },
+    {
+      "timestamp": "2026-11-24T05:21:13.184Z",
+      "department": "Finance & Treasury",
+      "actor": "Alice Muthoni (Finance)",
+      "action": "Order Released by Finance",
+      "details": "Order EL-TEST9991 (Test Customer Flow) verified and RELEASED by Finance to Dispatch Manager & Service Manager (Full payment verified and released by Finance Desk.)."
+    },
+    {
+      "timestamp": "2026-11-24T05:21:13.151Z",
+      "department": "Dispatch & Deliveries",
+      "actor": "Order Fulfillment Sync",
+      "action": "Delivery Dispatch Run Created",
+      "details": "Auto-created Delivery Run #DSP-11 for Order EL-TEST9991 to Makutano, Meru. Queued for driver assignment."
+    },
+    {
+      "timestamp": "2026-11-24T05:21:13.129Z",
+      "department": "Cashier & Sales",
+      "actor": "Esther Karimi (Cashier)",
+      "action": "Cashier Served Order — Passed to Finance",
+      "details": "Order EL-TEST9991 (Test Customer Flow): Paid KES 1,100 of KES 1,100 (M-Pesa Ref: TST1234567) • Settled in full. Passed to Finance for confirmation."
+    },
+    {
       "timestamp": "2026-11-16T08:13:54.153Z",
       "department": "Admin & Security",
       "actor": "Alice Muthoni (Finance Manager)",
@@ -704,62 +760,6 @@
       "actor": "Dennis Ndwiga (Dispatch Manager)",
       "action": "User Sign-In",
       "details": "Dennis Ndwiga (Dispatch Manager) signed in via Supabase Auth with role \"dispatch_manager\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:02:57.684Z",
-      "department": "Admin & Security",
-      "actor": "Alice Muthoni (Finance Manager)",
-      "action": "User Sign-In",
-      "details": "Alice Muthoni (Finance Manager) signed in via Supabase Auth with role \"finance_manager\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:02:55.782Z",
-      "department": "Admin & Security",
-      "actor": "Samuel Mwangi (Technician)",
-      "action": "User Sign-In",
-      "details": "Samuel Mwangi (Technician) signed in via Supabase Auth with role \"technician\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:02:53.873Z",
-      "department": "Admin & Security",
-      "actor": "Brian Kipchumba (Technician)",
-      "action": "User Sign-In",
-      "details": "Brian Kipchumba (Technician) signed in via Supabase Auth with role \"technician\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:02:51.650Z",
-      "department": "Admin & Security",
-      "actor": "Peter Otieno (Service Manager)",
-      "action": "User Sign-In",
-      "details": "Peter Otieno (Service Manager) signed in via Supabase Auth with role \"service_manager\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:02:50.137Z",
-      "department": "Admin & Security",
-      "actor": "Esther Karimi (Cashier)",
-      "action": "User Sign-In",
-      "details": "Esther Karimi (Cashier) signed in via Supabase Auth with role \"cashier\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:02:48.365Z",
-      "department": "Admin & Security",
-      "actor": "Mercy Wanjiku (Admin)",
-      "action": "User Sign-In",
-      "details": "Mercy Wanjiku (Admin) signed in via Supabase Auth with role \"admin\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:02:46.836Z",
-      "department": "Admin & Security",
-      "actor": "Joseph Kariuki (Owner)",
-      "action": "User Sign-In",
-      "details": "Joseph Kariuki (Owner) signed in via Supabase Auth with role \"owner\"."
-    },
-    {
-      "timestamp": "2026-11-13T07:47:18.724Z",
-      "department": "Finance & Treasury",
-      "actor": "Alice Muthoni (Finance)",
-      "action": "Customer Order Balance Payment Received",
-      "details": "Finance received KES 30,000 via Bank Transfer (BANK_EQUITY_8829) for Order EL-199120. Remaining balance: KES 0."
     }
   ]
 }

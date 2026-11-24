@@ -547,11 +547,12 @@ const reportsController = {
         return res.status(400).json({ success: false, message: refCheck.message });
       }
       const cleanReceipt = refCheck.value;
-      const isPaid = Boolean(cleanReceipt);
+      const hasSubmittedRef = Boolean(cleanReceipt);
       const isPickup = req.body.fulfillment_mode === 'collection' || /pickup|collection/i.test(String(delivery_address || ''));
       const wantsInstallation = Boolean(req.body.requires_installation || req.body.installation_required);
 
-      // 1. Save full itemized order into Cashier queue
+      // 1. Save full itemized order into Cashier queue (awaiting Cashier confirmation first)
+      const nowIso = new Date().toISOString();
       try {
         const existingOrders = readJsonFile(CASHIER_ORDERS_PATH, []);
         const normalizedItems = Array.isArray(items)
@@ -564,17 +565,13 @@ const reportsController = {
           : [];
         const itemsSubtotal = normalizedItems.reduce((s, i) => s + i.quantity * i.unit_price, 0);
         const delivFee = Math.max(0, cleanAmount - itemsSubtotal);
-        const nowIso = new Date().toISOString();
         const fType = isPickup
           ? 'product_collection'
           : (wantsInstallation ? 'product_delivery_install' : 'product_delivery');
-        const cleanAmountPaid = isPaid ? cleanAmount : 0;
-        const balanceDue = isPaid ? 0 : cleanAmount;
-        const hasUnpaidBalance = balanceDue > 0;
 
         existingOrders.unshift({
           order_no: refNo,
-          receipt_no: isPaid ? ('RCP-' + refNo.replace(/^EL-/i, '')) : '',
+          receipt_no: '',
           source: 'Online Customer Order',
           customer_name: customer_name || 'Customer',
           customer_phone: customer_phone || '',
@@ -583,42 +580,45 @@ const reportsController = {
           subtotal: itemsSubtotal || cleanAmount,
           delivery_fee: delivFee,
           total_amount: cleanAmount,
-          amount_paid: cleanAmountPaid,
-          balance_due: balanceDue,
-          unpaid_balance: hasUnpaidBalance,
-          order_status: 'processing',
-          status: 'processing',
-          payment_status: isPaid ? 'paid' : 'pending',
+          amount_paid: 0,
+          balance_due: cleanAmount,
+          unpaid_balance: true,
+          order_status: 'awaiting_cashier',
+          status: 'awaiting_cashier',
+          payment_status: 'pending',
           delivery_status: 'not_scheduled',
           installation_status: wantsInstallation ? 'requested' : 'not_requested',
           requires_installation: wantsInstallation,
           site_ready_for_installation: isPickup,
           payment_method: cleanMethod,
-          payment_ref: isPaid
+          submitted_payment_ref: cleanReceipt || '',
+          payment_ref: hasSubmittedRef
             ? cleanReceipt
             : (cleanMethod === 'Cash' ? 'Pay on Collection / Delivery' : 'Pending M-Pesa Verification'),
-          cash_tendered: isPaid ? cleanAmount : 0,
+          cash_tendered: 0,
           change_due: 0,
           fulfillment_type: fType,
           fulfillment_mode: isPickup ? 'collection' : 'delivery',
-          fulfillment_stage: 'finance',
-          fulfillment_status: hasUnpaidBalance ? 'pending_credit_review' : 'pending_finance_release',
-          finance_release_status: hasUnpaidBalance ? 'pending_credit_review' : 'pending_finance',
+          fulfillment_stage: 'cashier',
+          fulfillment_status: 'awaiting_cashier_confirmation',
+          finance_release_status: 'awaiting_cashier',
           finance_release_notes: '',
           finance_released_by: null,
           finance_released_at: null,
-          cashier_name: isPaid ? 'M-Pesa Direct' : '',
+          cashier_confirmed: false,
+          cashier_served: false,
+          cashier_name: '',
           stock_deducted: true,
           created_at: nowIso,
-          paid_at: isPaid ? nowIso : null
+          paid_at: null
         });
         writeJsonFile(CASHIER_ORDERS_PATH, existingOrders);
       } catch (qErr) {
         console.warn('Cashier queue sync warning:', qErr.message);
       }
 
-      // 2. Record sale in finance_records (both local and Supabase)
-      const finDesc = `Online Order ${refNo} by ${customer_name || 'Customer'} (${Array.isArray(items) ? items.length : 1} item(s))${isPaid ? ' [M-Pesa Direct]' : ''}`;
+      // 2. Record pending order entry in finance_records (awaiting Cashier confirmation -> Finance verification)
+      const finDesc = `Online Order ${refNo} by ${customer_name || 'Customer'} (${Array.isArray(items) ? items.length : 1} item(s))${hasSubmittedRef ? ` [Customer Ref: ${cleanReceipt} — Pending Cashier]` : ' [Pending Cashier]'}`;
       try {
         const localFin = readJsonFile(FINANCE_RECORDS_PATH, []);
         localFin.unshift({
@@ -628,8 +628,8 @@ const reportsController = {
           description: finDesc,
           amount: cleanAmount,
           payment_method: cleanMethod,
-          reference_no: isPaid ? cleanReceipt : refNo,
-          status: isPaid ? 'confirmed' : 'pending',
+          reference_no: hasSubmittedRef ? cleanReceipt : refNo,
+          status: 'pending',
           created_at: nowIso
         });
         writeJsonFile(FINANCE_RECORDS_PATH, localFin);
@@ -642,8 +642,8 @@ const reportsController = {
           description: finDesc,
           amount: cleanAmount,
           payment_method: cleanMethod,
-          reference_no: isPaid ? cleanReceipt : refNo,
-          status: isPaid ? 'confirmed' : 'pending'
+          reference_no: hasSubmittedRef ? cleanReceipt : refNo,
+          status: 'pending'
         }]);
       } catch (fDbErr) {}
 
@@ -662,30 +662,19 @@ const reportsController = {
         }
       }
 
-      // 4. Finance Confirmation Gate:
-      // Delivery dispatch & service requests are held until Finance confirms & releases the order.
+      // 4. Workflow Gate:
+      // Order starts at Cashier for confirmation -> passes to Finance for payment confirmation -> forwarded to Dispatch/Service Manager.
 
-      // 5. Cross-Module Notifications for Online Checkout
+      // 5. Notify Cashier & Customer (Finance is notified only after Cashier confirms the order)
       moduleNotifications.notify({
         targetModules: ['cashier'],
         sourceModule: 'storefront',
         senderName: customer_name || 'Online Customer',
-        title: `New Online Order ${refNo}`,
-        message: `${customer_name || 'Customer'} placed an online order for KES ${cleanAmount.toLocaleString()} (${isPaid ? `Paid via ${cleanMethod}` : 'Payment Pending'}).`,
-        severity: isPaid ? 'info' : 'warning',
+        title: `New Order ${refNo} Awaiting Cashier Confirmation`,
+        message: `${customer_name || 'Customer'} placed order ${refNo} for KES ${cleanAmount.toLocaleString()} (${cleanMethod}${hasSubmittedRef ? `, Submitted Ref: ${cleanReceipt}` : ''}). Confirm payment and pass to Finance.${!isPickup ? ' Dispatch required after Finance confirmation.' : ''}${wantsInstallation ? ' Service installation requested.' : ''}`,
+        severity: 'warning',
         refNo,
         actionModule: 'cashier'
-      });
-
-      moduleNotifications.notify({
-        targetModules: ['finance', 'finance_releases'],
-        sourceModule: 'storefront',
-        senderName: customer_name || 'Online Storefront',
-        title: isPaid ? `Online Order ${refNo} Awaiting Finance Release` : `Unpaid Online Order ${refNo} Flagged for Finance`,
-        message: `Online order ${refNo} (${customer_name || 'Customer'}) — Total: KES ${cleanAmount.toLocaleString()}${isPaid ? ', Paid in Full' : `, Balance Due: KES ${cleanAmount.toLocaleString()}`}.${!isPickup ? ' Requires Dispatch after Finance confirmation.' : ''}${wantsInstallation ? ' Installation service requested.' : ''}`,
-        severity: isPaid ? 'info' : 'warning',
-        refNo,
-        actionModule: 'finance_releases'
       });
 
       moduleNotifications.notify({
@@ -693,9 +682,7 @@ const reportsController = {
         sourceModule: 'storefront',
         senderName: 'Elight Storefront',
         title: `Order ${refNo} Received`,
-        message: isPaid
-          ? `Your order ${refNo} (KES ${cleanAmount.toLocaleString()}) has been received and sent to Finance for confirmation.`
-          : `Your order ${refNo} (KES ${cleanAmount.toLocaleString()}) is pending payment confirmation by Cashier.`,
+        message: `Your order ${refNo} (KES ${cleanAmount.toLocaleString()}) has been received and sent to Cashier for confirmation before forwarding to Finance.`,
         severity: 'success',
         refNo,
         recipientPhone: customer_phone || '',
