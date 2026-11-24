@@ -54,7 +54,8 @@ async function ensureSupabaseAuthUser(userRecord, rawPassword) {
     username: userRecord.username,
     phone: userRecord.phone || '',
     role: userRecord.role,
-    erp_user_id: userRecord.user_id
+    erp_user_id: userRecord.user_id,
+    ...(userRecord.location ? { location: userRecord.location } : {})
   };
 
   let existingAuth = null;
@@ -455,7 +456,23 @@ const erpController = {
       }
 
       const sysCfg = readSystemConfig();
-      const activeMatches = matches.filter(u =>
+      const nonPendingMatches = matches.filter(u => !['pending', 'pending_approval'].includes(String(u.status || '').toLowerCase()));
+      if (nonPendingMatches.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'Your customer account is awaiting Administrator approval. Please try again after approval.'
+        });
+      }
+
+      const nonRejectedMatches = nonPendingMatches.filter(u => String(u.status || '').toLowerCase() !== 'rejected');
+      if (nonRejectedMatches.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'Your account registration was declined by the System Administrator.'
+        });
+      }
+
+      const activeMatches = nonRejectedMatches.filter(u =>
         !(sysCfg.settings?.enforce_suspended_block !== false && String(u.status || 'active').toLowerCase() === 'suspended')
       );
       if (activeMatches.length === 0) {
@@ -588,27 +605,44 @@ const erpController = {
       // 1. Check if user already exists
       const { data: existingUser } = await supabase
         .from('users_accounts')
-        .select('user_id')
+        .select('user_id, status')
         .or(`email.eq.${cleanEmail},phone.eq.${cleanPhone}`)
         .limit(1);
 
       if (existingUser && existingUser.length > 0) {
+        const existingStatus = String(existingUser[0].status || '').toLowerCase();
+        if (existingStatus === 'pending' || existingStatus === 'pending_approval') {
+          return res.status(400).json({
+            success: false,
+            message: 'A registration request with this phone or email is already pending Administrator approval.'
+          });
+        }
+        if (existingStatus === 'rejected') {
+          return res.status(400).json({
+            success: false,
+            message: 'This registration request was declined. Please contact the System Administrator.'
+          });
+        }
         return res.status(400).json({ success: false, message: 'An account with this phone or email already exists. Please log in.' });
       }
 
-      // 2. Provision Supabase Auth account
+      // 2. Provision Supabase Auth account in locked state until Administrator approves
       const authUserId = await ensureSupabaseAuthUser(
         {
           full_name: cleanName,
           email: cleanEmail,
           username: cleanUsername,
           phone: cleanPhone,
-          role: 'customer'
+          role: 'customer',
+          location: cleanLocation
         },
         cleanPass
       );
+      if (authUserId) {
+        await supabase.auth.admin.updateUserById(authUserId, { ban_duration: '876000h' });
+      }
 
-      // 3. Insert into users_accounts linked to Supabase Auth user
+      // 3. Insert into users_accounts with pending_approval status (no active customer row or session yet)
       const { data: newUser, error: userErr } = await supabase
         .from('users_accounts')
         .insert([{
@@ -618,48 +652,40 @@ const erpController = {
           password: cleanPass,
           role: 'customer',
           phone: cleanPhone,
-          status: 'active',
+          status: 'pending_approval',
           auth_user_id: authUserId
         }])
         .select();
 
       if (userErr) throw userErr;
 
-      // 4. Insert into customers table
-      await supabase
-        .from('customers')
-        .insert([{
-          full_name: cleanName,
-          phone: cleanPhone,
-          email: cleanEmail,
-          location: cleanLocation,
-          notes: 'Registered online via customer sign up'
-        }]);
-
       const createdUser = newUser[0];
-      // Sync erp_user_id onto Supabase Auth metadata
-      await ensureSupabaseAuthUser(createdUser, cleanPass);
+      // Sync erp_user_id onto Supabase Auth metadata while keeping account locked until approval
+      await ensureSupabaseAuthUser({ ...createdUser, location: cleanLocation }, cleanPass);
 
-      const { data: authSignIn } = await supabase
-        .createAuthClient()
-        .auth.signInWithPassword({ email: cleanEmail, password: cleanPass });
+      appendAuditLog(
+        'Customer Registration Pending Approval',
+        `${cleanName} (${cleanPhone}, ${cleanEmail}, ${cleanLocation}) requested a customer account and requires Administrator approval.`,
+        cleanName,
+        'Admin & Security'
+      );
 
-      const token = authSignIn?.session?.access_token || '';
-      const safeUser = {
-        user_id: createdUser.user_id,
-        auth_user_id: authUserId,
-        full_name: createdUser.full_name,
-        username: createdUser.username,
-        email: createdUser.email,
-        role: 'customer',
-        phone: createdUser.phone
-      };
+      moduleNotifications.notify({
+        targetModules: ['admin'],
+        sourceModule: 'admin',
+        senderName: cleanName,
+        title: `Customer Approval Required: ${cleanName}`,
+        message: `${cleanName} (${cleanPhone}, ${cleanEmail}) requested a new customer account. Approve or decline in User Accounts.`,
+        severity: 'warning',
+        refNo: cleanPhone,
+        actionModule: 'admin'
+      });
 
       return res.status(201).json({
         success: true,
-        message: `Welcome to Elight Electrical, ${safeUser.full_name}! Your customer account is active.`,
-        user: safeUser,
-        token
+        pending_approval: true,
+        status: 'pending_approval',
+        message: `Registration submitted for ${cleanName}. Your account requires Administrator approval before you can sign in.`
       });
     } catch (err) {
       console.error('Customer registration error:', err);
@@ -765,6 +791,12 @@ const erpController = {
         return res.status(400).json({ success: false, message: 'No account fields provided to update.' });
       }
 
+      const { data: previousUser } = await supabase
+        .from('users_accounts')
+        .select('user_id, status, role')
+        .eq('user_id', id)
+        .maybeSingle();
+
       const { data, error } = await supabase
         .from('users_accounts')
         .update(updates)
@@ -777,13 +809,65 @@ const erpController = {
         return res.status(404).json({ success: false, message: `User #${id} not found.` });
       }
 
+      let authLocation = '';
       if (updatedUser.email) {
         const authUserId = await ensureSupabaseAuthUser(updatedUser, updates.password || updatedUser.password);
-        if (authUserId && updates.status) {
-          await supabase.auth.admin.updateUserById(authUserId, {
-            ban_duration: updates.status === 'suspended' ? '876000h' : 'none'
-          });
+        if (authUserId) {
+          const { data: authDetails } = await supabase.auth.admin.getUserById(authUserId).catch(() => ({ data: null }));
+          authLocation = authDetails?.user?.user_metadata?.location || '';
+          if (updates.status) {
+            const shouldLock = ['suspended', 'rejected', 'pending', 'pending_approval'].includes(updates.status);
+            await supabase.auth.admin.updateUserById(authUserId, {
+              ban_duration: shouldLock ? '876000h' : 'none'
+            });
+          }
         }
+      }
+
+      const prevStatus = String(previousUser?.status || '').toLowerCase();
+      const wasPending = prevStatus === 'pending' || prevStatus === 'pending_approval';
+      if (wasPending && updates.status === 'active' && String(updatedUser.role || '').toLowerCase() === 'customer') {
+        const cleanEmail = String(updatedUser.email || '').trim().toLowerCase();
+        const cleanPhone = String(updatedUser.phone || '').trim();
+        const filterClauses = [
+          cleanEmail ? `email.eq.${cleanEmail}` : '',
+          cleanPhone ? `phone.eq.${cleanPhone}` : ''
+        ].filter(Boolean);
+
+        let existingCust = [];
+        if (filterClauses.length > 0) {
+          const { data: custHits } = await supabase
+            .from('customers')
+            .select('customer_id')
+            .or(filterClauses.join(','))
+            .limit(1);
+          existingCust = custHits || [];
+        }
+
+        if (existingCust.length === 0) {
+          await supabase
+            .from('customers')
+            .insert([{
+              full_name: updatedUser.full_name,
+              phone: cleanPhone,
+              email: cleanEmail,
+              location: authLocation || 'Meru, Meru County',
+              notes: `Approved by ${actor || 'Administrator'}`
+            }]);
+        }
+
+        moduleNotifications.notify({
+          targetModules: ['customer'],
+          sourceModule: 'admin',
+          senderName: actor || 'System Administrator',
+          title: 'Customer Account Approved',
+          message: `Welcome ${updatedUser.full_name}! Your Elight Electrical customer account has been approved and is now active.`,
+          severity: 'success',
+          refNo: cleanPhone || `USR-${id}`,
+          recipientPhone: cleanPhone,
+          recipientEmail: cleanEmail,
+          recipientName: updatedUser.full_name
+        });
       }
 
       const { password: _omitted, ...safeUser } = updatedUser;

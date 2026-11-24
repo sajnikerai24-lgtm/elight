@@ -396,19 +396,37 @@ function renderUsersTable() {
 
   const searchVal = (document.getElementById('users-search-input')?.value || '').trim().toLowerCase();
   const roleFilter = document.getElementById('users-role-filter')?.value || 'all';
+  const statusFilter = document.getElementById('users-status-filter')?.value || 'all';
 
   const filtered = allUsers.filter(u => {
     const normR = normalizeRole(u.role);
+    const normStatus = String(u.status || 'active').toLowerCase();
     if (roleFilter !== 'all' && normR !== roleFilter) return false;
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'pending_approval') {
+        if (normStatus !== 'pending_approval' && normStatus !== 'pending') return false;
+      } else if (normStatus !== statusFilter) {
+        return false;
+      }
+    }
     if (!searchVal) return true;
-    const hay = `${u.full_name || ''} ${u.username || ''} ${u.email || ''} ${u.phone || ''} ${u.role || ''}`.toLowerCase();
+    const hay = `${u.full_name || ''} ${u.username || ''} ${u.email || ''} ${u.phone || ''} ${u.role || ''} ${normStatus}`.toLowerCase();
     return hay.includes(searchVal);
+  });
+
+  // Float pending customer approval requests to the top of the table
+  filtered.sort((a, b) => {
+    const aPending = ['pending', 'pending_approval'].includes(String(a.status || '').toLowerCase()) ? 0 : 1;
+    const bPending = ['pending', 'pending_approval'].includes(String(b.status || '').toLowerCase()) ? 0 : 1;
+    if (aPending !== bPending) return aPending - bPending;
+    return Number(b.user_id || 0) - Number(a.user_id || 0);
   });
 
   const badgeEl = document.getElementById('users-summary-badge');
   if (badgeEl) {
     const activeTotal = allUsers.filter(u => String(u.status || 'active').toLowerCase() === 'active').length;
-    badgeEl.textContent = `Showing ${filtered.length} of ${allUsers.length} accounts (${activeTotal} Active)`;
+    const pendingTotal = allUsers.filter(u => ['pending', 'pending_approval'].includes(String(u.status || '').toLowerCase())).length;
+    badgeEl.textContent = `Showing ${filtered.length} of ${allUsers.length} accounts (${activeTotal} Active${pendingTotal > 0 ? ` • ${pendingTotal} Pending Approval` : ''})`;
   }
 
   if (filtered.length === 0) {
@@ -432,9 +450,14 @@ function renderUsersTable() {
   tbody.innerHTML = filtered.map(u => {
     const normR = normalizeRole(u.role);
     const statusStr = String(u.status || 'active').toLowerCase();
+    const isPending = statusStr === 'pending' || statusStr === 'pending_approval';
+    const isRejected = statusStr === 'rejected';
     const isSuspended = statusStr === 'suspended';
     const roleLabel = ROLE_LABELS[normR] || u.role;
     const roleIcon = ROLE_ICONS[normR] || '👤';
+    const statusBg = isPending ? '#fef3c7' : (isRejected || isSuspended ? '#fee2e2' : '#dcfce7');
+    const statusColor = isPending ? '#92400e' : (isRejected || isSuspended ? '#b91c1c' : '#15803d');
+    const statusText = isPending ? '⏳ Pending Approval' : (isRejected ? 'Declined' : (isSuspended ? 'Suspended' : 'Active'));
 
     return `
       <tr>
@@ -453,8 +476,8 @@ function renderUsersTable() {
           </span>
         </td>
         <td>
-          <span class="badge-tag" style="background:${isSuspended ? '#fee2e2' : '#dcfce7'}; color:${isSuspended ? '#b91c1c' : '#15803d'}; font-weight:700;">
-            ${isSuspended ? 'Suspended' : 'Active'}
+          <span class="badge-tag" style="background:${statusBg}; color:${statusColor}; font-weight:700;">
+            ${statusText}
           </span>
         </td>
         <td>
@@ -463,9 +486,18 @@ function renderUsersTable() {
               <option value="">Assign Role...</option>
               ${roleOptions.map(opt => `<option value="${opt.value}" ${normR === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
             </select>
-            <button type="button" class="btn-sm" style="padding:4px 8px; font-size:0.75rem; background:${isSuspended ? '#dcfce7' : '#fef3c7'}; color:${isSuspended ? '#166534' : '#92400e'}; border:1px solid ${isSuspended ? '#86efac' : '#fde68a'};" onclick="toggleUserStatus(${u.user_id}, '${statusStr}')">
-              ${isSuspended ? 'Activate' : 'Suspend'}
-            </button>
+            ${isPending ? `
+              <button type="button" class="btn-sm" style="padding:4px 8px; font-size:0.75rem; background:#16a34a; color:#ffffff; border:1px solid #15803d; font-weight:700;" onclick="approvePendingUser(${u.user_id}, '${escapeHTML(u.full_name)}')">
+                ✓ Approve
+              </button>
+              <button type="button" class="btn-sm" style="padding:4px 8px; font-size:0.75rem; background:#fff7ed; color:#c2410c; border:1px solid #fdba74; font-weight:600;" onclick="rejectPendingUser(${u.user_id}, '${escapeHTML(u.full_name)}')">
+                ✕ Decline
+              </button>
+            ` : `
+              <button type="button" class="btn-sm" style="padding:4px 8px; font-size:0.75rem; background:${(isSuspended || isRejected) ? '#dcfce7' : '#fef3c7'}; color:${(isSuspended || isRejected) ? '#166534' : '#92400e'}; border:1px solid ${(isSuspended || isRejected) ? '#86efac' : '#fde68a'};" onclick="toggleUserStatus(${u.user_id}, '${statusStr}')">
+                ${(isSuspended || isRejected) ? 'Activate' : 'Suspend'}
+              </button>
+            `}
             <button type="button" class="btn-sm" style="padding:4px 8px; font-size:0.75rem; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;" onclick="resetUserPassword(${u.user_id}, '${escapeHTML(u.full_name)}')">
               Reset Key
             </button>
@@ -527,8 +559,41 @@ async function updateUserRole(id, role) {
   }
 }
 
+async function approvePendingUser(id, fullName) {
+  try {
+    const res = await fetch(`/api/admin/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'active', actor: currentUser?.full_name || 'Administrator' })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Approval failed');
+    showToast(`Approved customer account for ${fullName}. They can now sign in.`, 'success');
+    loadUsers();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function rejectPendingUser(id, fullName) {
+  if (!window.confirm(`Decline customer registration for "${fullName}" (#${id})? They will not be able to sign in.`)) return;
+  try {
+    const res = await fetch(`/api/admin/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'rejected', actor: currentUser?.full_name || 'Administrator' })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Rejection failed');
+    showToast(`Registration declined for ${fullName}.`, 'info');
+    loadUsers();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
 async function toggleUserStatus(id, currentStatus) {
-  const nextStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
+  const nextStatus = (currentStatus === 'suspended' || currentStatus === 'rejected') ? 'active' : 'suspended';
   try {
     const res = await fetch(`/api/admin/users/${id}`, {
       method: 'PUT',

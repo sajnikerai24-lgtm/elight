@@ -318,7 +318,7 @@
                 Back to Sign In</button>
             </div>
             <h2>Create Account</h2>
-            <p>Register to track your electrical purchases, manage active warranties, and enjoy priority delivery.</p>
+            <p>Submit your details to request a customer account. An Administrator must approve your account before you can sign in.</p>
           </div>
 
           <form id="registerForm">
@@ -357,7 +357,7 @@
             </div>
 
             <button type="submit" id="submitRegisterBtn" class="btn-auth-primary">
-              Create Account →
+              Submit Registration for Approval →
             </button>
           </form>
         </div>
@@ -538,7 +538,18 @@
         if (!data.success) {
           showAlert(data.message || 'Registration failed.', true);
           submitRegBtn.disabled = false;
-          submitRegBtn.textContent = 'Create Account →';
+          submitRegBtn.textContent = 'Submit Registration for Approval →';
+          return;
+        }
+
+        if (data.pending_approval || !data.token || !data.user) {
+          showAlert(
+            data.message || 'Registration submitted. Your customer account awaits Administrator approval before you can sign in.',
+            false
+          );
+          registerForm.reset();
+          submitRegBtn.disabled = false;
+          submitRegBtn.textContent = 'Submit Registration for Approval →';
           return;
         }
 
@@ -558,7 +569,7 @@
         console.error(err);
         showAlert('Network error connecting to server.', true);
         submitRegBtn.disabled = false;
-        submitRegBtn.textContent = 'Create Account →';
+        submitRegBtn.textContent = 'Submit Registration for Approval →';
       }
     });
 

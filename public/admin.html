@@ -331,6 +331,13 @@
               <option value="driver">Driver</option>
               <option value="customer">Customer</option>
             </select>
+            <select id="users-status-filter" onchange="renderUsersTable()" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem; background:#fff;">
+              <option value="all">All Statuses</option>
+              <option value="pending_approval">⏳ Pending Approval</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+              <option value="rejected">Declined</option>
+            </select>
           </div>
           <div id="users-summary-badge" style="font-size:0.82rem; font-weight:700; color:#334155;"></div>
         </div>

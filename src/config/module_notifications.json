@@ -1,5 +1,51 @@
 [
   {
+    "notification_id": "NTF-1795502948477-401",
+    "target_module": "customer",
+    "target_modules": [
+      "customer"
+    ],
+    "source_module": "admin",
+    "sender_name": "Mercy Wanjiku (Admin)",
+    "title": "Customer Account Approved",
+    "message": "Welcome Pending Approval Tester! Your Elight Electrical customer account has been approved and is now active.",
+    "severity": "success",
+    "ref_no": "0799937224",
+    "action_module": "customer",
+    "action_url": "",
+    "department": "",
+    "recipient_phone": "0799937224",
+    "recipient_email": "pending.test.cust.1795502937224@example.com",
+    "recipient_name": "Pending Approval Tester",
+    "supplier_id": null,
+    "is_read": false,
+    "read_by": [],
+    "created_at": "2026-11-24T06:49:08.477Z"
+  },
+  {
+    "notification_id": "NTF-1795502941354-836",
+    "target_module": "admin",
+    "target_modules": [
+      "admin"
+    ],
+    "source_module": "admin",
+    "sender_name": "Pending Approval Tester",
+    "title": "Customer Approval Required: Pending Approval Tester",
+    "message": "Pending Approval Tester (0799937224, pending.test.cust.1795502937224@example.com) requested a new customer account. Approve or decline in User Accounts.",
+    "severity": "warning",
+    "ref_no": "0799937224",
+    "action_module": "admin",
+    "action_url": "",
+    "department": "",
+    "recipient_phone": "",
+    "recipient_email": "",
+    "recipient_name": "",
+    "supplier_id": null,
+    "is_read": false,
+    "read_by": [],
+    "created_at": "2026-11-24T06:49:01.354Z"
+  },
+  {
     "notification_id": "NTF-1795164191655-850",
     "target_module": "customer",
     "target_modules": [

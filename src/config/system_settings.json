@@ -725,41 +725,6 @@
       "actor": "Grace Kerubo (Inventory Manager)",
       "action": "User Sign-In",
       "details": "Grace Kerubo (Inventory Manager) signed in via Supabase Auth with role \"inventory_manager\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:03:37.725Z",
-      "department": "Admin & Security",
-      "actor": "Esther Karimi (Cashier)",
-      "action": "User Sign-In",
-      "details": "Esther Karimi (Cashier) signed in with role \"cashier\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:03:14.279Z",
-      "department": "Admin & Security",
-      "actor": "Administrator",
-      "action": "User Account Removed",
-      "details": "Deleted user #29 (Verify Test Staff - cashier)."
-    },
-    {
-      "timestamp": "2026-11-13T08:03:12.331Z",
-      "department": "Admin & Security",
-      "actor": "Administrator",
-      "action": "User Account / Role Updated",
-      "details": "Verify Test Staff (#29): status → suspended"
-    },
-    {
-      "timestamp": "2026-11-13T08:03:10.859Z",
-      "department": "Admin & Security",
-      "actor": "Verify Test Staff",
-      "action": "User Sign-In",
-      "details": "Verify Test Staff signed in via Supabase Auth with role \"cashier\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:03:10.097Z",
-      "department": "Admin & Security",
-      "actor": "Administrator",
-      "action": "User Account Created",
-      "details": "Created cashier account for Verify Test Staff (@verify_1794556988035) synced to Supabase Auth."
     }
   ]
 }
