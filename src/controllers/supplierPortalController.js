@@ -177,116 +177,55 @@ async function streamStoredDocument(res, storagePath, fallbackName) {
 // 1. SUPPLIER AUTHENTICATION ENDPOINTS
 // =========================================================================
 
-const demoPasswordsByEmail = {
-  'sales@philipsea.com': 'PhilipsSup#2026',
-  'orders@schneiderelectric.co.ke': 'SchneiderSup#2026',
-  'sales@metsec.co.ke': 'Supplier#2026!',
-  'kamau@gmail.com': 'Supplier#2026!'
-};
-
-exports.getSupplierQuickProfiles = async (req, res) => {
-  try {
-    const { data: sups, error } = await supabase
-      .from('suppliers')
-      .select('supplier_id, supplier_name, company_name, contact_name, email, phone, status')
-      .order('supplier_id', { ascending: true });
-
-    if (!error && sups && sups.length > 0) {
-      return res.json({ success: true, profiles: sups });
-    }
-  } catch (e) {}
-
-  return res.json({
-    success: true,
-    profiles: [
-      { supplier_id: 3, supplier_name: 'Metsec Cables Kenya', company_name: 'Metsec Cables Kenya Ltd', contact_name: 'Mark Kamau', email: 'sales@metsec.co.ke', phone: '0700203672' },
-      { supplier_id: 1, supplier_name: 'Philips Lighting Kenya Dist.', company_name: 'Philips Lighting East Africa', contact_name: 'David Mwangi', email: 'sales@philipsea.com', phone: '0711334455' },
-      { supplier_id: 2, supplier_name: 'Schneider Electric Kenya', company_name: 'Schneider Electric East Africa', contact_name: 'Grace Wanjiku', email: 'orders@schneiderelectric.co.ke', phone: '0722889900' }
-    ]
-  });
-};
-
-exports.supplierQuickLogin = async (req, res) => {
-  try {
-    const supplierId = Number(req.body.supplier_id || 0);
-    const email = String(req.body.email || '').trim().toLowerCase();
-
-    let supQuery = supabase.from('suppliers').select('*');
-    if (supplierId) supQuery = supQuery.eq('supplier_id', supplierId);
-    else if (email) supQuery = supQuery.ilike('email', email);
-    else supQuery = supQuery.order('supplier_id', { ascending: true }).limit(1);
-
-    const { data: suppliers } = await supQuery;
-    const supplier = (suppliers && suppliers[0]) || {
-      supplier_id: supplierId || 3,
-      supplier_name: 'Metsec Cables Kenya',
-      contact_name: 'Mark Kamau',
-      email: email || 'sales@metsec.co.ke',
-      phone: '0700203672',
-      status: 'active'
-    };
-
-    const supEmail = String(supplier.email || email || 'sales@metsec.co.ke').toLowerCase();
-    const demoPwd = demoPasswordsByEmail[supEmail] || 'Supplier#2026!';
-
-    let { data, error } = await supabase.createAuthClient().auth.signInWithPassword({
-      email: supEmail,
-      password: demoPwd
-    });
-
-    if (error || !data?.session) {
-      const alt = await supabase.createAuthClient().auth.signInWithPassword({
-        email: supEmail,
-        password: 'supplier123'
-      });
-      if (alt.data?.session) {
-        data = alt.data;
-        error = null;
-      }
-    }
-
-    const token = data?.session?.access_token || `demo-supplier-token-${supplier.supplier_id}-${Date.now()}`;
-    return res.json({
-      success: true,
-      message: `Welcome to Supplier Portal, ${supplier.contact_name || supplier.supplier_name}`,
-      session: {
-        access_token: token,
-        refresh_token: data?.session?.refresh_token || 'demo-refresh-token',
-        expires_at: data?.session?.expires_at || Math.floor(Date.now() / 1000) + 86400
-      },
-      supplier
-    });
-  } catch (err) {
-    console.error('supplierQuickLogin error:', err);
-    return res.status(500).json({ success: false, message: err.message || 'Quick login failed.' });
-  }
-};
+function generateSupplierUsername(rawName, supplierId) {
+  const slug = String(rawName || '')
+    .toLowerCase()
+    .replace(/\b(ltd|limited|kenya|east africa|dist|enterprise|ent)\b/g, '')
+    .replace(/[^a-z0-9]+/g, '')
+    .slice(0, 18);
+  return slug || `supplier${supplierId || Date.now().toString().slice(-4)}`;
+}
 
 exports.supplierLogin = async (req, res) => {
   try {
-    const email = String(req.body.email || '').trim().toLowerCase();
+    const rawIdentifier = String(req.body.username || req.body.identifier || req.body.email || '').trim();
     const password = String(req.body.password || '');
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email and password are required.' });
+    if (!rawIdentifier || !password) {
+      return res.status(400).json({ success: false, message: 'Supplier username or email and password are required.' });
     }
 
-    // Try primary password
-    let { data, error } = await supabase.createAuthClient().auth.signInWithPassword({ email, password });
+    const cleanId = rawIdentifier.toLowerCase();
 
-    // Fallback: if 'supplier123' or demo password was supplied
-    if (error && (password === 'supplier123' || demoPasswordsByEmail[email])) {
-      const altPwd = demoPasswordsByEmail[email] || 'supplier123';
-      const altRes = await supabase.createAuthClient().auth.signInWithPassword({ email, password: altPwd });
-      if (altRes.data?.session) {
-        data = altRes.data;
-        error = null;
-      }
+    // Resolve supplier record by username, email, supplier_code, or phone
+    const { data: allSuppliers } = await supabase
+      .from('suppliers')
+      .select('supplier_id, username, email, supplier_code, phone, password, status, auth_user_id');
+
+    const matchedSup = (allSuppliers || []).find(s =>
+      String(s.username || '').trim().toLowerCase() === cleanId ||
+      String(s.email || '').trim().toLowerCase() === cleanId ||
+      String(s.supplier_code || '').trim().toLowerCase() === cleanId ||
+      String(s.phone || '').trim().toLowerCase() === cleanId
+    );
+
+    const authEmail = String(matchedSup?.email || (cleanId.includes('@') ? cleanId : '')).trim().toLowerCase();
+    if (!authEmail) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid supplier username or password.'
+      });
     }
+
+    // Authenticate via Supabase Auth using resolved supplier email
+    const { data, error } = await supabase.createAuthClient().auth.signInWithPassword({
+      email: authEmail,
+      password
+    });
 
     if (error || !data?.session || !data?.user) {
       return res.status(401).json({
         success: false,
-        message: error?.message || 'Invalid supplier email or password.'
+        message: 'Invalid supplier username/email or password.'
       });
     }
 
@@ -325,15 +264,18 @@ exports.supplierLogin = async (req, res) => {
       .update({ last_login_at: new Date().toISOString() })
       .eq('supplier_id', supplier.supplier_id);
 
+    const safeSupplier = { ...supplier };
+    delete safeSupplier.password;
+
     return res.json({
       success: true,
-      message: `Welcome back, ${supplier.contact_name || supplier.supplier_name}`,
+      message: `Welcome back, ${safeSupplier.contact_person || safeSupplier.supplier_name}`,
       session: {
         access_token: token,
         refresh_token: data.session.refresh_token,
         expires_at: data.session.expires_at
       },
-      supplier
+      supplier: safeSupplier
     });
   } catch (err) {
     console.error('supplierLogin error:', err);
@@ -438,6 +380,11 @@ exports.supplierChangePassword = async (req, res) => {
     if (updateErr) {
       return res.status(400).json({ success: false, message: updateErr.message });
     }
+
+    await supabase
+      .from('suppliers')
+      .update({ password: newPassword, updated_at: new Date().toISOString() })
+      .eq('supplier_id', req.supplierId);
 
     await createSupplierNotification(req.supplierId, {
       title: 'Account Password Updated',
@@ -1692,6 +1639,7 @@ exports.erpRegisterSupplier = async (req, res) => {
     const businessDescription = String(req.body.business_description || '').trim();
     const status = String(req.body.status || 'active').toLowerCase() === 'inactive' ? 'inactive' : 'active';
     const initialPassword = String(req.body.initial_password || '').trim();
+    const rawUsername = String(req.body.username || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
 
     if (!supplierName || !email || !phone) {
       return res.status(400).json({
@@ -1706,8 +1654,20 @@ exports.erpRegisterSupplier = async (req, res) => {
       });
     }
 
-    // Generate cryptographically random one-time password only in memory if admin opted for recovery-link setup
     const effectivePassword = initialPassword || `${crypto.randomBytes(9).toString('base64url')}#A9`;
+    let effectiveUsername = rawUsername || generateSupplierUsername(supplierName || email);
+
+    const { data: usernameHit } = await supabase
+      .from('suppliers')
+      .select('supplier_id')
+      .ilike('username', effectiveUsername)
+      .maybeSingle();
+    if (usernameHit) {
+      if (rawUsername) {
+        return res.status(409).json({ success: false, message: `Username "${rawUsername}" is already taken.` });
+      }
+      effectiveUsername = `${effectiveUsername}${String(Date.now()).slice(-3)}`;
+    }
 
     // Check email collision on suppliers first
     const { data: existingSup } = await supabase
@@ -1726,7 +1686,7 @@ exports.erpRegisterSupplier = async (req, res) => {
       return res.status(409).json({ success: false, message: `Email ${email} is already registered in authentication.` });
     }
 
-    // Step 1: Insert supplier record (no password stored anywhere in database)
+    // Step 1: Insert supplier record and sync username & password into public.suppliers
     const tempCode = `SUP-${String(Date.now()).slice(-6)}`;
     const { data: createdSup, error: supErr } = await supabase
       .from('suppliers')
@@ -1734,6 +1694,8 @@ exports.erpRegisterSupplier = async (req, res) => {
         supplier_name: supplierName,
         contact_person: contactPerson,
         email,
+        username: effectiveUsername,
+        password: effectivePassword,
         phone,
         address,
         kra_pin: kraPin,
@@ -1907,6 +1869,11 @@ exports.erpResetSupplierPassword = async (req, res) => {
         password: tempPassword
       });
       if (pwdErr) return res.status(400).json({ success: false, message: pwdErr.message });
+
+      await supabase
+        .from('suppliers')
+        .update({ password: tempPassword, updated_at: new Date().toISOString() })
+        .eq('supplier_id', supplierId);
     }
 
     const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({

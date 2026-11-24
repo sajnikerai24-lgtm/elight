@@ -7,8 +7,6 @@ const { authenticateSupplier, requireErpRoles } = require('../middleware/supplie
 router.post('/supplier/auth/login', controller.supplierLogin);
 router.post('/supplier/auth/refresh', controller.supplierRefreshSession);
 router.post('/supplier/auth/forgot-password', controller.supplierForgotPassword);
-router.get('/supplier/auth/quick-profiles', controller.getSupplierQuickProfiles);
-router.post('/supplier/auth/quick-login', controller.supplierQuickLogin);
 
 // --- Authenticated Supplier Account Endpoints ---
 router.get('/supplier/auth/me', authenticateSupplier, controller.getSupplierMe);

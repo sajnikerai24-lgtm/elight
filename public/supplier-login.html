@@ -156,74 +156,6 @@
       margin-bottom: 24px;
     }
 
-    /* Quick Select Supplier Box */
-    .quick-select-box {
-      border: 1.5px dashed var(--sys-gold-border);
-      background: var(--sys-gold-tint);
-      border-radius: 10px;
-      padding: 14px 16px;
-      margin-bottom: 22px;
-    }
-    .quick-select-label {
-      font-size: 0.84rem;
-      font-weight: 800;
-      color: var(--sys-gold-text);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 10px;
-    }
-    .quick-select-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .quick-select-row select {
-      flex: 1;
-      background: #ffffff;
-      color: var(--sys-text);
-      border: 1.5px solid #d1d5db;
-      border-radius: 8px;
-      padding: 10px 12px;
-      font-size: 0.86rem;
-      font-weight: 500;
-      outline: none;
-      cursor: pointer;
-    }
-    .quick-select-row select:focus {
-      border-color: #f59e0b;
-      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
-    }
-    .btn-enter-portal {
-      background: linear-gradient(135deg, #ffc107 0%, #f59e0b 100%);
-      color: #0d233a;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 16px;
-      font-weight: 800;
-      font-size: 0.86rem;
-      cursor: pointer;
-      white-space: nowrap;
-      box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
-      transition: transform 0.1s, opacity 0.15s;
-    }
-    .btn-enter-portal:hover {
-      opacity: 0.95;
-      transform: translateY(-1px);
-    }
-
-    /* Divider */
-    .divider-text {
-      text-align: center;
-      font-size: 0.72rem;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: #94a3b8;
-      margin-bottom: 20px;
-      font-weight: 700;
-      position: relative;
-    }
-
     /* Form Fields */
     .form-group {
       margin-bottom: 16px;
@@ -345,36 +277,19 @@
       <!-- Alert Box -->
       <div id="loginAlert" class="alert-box"></div>
 
-      <!-- Quick Select Supplier (One-Click) -->
-      <div class="quick-select-box">
-        <div class="quick-select-label">
-          <span>⚡</span> Quick Select Supplier (One-Click)
-        </div>
-        <div class="quick-select-row">
-          <select id="quickSupplierSelect" onchange="handleQuickSelectChange()">
-            <option value="">Select registered supplier profile...</option>
-            <option value="3" data-email="sales@metsec.co.ke" data-contact="Mark Kamau">Mark Kamau (Metsec Cables Kenya)</option>
-            <option value="1" data-email="sales@philipsea.com" data-contact="David Mwangi">David Mwangi (Philips Lighting Kenya Dist.)</option>
-            <option value="2" data-email="orders@schneiderelectric.co.ke" data-contact="Grace Wanjiku">Grace Wanjiku (Schneider Electric Kenya)</option>
-          </select>
-          <button type="button" class="btn-enter-portal" onclick="executeQuickLogin()">Enter Portal &rarr;</button>
-        </div>
-      </div>
-
-      <!-- Separator -->
-      <div class="divider-text">— OR LOG IN WITH EMAIL &amp; PASSWORD —</div>
-
-      <!-- Email & Password Form -->
+      <!-- Username / Email & Password Form -->
       <form id="supplierLoginForm" onsubmit="handleSupplierLogin(event)">
         <div class="form-group">
-          <label for="supEmail">Supplier Email Address</label>
-          <input type="email" id="supEmail" required autocomplete="email" placeholder="e.g. kamau@gmail.com">
+          <label for="supIdentifier">Supplier Username or Email</label>
+          <input type="text" id="supIdentifier" required autocomplete="username" placeholder="e.g. philips or sales@philipsea.com">
         </div>
 
         <div class="form-group">
-          <label for="supPassword">Password</label>
-          <input type="password" id="supPassword" required autocomplete="current-password" placeholder="Enter password (default: supplier123)">
-          <div class="password-hint">Default test password: <strong>supplier123</strong></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label for="supPassword" style="margin-bottom:0;">Password</label>
+            <span id="toggleSupPwd" style="font-size:0.75rem; color:#0284c7; cursor:pointer; font-weight:600;">Show</span>
+          </div>
+          <input type="password" id="supPassword" required autocomplete="current-password" placeholder="Enter your supplier password">
         </div>
 
         <button type="submit" id="loginSubmitBtn" class="btn-submit-login">Sign In to Supplier Portal</button>
@@ -408,81 +323,22 @@
       }
     }
 
-    // Load registered supplier profiles into dropdown
-    async function loadQuickProfiles() {
-      try {
-        const res = await fetch('/api/supplier/auth/quick-profiles');
-        const data = await res.json();
-        if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
-          const sel = document.getElementById('quickSupplierSelect');
-          sel.innerHTML = '<option value="">Select registered supplier profile...</option>' +
-            data.profiles.map(p => {
-              const displayName = p.contact_name ? `${p.contact_name} (${p.supplier_name || p.company_name})` : (p.supplier_name || p.company_name);
-              return `<option value="${p.supplier_id}" data-email="${p.email || ''}" data-contact="${p.contact_name || ''}">${displayName}</option>`;
-            }).join('');
-        }
-      } catch (e) {}
+    // Standard Form Login (accepts Username or Email + Password)
+    const toggleSupPwd = document.getElementById('toggleSupPwd');
+    const supPwdInput = document.getElementById('supPassword');
+    if (toggleSupPwd && supPwdInput) {
+      toggleSupPwd.addEventListener('click', () => {
+        const isPwd = supPwdInput.type === 'password';
+        supPwdInput.type = isPwd ? 'text' : 'password';
+        toggleSupPwd.textContent = isPwd ? 'Hide' : 'Show';
+      });
     }
 
-    function handleQuickSelectChange() {
-      const sel = document.getElementById('quickSupplierSelect');
-      const opt = sel.options[sel.selectedIndex];
-      if (opt && opt.value) {
-        const email = opt.getAttribute('data-email');
-        if (email) document.getElementById('supEmail').value = email;
-        document.getElementById('supPassword').value = 'supplier123';
-      }
-    }
-
-    // One-Click Enter Portal
-    async function executeQuickLogin() {
-      clearAlert();
-      const sel = document.getElementById('quickSupplierSelect');
-      const supplierId = sel.value;
-      const opt = sel.options[sel.selectedIndex];
-      const email = opt?.getAttribute('data-email') || document.getElementById('supEmail').value.trim();
-
-      if (!supplierId && !email) {
-        showAlert('Please select a supplier profile from the dropdown first.');
-        return;
-      }
-
-      const btn = document.querySelector('.btn-enter-portal');
-      btn.disabled = true;
-      btn.textContent = 'Entering...';
-
-      try {
-        const res = await fetch('/api/supplier/auth/quick-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ supplier_id: supplierId, email })
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          showAlert(data.message || 'Quick login failed.');
-          return;
-        }
-
-        localStorage.removeItem('elight_user');
-        localStorage.setItem(SUPPLIER_SESSION_KEY, JSON.stringify({
-          session: data.session,
-          supplier: data.supplier
-        }));
-        window.location.replace('/supplier-portal');
-      } catch (err) {
-        showAlert('Connection error during quick login.');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = 'Enter Portal &rarr;';
-      }
-    }
-
-    // Standard Form Login
     async function handleSupplierLogin(e) {
       e.preventDefault();
       clearAlert();
       const btn = document.getElementById('loginSubmitBtn');
-      const email = document.getElementById('supEmail').value.trim();
+      const identifier = document.getElementById('supIdentifier').value.trim();
       const password = document.getElementById('supPassword').value;
 
       btn.disabled = true;
@@ -492,11 +348,11 @@
         const res = await fetch('/api/supplier/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ username: identifier, email: identifier, password })
         });
         const data = await res.json();
         if (!res.ok || !data.success) {
-          showAlert(data.message || 'Authentication failed. Please verify email and password.');
+          showAlert(data.message || 'Authentication failed. Please verify your username/email and password.');
           return;
         }
 
@@ -532,8 +388,6 @@
         }
       } catch (e) {}
     })();
-
-    loadQuickProfiles();
   </script>
 </body>
 </html>
