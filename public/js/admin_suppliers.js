@@ -182,11 +182,18 @@
 
   window.handleRegisterSupplier = async function (e) {
     e.preventDefault();
+    const cleanPhone = document.getElementById('reg_sup_phone').value.trim().replace(/[\s()-]/g, '');
+    if (!/^\d{10}$/.test(cleanPhone)) {
+      showToast('Phone number must be exactly 10 digits (cannot be below 10 or above 10 digits).', 'error');
+      document.getElementById('reg_sup_phone')?.focus();
+      return;
+    }
+
     const payload = {
       supplier_name: document.getElementById('reg_sup_name').value.trim(),
       contact_person: document.getElementById('reg_sup_contact').value.trim(),
       email: document.getElementById('reg_sup_email').value.trim(),
-      phone: document.getElementById('reg_sup_phone').value.trim(),
+      phone: cleanPhone,
       address: document.getElementById('reg_sup_address').value.trim(),
       kra_pin: document.getElementById('reg_sup_kra').value.trim(),
       business_description: document.getElementById('reg_sup_desc').value.trim(),

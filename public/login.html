@@ -331,7 +331,7 @@
               <div class="form-group-white">
                 <label for="regPhone">Phone Number * (10 Digits)</label>
                 <input type="tel" id="regPhone" class="input-white" placeholder="07XXXXXXXX or 01XXXXXXXX"
-                  maxlength="10" pattern="[0-9]{10}" inputmode="numeric" required>
+                  minlength="10" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" required>
               </div>
               <div class="form-group-white">
                 <label for="regEmail">Email Address</label>
@@ -469,17 +469,11 @@
       performLogin(u, p);
     });
 
-    // Input restriction for registration phone number
+    // Input restriction for registration phone number (strictly 10 digits)
     const regPhoneInput = document.getElementById('regPhone');
     if (regPhoneInput) {
       regPhoneInput.addEventListener('input', function () {
-        let v = this.value;
-        if (/^\+254/.test(v)) {
-          v = '0' + v.replace(/^\+254/, '');
-        } else if (/^254\d/.test(v)) {
-          v = '0' + v.replace(/^254/, '');
-        }
-        this.value = v.replace(/\D/g, '').slice(0, 10);
+        this.value = this.value.replace(/\D/g, '').slice(0, 10);
       });
     }
 
@@ -496,13 +490,10 @@
       const password = document.getElementById('regPassword').value.trim();
       const confirmPassword = document.getElementById('regConfirmPassword').value.trim();
 
-      let cleanPhone = phone.replace(/\D/g, '');
-      if (cleanPhone.startsWith('254') && cleanPhone.length === 12) {
-        cleanPhone = '0' + cleanPhone.slice(3);
-      }
+      const cleanPhone = phone.replace(/[\s()-]/g, '');
 
-      if (cleanPhone.length !== 10) {
-        showAlert('Customer phone number must be exactly 10 digits (e.g. 0712345678 or 0112345678).', true);
+      if (!/^\d{10}$/.test(cleanPhone)) {
+        showAlert('Phone number must be exactly 10 digits (cannot be below 10 or above 10 digits, e.g. 0712345678).', true);
         return;
       }
 

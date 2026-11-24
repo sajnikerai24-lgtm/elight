@@ -383,6 +383,31 @@ function calculateTreasuryBalances(records, customSettings) {
   };
 }
 
+/**
+ * Validates that an account phone number contains strictly 10 digits (not below or above 10 digits).
+ */
+function validateAccountPhone(rawPhone, { required = true } = {}) {
+  const str = String(rawPhone === undefined || rawPhone === null ? '' : rawPhone).trim();
+  if (!str) {
+    if (required) {
+      return { valid: false, value: '', message: 'Phone number is required and must be exactly 10 digits.' };
+    }
+    return { valid: true, value: '' };
+  }
+  if (/[a-zA-Z]/.test(str)) {
+    return { valid: false, value: '', message: 'Phone number must contain exactly 10 digits (numbers only).' };
+  }
+  const digits = str.replace(/[\s()-]/g, '');
+  if (!/^\d{10}$/.test(digits)) {
+    return {
+      valid: false,
+      value: digits,
+      message: 'Phone number must be exactly 10 digits (cannot be below 10 or above 10 digits, e.g. 0712345678).'
+    };
+  }
+  return { valid: true, value: digits };
+}
+
 const erpController = {
   // ==========================================
   // AUTHENTICATION & DEMO ACCOUNTS
@@ -581,17 +606,14 @@ const erpController = {
         return res.status(400).json({ success: false, message: 'Please provide full name, phone number, and password.' });
       }
 
-      const rawPhone = String(phone).trim();
-      let cleanPhone = rawPhone.replace(/\D/g, '');
-      if (cleanPhone.startsWith('254') && cleanPhone.length === 12) {
-        cleanPhone = '0' + cleanPhone.slice(3);
-      }
-      if (cleanPhone.length !== 10) {
+      const phoneCheck = validateAccountPhone(phone, { required: true });
+      if (!phoneCheck.valid) {
         return res.status(400).json({
           success: false,
-          message: 'Customer phone number must be exactly 10 digits (e.g. 07XXXXXXXX or 01XXXXXXXX).'
+          message: phoneCheck.message
         });
       }
+      const cleanPhone = phoneCheck.value;
 
       const cleanEmail = email ? String(email).trim().toLowerCase() : `${cleanPhone}@customer.elight.co.ke`;
       const cleanName = String(full_name).trim();
@@ -728,7 +750,11 @@ const erpController = {
         return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
       }
       const cleanRole = String(role || 'cashier').trim().toLowerCase();
-      const cleanPhone = phone ? String(phone).trim() : '';
+      const phoneCheck = validateAccountPhone(phone, { required: true });
+      if (!phoneCheck.valid) {
+        return res.status(400).json({ success: false, message: phoneCheck.message });
+      }
+      const cleanPhone = phoneCheck.value;
 
       const authUserId = await ensureSupabaseAuthUser(
         {
@@ -785,7 +811,13 @@ const erpController = {
         updates.password = trimmedPass;
       }
       if (full_name !== undefined && String(full_name).trim() !== '') updates.full_name = String(full_name).trim();
-      if (phone !== undefined) updates.phone = String(phone).trim();
+      if (phone !== undefined) {
+        const phoneCheck = validateAccountPhone(phone, { required: true });
+        if (!phoneCheck.valid) {
+          return res.status(400).json({ success: false, message: phoneCheck.message });
+        }
+        updates.phone = phoneCheck.value;
+      }
 
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ success: false, message: 'No account fields provided to update.' });
@@ -1140,9 +1172,13 @@ const erpController = {
   createCustomer: async (req, res) => {
     try {
       const { full_name, phone, email, location, notes } = req.body;
+      const phoneCheck = validateAccountPhone(phone, { required: true });
+      if (!phoneCheck.valid) {
+        return res.status(400).json({ success: false, message: phoneCheck.message });
+      }
       const { data, error } = await supabase
         .from('customers')
-        .insert([{ full_name, phone, email, location, notes }])
+        .insert([{ full_name, phone: phoneCheck.value, email, location, notes }])
         .select();
       if (error) throw error;
       res.status(201).json({ success: true, customer: data[0] });

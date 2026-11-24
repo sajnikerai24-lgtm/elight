@@ -513,12 +513,19 @@ function renderUsersTable() {
 
 async function handleCreateUser(e) {
   e.preventDefault();
+  const cleanPhone = document.getElementById('user_phone').value.trim().replace(/[\s()-]/g, '');
+  if (!/^\d{10}$/.test(cleanPhone)) {
+    showToast('Phone number must be exactly 10 digits (cannot be below 10 or above 10 digits).', 'error');
+    document.getElementById('user_phone')?.focus();
+    return;
+  }
+
   const payload = {
     full_name: document.getElementById('user_full_name').value.trim(),
     username: document.getElementById('user_username')?.value.trim() || '',
     email: document.getElementById('user_email').value.trim(),
     role: document.getElementById('user_role').value,
-    phone: document.getElementById('user_phone').value.trim(),
+    phone: cleanPhone,
     password: document.getElementById('user_password')?.value.trim() || 'elight123',
     actor: currentUser?.full_name || 'Administrator'
   };
@@ -969,9 +976,16 @@ async function loadCustomersAndWarranties() {
 
 async function handleCreateCustomer(e) {
   e.preventDefault();
+  const cleanPhone = document.getElementById('cust_phone_input').value.trim().replace(/[\s()-]/g, '');
+  if (!/^\d{10}$/.test(cleanPhone)) {
+    showToast('Phone number must be exactly 10 digits (cannot be below 10 or above 10 digits).', 'error');
+    document.getElementById('cust_phone_input')?.focus();
+    return;
+  }
+
   const payload = {
     full_name: document.getElementById('cust_name_input').value.trim(),
-    phone: document.getElementById('cust_phone_input').value.trim(),
+    phone: cleanPhone,
     email: document.getElementById('cust_email_input').value.trim(),
     location: document.getElementById('cust_location_input').value.trim(),
     notes: document.getElementById('cust_notes_input').value.trim()
@@ -983,7 +997,8 @@ async function handleCreateCustomer(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    if (!res.ok) throw new Error('Customer creation failed');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Customer creation failed');
     closeModal('customer-modal');
     showToast(`Customer ${payload.full_name} saved.`, 'success');
     loadCustomersAndWarranties();

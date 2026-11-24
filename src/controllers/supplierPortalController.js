@@ -1771,12 +1771,36 @@ exports.erpGetSupplierDetails = async (req, res) => {
   }
 };
 
+/**
+ * Enforces strict 10-digit phone numbers for supplier account creation/updates.
+ */
+function validateAccountPhone10(rawPhone, { required = true } = {}) {
+  const str = String(rawPhone === undefined || rawPhone === null ? '' : rawPhone).trim();
+  if (!str) {
+    return required
+      ? { valid: false, value: '', message: 'Phone number is required and must be exactly 10 digits.' }
+      : { valid: true, value: '' };
+  }
+  if (/[a-zA-Z]/.test(str)) {
+    return { valid: false, value: '', message: 'Phone number must contain exactly 10 digits (numbers only).' };
+  }
+  const digits = str.replace(/[\s()-]/g, '');
+  if (!/^\d{10}$/.test(digits)) {
+    return {
+      valid: false,
+      value: digits,
+      message: 'Phone number must be exactly 10 digits (cannot be below 10 or above 10 digits, e.g. 0712345678).'
+    };
+  }
+  return { valid: true, value: digits };
+}
+
 exports.erpRegisterSupplier = async (req, res) => {
   try {
     const supplierName = String(req.body.supplier_name || '').trim();
     const contactPerson = String(req.body.contact_person || '').trim();
     const email = String(req.body.email || '').trim().toLowerCase();
-    const phone = String(req.body.phone || '').trim();
+    const rawPhone = String(req.body.phone || '').trim();
     const address = String(req.body.address || '').trim();
     const kraPin = String(req.body.kra_pin || '').trim();
     const businessDescription = String(req.body.business_description || '').trim();
@@ -1784,12 +1808,20 @@ exports.erpRegisterSupplier = async (req, res) => {
     const initialPassword = String(req.body.initial_password || '').trim();
     const rawUsername = String(req.body.username || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
 
-    if (!supplierName || !email || !phone) {
+    if (!supplierName || !email || !rawPhone) {
       return res.status(400).json({
         success: false,
         message: 'Supplier name, login email, and phone number are required.'
       });
     }
+    const phoneCheck = validateAccountPhone10(rawPhone, { required: true });
+    if (!phoneCheck.valid) {
+      return res.status(400).json({
+        success: false,
+        message: phoneCheck.message
+      });
+    }
+    const phone = phoneCheck.value;
     if (initialPassword && initialPassword.length < 8) {
       return res.status(400).json({
         success: false,
@@ -1919,7 +1951,17 @@ exports.erpUpdateSupplier = async (req, res) => {
 
     const updates = { updated_at: new Date().toISOString() };
     for (const field of ['supplier_name', 'contact_person', 'phone', 'address', 'kra_pin', 'business_description']) {
-      if (req.body[field] !== undefined) updates[field] = String(req.body[field]).trim();
+      if (req.body[field] !== undefined) {
+        if (field === 'phone') {
+          const phoneCheck = validateAccountPhone10(req.body.phone, { required: true });
+          if (!phoneCheck.valid) {
+            return res.status(400).json({ success: false, message: phoneCheck.message });
+          }
+          updates.phone = phoneCheck.value;
+        } else {
+          updates[field] = String(req.body[field]).trim();
+        }
+      }
     }
     if (req.body.status !== undefined) {
       const st = String(req.body.status).toLowerCase();
