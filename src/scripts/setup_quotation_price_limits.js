@@ -19,7 +19,7 @@ function computeCatalogMaxUnitPrice(prod) {
     const ceiling = Math.round(sell * 0.92);
     computed = buy > 0 ? Math.max(buy, ceiling) : Math.max(10, ceiling);
   }
-  return Number(computed.toFixed(2));
+  return Number(Math.min(5000, computed).toFixed(2));
 }
 
 const sql = `
@@ -84,24 +84,27 @@ const sql = `
       'SELECT purchase_item_id, product_id, product_name, max_unit_price FROM public.purchase_items'
     );
     for (const pi of piRows) {
-      if (pi.max_unit_price !== null && Number(pi.max_unit_price) > 0) continue;
       const prod = invById.get(Number(pi.product_id)) || invByName.get(String(pi.product_name || '').trim().toLowerCase());
-      const maxPrice = prod ? prod.max_unit_price : 1500;
+      const rawExisting = (pi.max_unit_price !== null && Number(pi.max_unit_price) > 0) ? Number(pi.max_unit_price) : null;
+      const maxPrice = rawExisting !== null
+        ? Math.min(5000, rawExisting)
+        : (prod ? prod.max_unit_price : 1500);
+      if (rawExisting !== null && rawExisting === maxPrice) continue;
       await client.query(
         'UPDATE public.purchase_items SET max_unit_price = $1 WHERE purchase_item_id = $2',
         [maxPrice, pi.purchase_item_id]
       );
     }
 
-    // 4. Backfill quotation_items where max_unit_price is null/0 and evaluate price_validation_status
+    // 4. Backfill quotation_items where max_unit_price is null/0 or > 5000 and evaluate price_validation_status
     const { rows: qiRows } = await client.query(
       'SELECT quotation_item_id, product_id, product_name, unit_price, max_unit_price FROM public.quotation_items'
     );
     for (const qi of qiRows) {
       const prod = invById.get(Number(qi.product_id)) || invByName.get(String(qi.product_name || '').trim().toLowerCase());
-      const maxPrice = (qi.max_unit_price !== null && Number(qi.max_unit_price) > 0)
+      const maxPrice = Math.min(5000, (qi.max_unit_price !== null && Number(qi.max_unit_price) > 0)
         ? Number(qi.max_unit_price)
-        : (prod ? prod.max_unit_price : 1500);
+        : (prod ? prod.max_unit_price : 1500));
       const unitPrice = Number(qi.unit_price || 0);
       const status = unitPrice <= 0 ? 'invalid' : (unitPrice <= maxPrice + 0.0001 ? 'within_range' : 'above_max');
       await client.query(
