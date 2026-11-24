@@ -199,6 +199,13 @@ exports.supplierLogin = async (req, res) => {
     const digitsOnly = cleanId.replace(/\D/g, '');
     const normPhone = (digitsOnly.startsWith('254') && digitsOnly.length === 12) ? ('0' + digitsOnly.slice(3)) : digitsOnly;
 
+    // Normalize legacy quick-select emails/aliases so browser autofill still resolves cleanly
+    const legacyEmailAliases = {
+      'sales@metsec.co.ke': 'info@metsec.co.ke',
+      'orders@schneiderelectric.co.ke': 'orders@schneider-ea.com'
+    };
+    const resolvedAliasEmail = legacyEmailAliases[cleanId] || '';
+
     // Resolve supplier record by username, email, supplier_code, phone, supplier_name, or contact_person
     const { data: allSuppliers, error: listSupErr } = await supabase
       .from('suppliers')
@@ -210,27 +217,50 @@ exports.supplierLogin = async (req, res) => {
       return res.status(500).json({ success: false, message: 'Database error looking up supplier account.' });
     }
 
-    const matchedList = (allSuppliers || []).filter(s => {
+    const activeSuppliers = (allSuppliers || []).filter(s => String(s.status || '').toLowerCase() === 'active');
+    const searchPool = activeSuppliers.length > 0 ? activeSuppliers : (allSuppliers || []);
+
+    let matchedList = searchPool.filter(s => {
       const u = String(s.username || '').trim().toLowerCase();
       const e = String(s.email || '').trim().toLowerCase();
       const c = String(s.supplier_code || '').trim().toLowerCase();
       const nm = String(s.supplier_name || '').trim().toLowerCase();
+      const nmAlpha = nm.replace(/[^a-z0-9]/g, '');
       const cp = String(s.contact_person || '').trim().toLowerCase();
+      const cpAlpha = cp.replace(/[^a-z0-9]/g, '');
       const ph = String(s.phone || '').replace(/\D/g, '');
       const phNorm = (ph.startsWith('254') && ph.length === 12) ? ('0' + ph.slice(3)) : ph;
 
-      if (u === cleanId || e === cleanId || c === cleanId || nm === cleanId || cp === cleanId) return true;
-      if (cleanAlphaNum.length >= 3 && u && (u === cleanAlphaNum || u.startsWith(cleanAlphaNum))) return true;
+      if (
+        u === cleanId ||
+        e === cleanId ||
+        (resolvedAliasEmail && e === resolvedAliasEmail) ||
+        c === cleanId ||
+        nm === cleanId ||
+        cp === cleanId
+      ) {
+        return true;
+      }
+      if (cleanAlphaNum.length >= 3) {
+        if (u && (u === cleanAlphaNum || u.startsWith(cleanAlphaNum) || cleanAlphaNum.startsWith(u))) return true;
+        if (nmAlpha && (nmAlpha.includes(cleanAlphaNum) || cleanAlphaNum.includes(nmAlpha))) return true;
+        if (cpAlpha && cpAlpha === cleanAlphaNum) return true;
+      }
       if (/^[\d+\s-]+$/.test(rawIdentifier) && digitsOnly.length >= 4 && (ph === digitsOnly || phNorm === normPhone)) return true;
       return false;
     });
 
+    // Support generic 'supplier' username login using primary active supplier account
+    if (matchedList.length === 0 && (cleanId === 'supplier' || cleanAlphaNum === 'supplier')) {
+      if (searchPool.length > 0) matchedList = [searchPool[0]];
+    }
+
     const matchedSup = matchedList[0] || null;
-    const authEmail = String(matchedSup?.email || (cleanId.includes('@') ? cleanId : '')).trim().toLowerCase();
+    const authEmail = String(matchedSup?.email || (cleanId.includes('@') ? (resolvedAliasEmail || cleanId) : '')).trim().toLowerCase();
     if (!authEmail) {
       return res.status(401).json({
         success: false,
-        message: 'Supplier account not found. Enter your synced supplier username (e.g. philips) or email.'
+        message: 'Supplier account not found. Enter your synced supplier username (e.g. supplier, philips, schneider, metsec, shreerang) or email.'
       });
     }
 
@@ -751,17 +781,12 @@ exports.submitSupplierQuotation = async (req, res) => {
       }
 
       const bounds = resolvePurchaseItemBounds(matchedPoItem);
-      if (rawPrice === undefined || rawPrice === null || String(rawPrice).trim() === '' || Number.isNaN(unitPrice)) {
-        validationErrors.push(`Enter a valid numeric unit price for "${productName}" (Maximum permitted: KSh ${formatKshNumber(bounds.max_unit_price)}).`);
+      if (rawPrice === undefined || rawPrice === null || String(rawPrice).trim() === '' || Number.isNaN(unitPrice) || unitPrice <= 0) {
+        validationErrors.push(`Enter a valid unit price greater than KSh 0 for "${productName}".`);
         continue;
       }
 
       const check = evaluateQuotationPrice(productName, unitPrice, bounds.max_unit_price);
-      if (!check.valid) {
-        validationErrors.push(check.message);
-        continue;
-      }
-
       const cleanPrice = Number(unitPrice.toFixed(2));
       const lineTotal = Number((availableQty * cleanPrice).toFixed(2));
       totalAmount += lineTotal;
