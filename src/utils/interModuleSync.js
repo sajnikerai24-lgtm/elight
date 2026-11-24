@@ -440,6 +440,7 @@ const interModuleSync = {
   // 2. CUSTOMER BOOKINGS & SERVICE REQUESTS CONNECTION
   // ========================================================
   getBookings: async (filter = {}) => {
+    const localBookings = readJson(BOOKINGS_PATH, DEFAULT_BOOKINGS);
     try {
       let query = supabase
         .from('bookings')
@@ -452,12 +453,31 @@ const interModuleSync = {
       }
       const { data, error } = await query;
       if (!error && Array.isArray(data) && data.length > 0) {
-        const sorted = sortByLatest(data, 'booking_id');
-        writeJson(BOOKINGS_PATH, sorted);
+        const merged = data.map(b => {
+          const local = localBookings.find(
+            l => Number(l.booking_id) === Number(b.booking_id) ||
+              (b.booking_ref && l.booking_ref && String(l.booking_ref).toUpperCase() === String(b.booking_ref).toUpperCase())
+          );
+          return {
+            ...(local || {}),
+            ...b,
+            booking_fee: Number(b.booking_fee ?? local?.booking_fee ?? 200),
+            booking_fee_status: b.booking_fee_status || local?.booking_fee_status || 'pending',
+            booking_payment_method: b.booking_payment_method || local?.booking_payment_method || null,
+            booking_payment_ref: b.booking_payment_ref || local?.booking_payment_ref || null,
+            booking_receipt_no: b.booking_receipt_no || local?.booking_receipt_no || null,
+            booking_paid_at: b.booking_paid_at || local?.booking_paid_at || null,
+            booking_payment_confirmed_by: b.booking_payment_confirmed_by || local?.booking_payment_confirmed_by || null
+          };
+        });
+        const sorted = sortByLatest(merged, 'booking_id');
+        if (!filter.booking_ref) {
+          writeJson(BOOKINGS_PATH, sorted);
+        }
         return sorted;
       }
     } catch (e) {}
-    return sortByLatest(readJson(BOOKINGS_PATH, DEFAULT_BOOKINGS), 'booking_id');
+    return sortByLatest(localBookings, 'booking_id');
   },
 
   getServiceRequests: async (technicianFilter = null, technicianId = null) => {
@@ -1737,6 +1757,128 @@ const interModuleSync = {
     });
 
     return req;
+  },
+
+  confirmBookingFeePayment: async (bookingIdOrRef, { amount_paid, payment_method, transaction_ref, actor }) => {
+    const rawKey = String(bookingIdOrRef || '').trim();
+    const idNum = Number(rawKey);
+    const bookings = await interModuleSync.getBookings();
+    const booking = bookings.find(
+      b => (!Number.isNaN(idNum) && idNum > 0 && Number(b.booking_id) === idNum) ||
+        (b.booking_ref && String(b.booking_ref).toUpperCase() === rawKey.toUpperCase())
+    );
+    if (!booking) throw new Error(`Booking ${rawKey} not found.`);
+    if (String(booking.status || '').toLowerCase() === 'cancelled') {
+      throw new Error(`Booking ${booking.booking_ref} is cancelled and cannot accept payment.`);
+    }
+    if (String(booking.booking_fee_status || '').toLowerCase() === 'paid') {
+      throw new Error(`Booking fee for ${booking.booking_ref} has already been paid (${booking.booking_receipt_no || 'Paid'}).`);
+    }
+
+    const paidAmt = Number(amount_paid ?? booking.booking_fee ?? 200);
+    if (Number.isNaN(paidAmt) || paidAmt <= 0) {
+      throw new Error('A valid positive booking fee amount is required.');
+    }
+
+    const cleanMethod = String(payment_method || 'M-Pesa').trim();
+    const refCheck = validatePaymentReference(cleanMethod, transaction_ref, { required: true, label: 'Transaction reference' });
+    if (!refCheck.valid) {
+      throw new Error(refCheck.message);
+    }
+    const cleanRef = refCheck.value;
+    const actorName = String(actor || booking.customer_name || 'Customer Portal').trim();
+    const receiptNo = `RCP-BK-${booking.booking_id || String(Date.now()).slice(-4)}-${String(Date.now()).slice(-4)}`;
+    const paidAt = new Date().toISOString();
+
+    booking.booking_fee = Number(paidAmt.toFixed(2));
+    booking.booking_fee_status = 'paid';
+    booking.booking_payment_method = cleanMethod;
+    booking.booking_payment_ref = cleanRef;
+    booking.booking_receipt_no = receiptNo;
+    booking.booking_paid_at = paidAt;
+    booking.booking_payment_confirmed_by = actorName;
+    writeJson(BOOKINGS_PATH, bookings);
+
+    try {
+      await supabase
+        .from('bookings')
+        .update({
+          booking_fee: booking.booking_fee,
+          booking_fee_status: 'paid',
+          booking_payment_method: cleanMethod,
+          booking_payment_ref: cleanRef,
+          booking_receipt_no: receiptNo,
+          booking_paid_at: paidAt,
+          booking_payment_confirmed_by: actorName
+        })
+        .eq('booking_id', booking.booking_id);
+    } catch (e) {}
+
+    const finDesc = `Booking Fee Payment ${booking.booking_ref} (${booking.customer_name}) - ${booking.item_or_service_name} [Receipt: ${receiptNo}]`;
+    let financeRecId = Date.now();
+    try {
+      const { data: finRow } = await supabase
+        .from('finance_records')
+        .insert([{
+          type: 'sale',
+          category: 'Booking Fee Payment',
+          description: finDesc,
+          amount: booking.booking_fee,
+          payment_method: cleanMethod,
+          reference_no: cleanRef,
+          status: 'confirmed'
+        }])
+        .select('*')
+        .single();
+      if (finRow?.record_id) financeRecId = finRow.record_id;
+    } catch (e) {}
+
+    const finRecords = readJson(FINANCE_RECORDS_PATH, []);
+    finRecords.unshift({
+      record_id: financeRecId,
+      type: 'sale',
+      category: 'Booking Fee Payment',
+      description: finDesc,
+      amount: booking.booking_fee,
+      payment_method: cleanMethod,
+      reference_no: cleanRef,
+      status: 'confirmed',
+      created_at: paidAt
+    });
+    writeJson(FINANCE_RECORDS_PATH, finRecords);
+
+    appendSystemAudit(
+      'Finance & Bookings',
+      actorName,
+      'Booking Fee Payment Confirmed',
+      `${actorName} confirmed KES ${booking.booking_fee.toLocaleString()} (${cleanMethod}, Ref: ${cleanRef}) for Booking ${booking.booking_ref}. Receipt issued: ${receiptNo}.`
+    );
+
+    moduleNotifications.notify({
+      targetModules: ['bookings', 'finance'],
+      sourceModule: 'customer',
+      senderName: actorName,
+      title: `Booking Fee Paid (${booking.booking_ref}) — ${receiptNo}`,
+      message: `${booking.customer_name} paid KES ${booking.booking_fee.toLocaleString()} booking fee via ${cleanMethod} (Ref: ${cleanRef}).`,
+      severity: 'success',
+      refNo: receiptNo,
+      actionModule: 'bookings'
+    });
+
+    moduleNotifications.notify({
+      targetModules: ['customer'],
+      sourceModule: 'bookings',
+      senderName: 'Elight Booking Desk',
+      title: `Booking Fee Receipt ${receiptNo} Ready`,
+      message: `Your booking fee payment of KES ${booking.booking_fee.toLocaleString()} (${cleanMethod}) for ${booking.booking_ref} is confirmed.`,
+      severity: 'success',
+      refNo: receiptNo,
+      recipientPhone: booking.customer_phone || '',
+      recipientEmail: booking.customer_email || '',
+      recipientName: booking.customer_name || ''
+    });
+
+    return booking;
   },
 
   // ========================================================

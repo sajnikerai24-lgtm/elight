@@ -25,6 +25,13 @@ async function main() {
       preferred_time VARCHAR(40) DEFAULT '09:00 AM - 12:00 PM',
       location_or_notes TEXT,
       estimated_amount NUMERIC(12, 2) DEFAULT 0,
+      booking_fee NUMERIC(12, 2) NOT NULL DEFAULT 200.00,
+      booking_fee_status TEXT NOT NULL DEFAULT 'pending',
+      booking_payment_method TEXT,
+      booking_payment_ref TEXT,
+      booking_receipt_no TEXT,
+      booking_paid_at TIMESTAMPTZ,
+      booking_payment_confirmed_by TEXT,
       status VARCHAR(30) NOT NULL DEFAULT 'confirmed',
       confirmation_note TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()

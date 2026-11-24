@@ -59,7 +59,11 @@
           <h3 style="color:#065f46; margin:10px 0 4px 0; font-size:1.3rem;">Your Booking Confirmation Is Ready!</h3>
           <div>Reference Code: <span class="confirmation-ref" id="confRef">BK-ELIGHT-0000</span></div>
         </div>
-        <button type="button" onclick="window.print()" class="btn-sm" style="background:#065f46; color:#fff; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:700;">🖨️ Print Confirmation</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" id="confViewReceiptBtn" class="btn-sm" style="background:#0284c7; color:#fff; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:700;">👁️ View Receipt</button>
+          <button type="button" id="confPrintReceiptBtn" class="btn-sm" style="background:#065f46; color:#fff; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:700;">🖨️ Print Receipt</button>
+          <button type="button" id="confDownloadReceiptBtn" class="btn-sm" style="background:#0f172a; color:#fff; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:700;">📥 Download Receipt</button>
+        </div>
       </div>
       <div id="confDetailsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:14px; margin-top:14px; padding-top:14px; border-top:1px solid #a7f3d0; font-size:0.9rem; color:#064e3b;"></div>
       <p id="confNoteText" style="margin:14px 0 0 0; font-weight:600; color:#047857; font-size:0.92rem;"></p>
@@ -389,9 +393,65 @@
       }
     }
 
+    function buildBookingReceiptPdfUrl(b, preview = false) {
+      const params = new URLSearchParams({
+        phone: b.customer_phone || '',
+        email: b.customer_email || '',
+        name: b.customer_name || ''
+      });
+      if (preview) params.set('preview', '1');
+      return `/api/customer/bookings/${encodeURIComponent(b.booking_id || b.booking_ref)}/receipt?${params.toString()}`;
+    }
+
+    function viewBookingFeeReceipt(b) {
+      window.open(buildBookingReceiptPdfUrl(b, true), '_blank', 'noopener');
+    }
+
+    function printBookingFeeReceipt(b) {
+      const oldFrame = document.getElementById('booking-print-pdf-frame');
+      if (oldFrame) oldFrame.remove();
+      const iframe = document.createElement('iframe');
+      iframe.id = 'booking-print-pdf-frame';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.src = buildBookingReceiptPdfUrl(b, true);
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch (e) {
+          window.open(buildBookingReceiptPdfUrl(b, true), '_blank', 'noopener');
+        }
+      };
+      document.body.appendChild(iframe);
+    }
+
+    async function downloadBookingFeeReceiptFile(b) {
+      const res = await fetch(buildBookingReceiptPdfUrl(b, false));
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Booking-Receipt-${b.booking_ref || b.booking_id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    window.__bookingCacheMap = window.__bookingCacheMap || {};
+
     function renderBookingCardHTML(b) {
+      const key = String(b.booking_ref || b.booking_id);
+      window.__bookingCacheMap[key] = b;
       const badgeColor = b.status === 'confirmed' ? '#059669' : b.status === 'completed' ? '#2563eb' : b.status === 'cancelled' ? '#dc2626' : '#d97706';
       const hasMultiServices = Array.isArray(b.services_list) && b.services_list.length > 1;
+      const isCancelled = String(b.status || '').toLowerCase() === 'cancelled';
 
       return `
         <div style="border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:10px; background:#f8fafc;">
@@ -417,6 +477,13 @@
             Est. Total: <strong>${formatKES(b.estimated_amount)}</strong>
           </div>
           ${b.confirmation_note ? `<div style="margin-top:6px; font-size:0.8rem; color:#047857; background:#ecfdf5; padding:6px 8px; border-radius:6px;">${escapeHTML(b.confirmation_note)}</div>` : ''}
+          ${!isCancelled ? `
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+              <button type="button" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:4px 9px; font-size:0.74rem; font-weight:700;" onclick="viewBookingFeeReceipt(window.__bookingCacheMap['${escapeHTML(key)}'])">👁️ View Receipt</button>
+              <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:4px 9px; font-size:0.74rem; font-weight:700;" onclick="printBookingFeeReceipt(window.__bookingCacheMap['${escapeHTML(key)}'])">🖨️ Print Receipt</button>
+              <button type="button" class="btn-sm btn-primary" style="padding:4px 9px; font-size:0.74rem;" onclick="downloadBookingFeeReceiptFile(window.__bookingCacheMap['${escapeHTML(key)}'])">📥 Download Receipt</button>
+            </div>
+          ` : ''}
         </div>
       `;
     }
@@ -597,6 +664,12 @@
           </div>
         `;
         document.getElementById('confNoteText').textContent = b.confirmation_note || 'Your booking is confirmed!';
+        const vBtn = document.getElementById('confViewReceiptBtn');
+        const pBtn = document.getElementById('confPrintReceiptBtn');
+        const dBtn = document.getElementById('confDownloadReceiptBtn');
+        if (vBtn) vBtn.onclick = () => viewBookingFeeReceipt(b);
+        if (pBtn) pBtn.onclick = () => printBookingFeeReceipt(b);
+        if (dBtn) dBtn.onclick = () => downloadBookingFeeReceiptFile(b);
         const card = document.getElementById('bookingConfirmationCard');
         card.style.display = 'block';
         card.scrollIntoView({ behavior: 'smooth', block: 'start' });

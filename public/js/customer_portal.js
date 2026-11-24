@@ -7,6 +7,7 @@
 let loggedCustomerUser = null;
 let myCustomerProfile = null;
 let myCustomerServices = [];
+let myCustomerBookings = [];
 let myCustomerPayments = [];
 
 const CUSTOMER_ACCOUNT_MENU_ITEMS = [
@@ -194,6 +195,7 @@ async function loadMyCustomerPortal() {
     const bookings = data.bookings || [];
     const services = data.services || [];
     myCustomerServices = services;
+    myCustomerBookings = bookings;
     myCustomerPayments = payments;
 
     // Populate Profile Section (only if present on current page)
@@ -294,13 +296,19 @@ async function loadMyCustomerPortal() {
             <td>${p.paid_at ? new Date(p.paid_at).toLocaleString() : '—'}</td>
             <td>${escapeHTML(p.cashier_name || 'Esther Karimi')}</td>
             <td>
-              ${p.source === 'service' && p.request_id
+              ${(p.source === 'service' && p.request_id)
                 ? `<div style="display:flex; gap:5px; flex-wrap:wrap;">
                      <button type="button" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:4px 8px; font-size:0.74rem; font-weight:700;" onclick="openServiceReceiptModal(${p.request_id})">👁️ View</button>
                      <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:4px 8px; font-size:0.74rem; font-weight:700;" onclick="printServiceReceipt(${p.request_id})">🖨️ Print</button>
-                     <button type="button" class="btn-sm btn-primary" style="padding:4px 8px; font-size:0.74rem;" onclick="downloadServiceFeeReceipt(${p.request_id})">📥 PDF</button>
+                     <button type="button" class="btn-sm btn-primary" style="padding:4px 8px; font-size:0.74rem;" onclick="downloadServiceFeeReceipt(${p.request_id})">📥 Download</button>
                    </div>`
-                : `<span style="font-size:0.76rem; color:#087443; font-weight:700;">✓ Verified</span>`}
+                : ((p.source === 'booking' && p.booking_id)
+                  ? `<div style="display:flex; gap:5px; flex-wrap:wrap;">
+                       <button type="button" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:4px 8px; font-size:0.74rem; font-weight:700;" onclick="openBookingReceiptModal(${p.booking_id})">👁️ View</button>
+                       <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:4px 8px; font-size:0.74rem; font-weight:700;" onclick="printBookingReceipt(${p.booking_id})">🖨️ Print</button>
+                       <button type="button" class="btn-sm btn-primary" style="padding:4px 8px; font-size:0.74rem;" onclick="downloadBookingFeeReceipt(${p.booking_id})">📥 Download</button>
+                     </div>`
+                  : `<span style="font-size:0.76rem; color:#087443; font-weight:700;">✓ Verified</span>`)}
             </td>
           </tr>
         `).join('');
@@ -371,7 +379,7 @@ async function loadMyCustomerPortal() {
                   ${isPaid ? `
                     <button type="button" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:5px 10px; font-size:0.76rem; font-weight:700;" onclick="openServiceReceiptModal(${s.request_id})">👁️ View Receipt</button>
                     <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:5px 10px; font-size:0.76rem; font-weight:700;" onclick="printServiceReceipt(${s.request_id})">🖨️ Print Receipt</button>
-                    <button type="button" class="btn-sm btn-primary" style="padding:5px 10px; font-size:0.76rem;" onclick="downloadServiceFeeReceipt(${s.request_id})">📥 PDF</button>
+                    <button type="button" class="btn-sm btn-primary" style="padding:5px 10px; font-size:0.76rem;" onclick="downloadServiceFeeReceipt(${s.request_id})">📥 Download</button>
                   ` : ''}
                   ${isCompleted ? `<button type="button" class="btn-sm" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:5px 10px; font-size:0.76rem; font-weight:700;" onclick="openServiceFeedbackModal(${s.request_id})">💬 Give Feedback</button>` : ''}
                 </div>
@@ -406,23 +414,49 @@ async function loadMyCustomerPortal() {
     if (bookingsBody) {
       const myBookings = bookings.length > 0 ? bookings : [];
       if (myBookings.length === 0) {
-        bookingsBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:18px; color:var(--text-muted);">No future bookings yet. <a href="/booking" style="color:var(--primary); font-weight:700;">Book a service or reserve a product →</a></td></tr>';
+        bookingsBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:18px; color:var(--text-muted);">No future bookings yet. <a href="/booking" style="color:var(--primary); font-weight:700;">Book a service or reserve a product →</a></td></tr>';
       } else {
-        bookingsBody.innerHTML = myBookings.map(b => `
-          <tr>
-            <td><strong style="font-family:monospace;">${escapeHTML(b.booking_ref)}</strong></td>
-            <td>${b.booking_type === 'product' ? '📦 Product' : '🔧 Service'}</td>
-            <td><strong>${escapeHTML(b.item_or_service_name)}</strong> (x${b.quantity})</td>
-            <td>
-              <strong>${escapeHTML(b.preferred_date)}</strong><br>
-              ${(!b.preferred_time || b.preferred_time.includes('Pending'))
-                ? '<span style="display:inline-block; margin-top:3px; padding:2px 8px; border-radius:12px; font-size:0.75rem; background:#fef3c7; color:#92400e; font-weight:600;">🕒 Time Pending Service Manager</span>'
-                : `<span style="display:inline-block; margin-top:3px; padding:2px 8px; border-radius:12px; font-size:0.75rem; background:#dcfce7; color:#166534; font-weight:700;">⏰ ${escapeHTML(b.preferred_time)}</span>`}
-            </td>
-            <td><strong>KES ${Number(b.estimated_amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
-            <td><span class="badge-tag badge-${escapeHTML(b.status)}">${escapeHTML(b.status)}</span></td>
-          </tr>
-        `).join('');
+        bookingsBody.innerHTML = myBookings.map(b => {
+          const bkFee = Number(b.booking_fee ?? 200);
+          const estTotal = Number(b.estimated_amount || 0);
+          const isCancelled = String(b.status || '').toLowerCase() === 'cancelled';
+          const isFeePaid = String(b.booking_fee_status || '').toLowerCase() === 'paid';
+          return `
+            <tr>
+              <td><strong style="font-family:monospace;">${escapeHTML(b.booking_ref)}</strong></td>
+              <td>${b.booking_type === 'product' ? '📦 Product' : '🔧 Service'}</td>
+              <td><strong>${escapeHTML(b.item_or_service_name)}</strong> (x${b.quantity || 1})</td>
+              <td>
+                <strong>${escapeHTML(b.preferred_date)}</strong><br>
+                ${(!b.preferred_time || b.preferred_time.includes('Pending'))
+                  ? '<span style="display:inline-block; margin-top:3px; padding:2px 8px; border-radius:12px; font-size:0.75rem; background:#fef3c7; color:#92400e; font-weight:600;">🕒 Time Pending Service Manager</span>'
+                  : `<span style="display:inline-block; margin-top:3px; padding:2px 8px; border-radius:12px; font-size:0.75rem; background:#dcfce7; color:#166534; font-weight:700;">⏰ ${escapeHTML(b.preferred_time)}</span>`}
+              </td>
+              <td>
+                <div style="font-weight:700; color:#0284c7;">Fee: KES ${bkFee.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <small style="color:var(--text-muted);">Est. Total: KES ${estTotal.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>
+              </td>
+              <td>
+                <span class="badge-tag badge-${escapeHTML(b.status)}">${escapeHTML(b.status)}</span>
+                <div style="margin-top:4px;">
+                  ${isFeePaid
+                    ? `<span class="badge-tag" style="background:#dcfce7; color:#15803d; font-weight:700;">✅ Fee Paid (${escapeHTML(b.booking_receipt_no || 'Receipt Ready')})</span>`
+                    : `<span class="badge-tag" style="background:#fef3c7; color:#92400e; font-weight:600;">⏳ Booking Fee Pending</span>`}
+                </div>
+              </td>
+              <td style="white-space:nowrap;">
+                ${!isCancelled ? `
+                  <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                    ${!isFeePaid ? `<button type="button" class="btn-sm" style="background:#087443; color:#fff; padding:5px 10px; font-size:0.75rem; font-weight:700;" onclick="openCustomerBookingPayModal(${b.booking_id})">💳 Pay Fee</button>` : ''}
+                    <button type="button" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:5px 10px; font-size:0.75rem; font-weight:700;" onclick="openBookingReceiptModal(${b.booking_id})">👁️ View Receipt</button>
+                    <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:5px 10px; font-size:0.75rem; font-weight:700;" onclick="printBookingReceipt(${b.booking_id})">🖨️ Print Receipt</button>
+                    <button type="button" class="btn-sm btn-primary" style="padding:5px 10px; font-size:0.75rem;" onclick="downloadBookingFeeReceipt(${b.booking_id})">📥 Download</button>
+                  </div>
+                ` : '<small style="color:#64748b;">Cancelled</small>'}
+              </td>
+            </tr>
+          `;
+        }).join('');
       }
     }
 
@@ -558,6 +592,118 @@ function buildCustomerReceiptQuery(requestId, preview = false) {
   return `/api/customer/services/${requestId}/receipt?${params.toString()}`;
 }
 
+function buildBookingReceiptQuery(bookingIdOrRef, preview = false) {
+  const params = new URLSearchParams(getCustomerIdentityPayload());
+  if (preview) params.set('preview', '1');
+  return `/api/customer/bookings/${encodeURIComponent(bookingIdOrRef)}/receipt?${params.toString()}`;
+}
+
+function resolveBookingReceiptData(bookingId) {
+  const idNum = Number(bookingId);
+  const b = myCustomerBookings.find(item => Number(item.booking_id) === idNum || String(item.booking_ref) === String(bookingId));
+  if (b) return b;
+  const pay = myCustomerPayments.find(p => p.source === 'booking' && Number(p.booking_id) === idNum);
+  if (pay) {
+    return {
+      booking_id: idNum,
+      booking_ref: pay.booking_ref || pay.order_no,
+      booking_type: 'service',
+      item_or_service_name: pay.item_or_service_name || 'Scheduled Booking',
+      booking_fee: Number(pay.amount || 200),
+      estimated_amount: Number(pay.amount || 200),
+      booking_fee_status: 'paid',
+      booking_receipt_no: pay.receipt_no,
+      booking_payment_method: pay.payment_method,
+      booking_payment_ref: pay.payment_ref,
+      booking_paid_at: pay.paid_at,
+      booking_payment_confirmed_by: pay.cashier_name,
+      customer_name: myCustomerProfile?.full_name || loggedCustomerUser?.full_name || 'Valued Customer',
+      customer_phone: myCustomerProfile?.phone || loggedCustomerUser?.phone || '-',
+      customer_email: myCustomerProfile?.email || loggedCustomerUser?.email || '-',
+      preferred_date: '-',
+      preferred_time: '-',
+      status: 'confirmed'
+    };
+  }
+  return null;
+}
+
+function buildPrintableBookingReceiptHtml(b) {
+  const fee = Number(b.booking_fee ?? 200);
+  const isPaid = String(b.booking_fee_status || '').toLowerCase() === 'paid';
+  const receiptNo = b.booking_receipt_no || `RCP-${b.booking_ref || `BK-${b.booking_id}`}`;
+  const dateStr = b.booking_paid_at || b.created_at;
+  const issueDate = dateStr ? new Date(dateStr).toLocaleString('en-KE') : 'N/A';
+  const feeText = `KES ${fee.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const estText = `KES ${Number(b.estimated_amount || fee).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  return `
+    <div style="font-family:'Segoe UI',Arial,sans-serif; color:#0f172a; border:1px solid #cbd5e1; border-radius:10px; overflow:hidden; background:#ffffff;">
+      <div style="background:#102b46; color:#ffffff; padding:18px 22px; border-bottom:4px solid #ffc107; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <div style="font-size:1.15rem; font-weight:800; letter-spacing:0.4px;">ELIGHT ELECTRICAL SHOP</div>
+          <div style="font-size:0.78rem; color:#e2e8f0; margin-top:2px;">Meru Town, Meru County, Kenya • Tel: +254 700 123 456 • elightelectrical@ke.com</div>
+        </div>
+        <div style="background:${isPaid ? '#dcfce7' : '#e0f2fe'}; color:${isPaid ? '#15803d' : '#0369a1'}; padding:5px 12px; border-radius:999px; font-size:0.78rem; font-weight:800;">
+          ${isPaid ? 'BOOKING FEE PAID' : 'CONFIRMED BOOKING FEE'}
+        </div>
+      </div>
+
+      <div style="padding:18px 22px;">
+        <div style="text-align:center; font-size:0.95rem; font-weight:800; color:#102b46; letter-spacing:0.5px; margin-bottom:14px;">OFFICIAL BOOKING FEE RECEIPT</div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; font-size:0.84rem; margin-bottom:14px;">
+          <div>
+            <div><strong>Receipt No:</strong> <code>${escapeHTML(receiptNo)}</code></div>
+            <div><strong>Booking Ref:</strong> <code>${escapeHTML(b.booking_ref || `BK-${b.booking_id}`)}</code></div>
+            <div><strong>Date:</strong> ${escapeHTML(issueDate)}</div>
+          </div>
+          <div>
+            <div><strong>Payment Method:</strong> ${escapeHTML(b.booking_payment_method || 'M-Pesa / Cash at Shop')}</div>
+            <div><strong>Payment Ref:</strong> <code>${escapeHTML(b.booking_payment_ref || b.booking_ref || 'CONFIRMED')}</code></div>
+            <div><strong>Status:</strong> ${escapeHTML(String(b.status || 'confirmed').toUpperCase())}</div>
+          </div>
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; font-size:0.84rem; margin-bottom:14px;">
+          <tbody>
+            <tr>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; color:#475569; width:24%;">Customer Name</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; font-weight:700;">${escapeHTML(b.customer_name || 'Valued Customer')}</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; color:#475569; width:22%;">Booking Type</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; font-weight:700;">${b.booking_type === 'product' ? 'Product Reservation' : 'Electrical Service'}</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; color:#475569;">Phone</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0;">${escapeHTML(b.customer_phone || '-')}</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; color:#475569;">Item / Service</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0;">${escapeHTML(b.item_or_service_name || 'Booking')}</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; color:#475569;">Scheduled Date</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0;">${escapeHTML(b.preferred_date || '-')}</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; color:#475569;">Time Slot</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0;">${escapeHTML(b.preferred_time || 'Pending Assignment')}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="background:#ecfdf5; border:1px solid #86efac; border-radius:8px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+          <div>
+            <div style="font-size:0.78rem; font-weight:700; color:#166534;">${isPaid ? 'TOTAL BOOKING FEE PAID' : 'OFFICIAL BOOKING FEE'}</div>
+            <div style="font-size:0.74rem; color:#475569;">Estimated Booking Total: ${escapeHTML(estText)}</div>
+          </div>
+          <div style="font-size:1.3rem; font-weight:800; color:#087443;">${escapeHTML(feeText)}</div>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; font-size:0.8rem; color:#334155;">
+          <strong>Booking Notes:</strong> ${escapeHTML(b.confirmation_note || b.location_or_notes || `Confirmed booking ${b.booking_ref}.`)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function resolveServiceReceiptData(requestId) {
   const idNum = Number(requestId);
   const svc = myCustomerServices.find(s => Number(s.request_id) === idNum);
@@ -686,37 +832,28 @@ function ensureServiceReceiptModal() {
   return modal;
 }
 
-function openServiceReceiptModal(requestId) {
-  const sr = resolveServiceReceiptData(requestId);
-  if (!sr || String(sr.payment_status || '').toLowerCase() !== 'paid') {
-    showToast('Receipt will be available once payment is completed.', 'info');
-    return;
-  }
+function showOfficialReceiptModal({ modalTitle, receiptHtml, onPrint, previewUrl, onDownload }) {
   ensureServiceReceiptModal();
+  const titleEl = document.querySelector('#cust-service-receipt-modal h3');
+  if (titleEl && modalTitle) titleEl.textContent = modalTitle;
+
   const bodyEl = document.getElementById('cust-service-receipt-body');
-  if (bodyEl) bodyEl.innerHTML = buildPrintableServiceReceiptHtml(sr);
+  if (bodyEl) bodyEl.innerHTML = receiptHtml;
 
   const printBtn = document.getElementById('receiptModalPrintBtn');
-  if (printBtn) printBtn.onclick = () => printServiceReceipt(requestId);
+  if (printBtn) printBtn.onclick = onPrint;
 
   const viewPdfBtn = document.getElementById('receiptModalViewPdfBtn');
-  if (viewPdfBtn) viewPdfBtn.onclick = () => window.open(buildCustomerReceiptQuery(requestId, true), '_blank', 'noopener');
+  if (viewPdfBtn) viewPdfBtn.onclick = () => window.open(previewUrl, '_blank', 'noopener');
 
   const dlBtn = document.getElementById('receiptModalDownloadBtn');
-  if (dlBtn) dlBtn.onclick = () => downloadServiceFeeReceipt(requestId);
+  if (dlBtn) dlBtn.onclick = onDownload;
 
   openCustModal('cust-service-receipt-modal');
 }
 
-function printServiceReceipt(requestId) {
-  const sr = resolveServiceReceiptData(requestId);
-  if (!sr || String(sr.payment_status || '').toLowerCase() !== 'paid') {
-    showToast('Receipt will be available to print once payment is completed.', 'info');
-    return;
-  }
-
-  const receiptMarkup = buildPrintableServiceReceiptHtml(sr);
-  const fullDoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receipt ${escapeHTML(sr.service_receipt_no || `SR-${sr.request_id}`)}</title><style>@page{margin:14mm;}body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:12px;background:#fff;}</style></head><body>${receiptMarkup}</body></html>`;
+function printReceiptDocument(docTitle, receiptMarkup) {
+  const fullDoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHTML(docTitle)}</title><style>@page{margin:14mm;}body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:12px;background:#fff;}</style></head><body>${receiptMarkup}</body></html>`;
 
   const oldFrame = document.getElementById('elight-print-receipt-frame');
   if (oldFrame) oldFrame.remove();
@@ -753,6 +890,54 @@ function printServiceReceipt(requestId) {
   }, 150);
 }
 
+function openServiceReceiptModal(requestId) {
+  const sr = resolveServiceReceiptData(requestId);
+  if (!sr || String(sr.payment_status || '').toLowerCase() !== 'paid') {
+    showToast('Receipt will be available once payment is completed.', 'info');
+    return;
+  }
+  showOfficialReceiptModal({
+    modalTitle: '🧾 Official Service Fee Receipt',
+    receiptHtml: buildPrintableServiceReceiptHtml(sr),
+    onPrint: () => printServiceReceipt(requestId),
+    previewUrl: buildCustomerReceiptQuery(requestId, true),
+    onDownload: () => downloadServiceFeeReceipt(requestId)
+  });
+}
+
+function printServiceReceipt(requestId) {
+  const sr = resolveServiceReceiptData(requestId);
+  if (!sr || String(sr.payment_status || '').toLowerCase() !== 'paid') {
+    showToast('Receipt will be available to print once payment is completed.', 'info');
+    return;
+  }
+  printReceiptDocument(`Receipt ${sr.service_receipt_no || `SR-${sr.request_id}`}`, buildPrintableServiceReceiptHtml(sr));
+}
+
+function openBookingReceiptModal(bookingId) {
+  const b = resolveBookingReceiptData(bookingId);
+  if (!b || String(b.status || '').toLowerCase() === 'cancelled') {
+    showToast('Booking receipt is unavailable.', 'info');
+    return;
+  }
+  showOfficialReceiptModal({
+    modalTitle: '🧾 Official Booking Fee Receipt',
+    receiptHtml: buildPrintableBookingReceiptHtml(b),
+    onPrint: () => printBookingReceipt(bookingId),
+    previewUrl: buildBookingReceiptQuery(b.booking_id || b.booking_ref, true),
+    onDownload: () => downloadBookingFeeReceipt(b.booking_id || b.booking_ref)
+  });
+}
+
+function printBookingReceipt(bookingId) {
+  const b = resolveBookingReceiptData(bookingId);
+  if (!b || String(b.status || '').toLowerCase() === 'cancelled') {
+    showToast('Booking receipt is unavailable to print.', 'info');
+    return;
+  }
+  printReceiptDocument(`Receipt ${b.booking_receipt_no || b.booking_ref}`, buildPrintableBookingReceiptHtml(b));
+}
+
 function openConfirmServiceModal(requestId) {
   const svc = myCustomerServices.find(s => Number(s.request_id) === Number(requestId));
   if (!svc) return;
@@ -770,10 +955,10 @@ function openConfirmServiceModal(requestId) {
   openCustModal('cust-service-confirm-modal');
 }
 
-function syncCustServicePayRefRules() {
-  const method = String(document.getElementById('cust_svc_pay_method')?.value || 'M-Pesa').toLowerCase();
-  const input = document.getElementById('cust_svc_pay_ref');
-  const label = document.getElementById('cust_svc_pay_ref_label');
+function applyCustPayRefRules(methodId, refId, labelId) {
+  const method = String(document.getElementById(methodId)?.value || 'M-Pesa').toLowerCase();
+  const input = document.getElementById(refId);
+  const label = document.getElementById(labelId);
   if (!input) return;
 
   if (method.includes('m-pesa') || method.includes('mpesa')) {
@@ -807,6 +992,34 @@ function syncCustServicePayRefRules() {
     input.placeholder = 'Optional cash receipt code';
     input.oninput = null;
   }
+}
+
+function syncCustServicePayRefRules() {
+  applyCustPayRefRules('cust_svc_pay_method', 'cust_svc_pay_ref', 'cust_svc_pay_ref_label');
+}
+
+function syncCustBookingPayRefRules() {
+  applyCustPayRefRules('cust_bk_pay_method', 'cust_bk_pay_ref', 'cust_bk_pay_ref_label');
+}
+
+function openCustomerBookingPayModal(bookingId) {
+  const b = resolveBookingReceiptData(bookingId);
+  if (!b) return;
+  const fee = Number(b.booking_fee ?? 200);
+  document.getElementById('pay_booking_id').value = b.booking_id;
+  document.getElementById('cust_bk_pay_amount').value = fee.toFixed(2);
+  document.getElementById('cust_bk_pay_method').value = 'M-Pesa';
+  document.getElementById('cust_bk_pay_ref').value = '';
+  syncCustBookingPayRefRules();
+
+  const sumEl = document.getElementById('pay-booking-summary');
+  if (sumEl) {
+    sumEl.innerHTML = `
+      <strong>Booking ${escapeHTML(b.booking_ref)}</strong><br>
+      ${escapeHTML(b.item_or_service_name || 'Booking')} • Scheduled: <strong>${escapeHTML(b.preferred_date || '-')}</strong>
+    `;
+  }
+  openCustModal('cust-booking-pay-modal');
 }
 
 function openCustomerServicePayModal(requestId) {
@@ -900,28 +1113,89 @@ if (custSvcPayForm) {
   });
 }
 
-async function downloadServiceFeeReceipt(requestId) {
+const custBkPayForm = document.getElementById('custBookingPayForm');
+if (custBkPayForm) {
+  custBkPayForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const bookingId = Number(document.getElementById('pay_booking_id').value);
+    const amountPaid = Number(document.getElementById('cust_bk_pay_amount').value || 200);
+    const method = document.getElementById('cust_bk_pay_method').value;
+    const rawRef = document.getElementById('cust_bk_pay_ref').value.trim();
+    const methodLower = method.toLowerCase();
+
+    if ((methodLower.includes('m-pesa') || methodLower.includes('mpesa')) && !/^[A-Z0-9]{1,10}$/.test(rawRef.toUpperCase())) {
+      showToast('M-Pesa reference must be up to 10 alphanumeric characters (e.g. SLK884290Q).', 'error');
+      document.getElementById('cust_bk_pay_ref')?.focus();
+      return;
+    }
+    if (methodLower.includes('bank') && !/^[0-9]{1,12}$/.test(rawRef)) {
+      showToast('Bank transfer reference must contain numbers only (up to 12 digits).', 'error');
+      document.getElementById('cust_bk_pay_ref')?.focus();
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/customer/bookings/${bookingId}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...getCustomerIdentityPayload(),
+          amount_paid: amountPaid,
+          payment_method: method,
+          transaction_ref: rawRef
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Booking fee payment failed.');
+      closeCustModal('cust-booking-pay-modal');
+      showToast(data.message || 'Booking fee paid! Opening receipt...', 'success');
+      await loadMyCustomerPortal();
+      openBookingReceiptModal(bookingId);
+    } catch (err) {
+      showToast(err.message || 'Booking fee payment failed.', 'error');
+    }
+  });
+}
+
+async function downloadOfficialPdfReceipt(url, fileName, successLabel) {
   try {
-    showToast('Downloading official service fee receipt...', 'info');
-    const url = buildCustomerReceiptQuery(requestId);
+    showToast(`Downloading ${successLabel}...`, 'info');
     const res = await fetch(url);
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
-      throw new Error(errJson.message || 'Unable to download service fee receipt.');
+      throw new Error(errJson.message || `Unable to download ${successLabel}.`);
     }
     const blob = await res.blob();
     const objUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = objUrl;
-    link.download = `Service-Receipt-SR-${requestId}.pdf`;
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     link.remove();
     setTimeout(() => window.URL.revokeObjectURL(objUrl), 1500);
-    showToast('Service fee receipt downloaded!', 'success');
+    showToast(`${successLabel} downloaded!`, 'success');
   } catch (err) {
     showToast(err.message || 'Failed downloading receipt.', 'error');
   }
+}
+
+function downloadServiceFeeReceipt(requestId) {
+  return downloadOfficialPdfReceipt(
+    buildCustomerReceiptQuery(requestId),
+    `Service-Receipt-SR-${requestId}.pdf`,
+    'official service fee receipt'
+  );
+}
+
+function downloadBookingFeeReceipt(bookingIdOrRef) {
+  const b = resolveBookingReceiptData(bookingIdOrRef);
+  const labelRef = b?.booking_ref || bookingIdOrRef;
+  return downloadOfficialPdfReceipt(
+    buildBookingReceiptQuery(bookingIdOrRef),
+    `Booking-Receipt-${labelRef}.pdf`,
+    'official booking fee receipt'
+  );
 }
 
 function openServiceFeedbackModal(requestId) {

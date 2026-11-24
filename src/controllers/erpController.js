@@ -426,6 +426,24 @@ function customerOwnsServiceRecord(sr, source = {}) {
   );
 }
 
+function customerOwnsBookingRecord(b, source = {}) {
+  const role = String(source.role || '').trim().toLowerCase();
+  if (role === 'admin') return true;
+  const email = String(source.email || '').trim().toLowerCase();
+  const phone = String(source.phone || '').trim();
+  const rawName = String(source.name || source.customer_name || '').trim();
+  const baseName = rawName.replace(/\s*\(customer\)\s*$/i, '').toLowerCase();
+
+  const bEmail = String(b.customer_email || '').toLowerCase().trim();
+  const bPhone = String(b.customer_phone || '').trim();
+  const bName = String(b.customer_name || '').toLowerCase().trim();
+  return Boolean(
+    (email && bEmail && email === bEmail) ||
+    (phone && bPhone && (phone === bPhone || (phone.length >= 8 && bPhone.includes(phone.slice(-8))))) ||
+    (baseName && bName && baseName === bName)
+  );
+}
+
 const erpController = {
   // ==========================================
   // AUTHENTICATION & DEMO ACCOUNTS
@@ -1430,7 +1448,24 @@ const erpController = {
           status: 'confirmed'
         }));
 
-      const combinedPayments = sortByLatest([...servicePayments, ...myPayments], 'request_id');
+      const bookingPayments = (bookings || [])
+        .filter(b => String(b.booking_fee_status || '').toLowerCase() === 'paid' && Number(b.booking_fee || 200) > 0)
+        .map(b => ({
+          source: 'booking',
+          booking_id: b.booking_id,
+          booking_ref: b.booking_ref,
+          payment_ref: b.booking_payment_ref || b.booking_ref,
+          order_no: b.booking_ref,
+          receipt_no: b.booking_receipt_no || `RCP-${b.booking_ref}`,
+          amount: Number(b.booking_fee || 200),
+          payment_method: b.booking_payment_method || 'M-Pesa',
+          paid_at: b.booking_paid_at || b.created_at,
+          cashier_name: b.booking_payment_confirmed_by || 'Elight Booking Desk',
+          item_or_service_name: b.item_or_service_name,
+          status: 'confirmed'
+        }));
+
+      const combinedPayments = sortByLatest([...servicePayments, ...bookingPayments, ...myPayments], 'paid_at');
 
       res.json({
         success: true,
@@ -1950,6 +1985,129 @@ const erpController = {
       return res.send(pdfBuffer);
     } catch (err) {
       console.error('downloadCustomerServiceReceipt error:', err);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  payCustomerBookingFee: async (req, res) => {
+    try {
+      const idOrRef = String(req.params.id || '').trim();
+      if (!idOrRef) return res.status(400).json({ success: false, message: 'Invalid booking identifier.' });
+
+      const allBookings = await interModuleSync.getBookings();
+      const idNum = Number(idOrRef);
+      const b = allBookings.find(
+        item => (!Number.isNaN(idNum) && idNum > 0 && Number(item.booking_id) === idNum) ||
+          (item.booking_ref && String(item.booking_ref).toUpperCase() === idOrRef.toUpperCase())
+      );
+      if (!b) return res.status(404).json({ success: false, message: 'Booking record not found.' });
+
+      const identity = {
+        role: req.body.role || req.query.role,
+        email: req.body.email || req.query.email,
+        phone: req.body.phone || req.query.phone,
+        name: req.body.name || req.body.customer_name || req.query.name,
+        booking_ref: req.body.booking_ref || req.query.booking_ref
+      };
+      if (!customerOwnsBookingRecord(b, identity)) {
+        return res.status(403).json({ success: false, message: 'Forbidden: This booking belongs to another customer.' });
+      }
+
+      const method = String(req.body.payment_method || 'M-Pesa').trim();
+      const isCashMethod = method.toLowerCase().includes('cash');
+      const rawRef = String(req.body.transaction_ref || '').trim() || (isCashMethod ? `CSHBK${b.booking_id}` : '');
+      const refCheck = validatePaymentReference(method, rawRef, {
+        required: true,
+        label: 'Transaction reference'
+      });
+      if (!refCheck.valid) {
+        return res.status(400).json({ success: false, message: refCheck.message });
+      }
+
+      const feeDue = Number(b.booking_fee || 200) > 0 ? Number(b.booking_fee || 200) : 200;
+      const payerName = String(identity.name || '').trim().replace(/\s*\(customer\)\s*$/i, '') || b.customer_name || 'Customer';
+
+      const updated = await interModuleSync.confirmBookingFeePayment(b.booking_id, {
+        amount_paid: feeDue,
+        payment_method: method,
+        transaction_ref: refCheck.value,
+        actor: `Customer Portal (${payerName})`
+      });
+
+      return res.json({
+        success: true,
+        booking: updated,
+        message: `Booking fee of KES ${Number(updated.booking_fee || 200).toLocaleString()} paid for ${updated.booking_ref}. Receipt ${updated.booking_receipt_no} is ready to view and print.`
+      });
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+  },
+
+  downloadCustomerBookingReceipt: async (req, res) => {
+    try {
+      const idOrRef = String(req.params.id || '').trim();
+      if (!idOrRef) return res.status(400).json({ success: false, message: 'Invalid booking identifier.' });
+
+      const allBookings = await interModuleSync.getBookings();
+      const idNum = Number(idOrRef);
+      const b = allBookings.find(
+        item => (!Number.isNaN(idNum) && idNum > 0 && Number(item.booking_id) === idNum) ||
+          (item.booking_ref && String(item.booking_ref).toUpperCase() === idOrRef.toUpperCase())
+      );
+      if (!b) return res.status(404).json({ success: false, message: 'Booking record not found.' });
+
+      if (!customerOwnsBookingRecord(b, req.query)) {
+        return res.status(403).json({ success: false, message: 'Forbidden: This booking receipt belongs to another customer.' });
+      }
+
+      if (String(b.status || '').toLowerCase() === 'cancelled') {
+        return res.status(400).json({ success: false, message: 'Cancelled bookings do not have an active booking receipt.' });
+      }
+
+      const bookingFee = Number(b.booking_fee ?? 200);
+      const isPaid = String(b.booking_fee_status || '').toLowerCase() === 'paid';
+      const receiptNo = b.booking_receipt_no || `RCP-${b.booking_ref || `BK-${b.booking_id}`}`;
+      const issueDate = String(b.booking_paid_at || b.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+
+      const pdfBuffer = buildOfficialReceiptPdf({
+        documentTitle: 'OFFICIAL BOOKING FEE RECEIPT',
+        metaLeft: [
+          `Receipt No: ${receiptNo}`,
+          `Booking Ref: ${b.booking_ref || `BK-${b.booking_id}`}`,
+          `Date: ${issueDate}`
+        ],
+        metaRight: [
+          `Status: ${isPaid ? 'BOOKING FEE PAID' : 'CONFIRMED BOOKING FEE'}`,
+          `Payment Ref: ${b.booking_payment_ref || b.booking_ref || 'CONFIRMED'}`,
+          `Payment Method: ${b.booking_payment_method || 'M-Pesa / Cash at Shop'}`
+        ],
+        statusPositive: true,
+        sectionTitle: 'CUSTOMER & BOOKING DETAILS',
+        detailRows: [
+          ['Customer Name:', b.customer_name || 'Valued Customer', 'Booking Type:', b.booking_type === 'product' ? 'Product Reservation' : 'Electrical Service'],
+          ['Phone:', b.customer_phone || '-', 'Item / Service:', b.item_or_service_name || 'Booking'],
+          ['Scheduled Date:', b.preferred_date || '-', 'Time Slot:', b.preferred_time || 'Pending Assignment'],
+          ['Customer Email:', b.customer_email || '-', 'Est. Total:', `KES ${Number(b.estimated_amount || bookingFee).toLocaleString('en-KE', { minimumFractionDigits: 2 })}`]
+        ],
+        amountLabel: isPaid ? 'TOTAL BOOKING FEE PAID' : 'OFFICIAL BOOKING FEE',
+        amountSubtext: isPaid
+          ? 'Verified and confirmed received by Elight Electrical Shop'
+          : 'Standard booking reservation fee recorded for your appointment',
+        amountValue: bookingFee,
+        notesTitle: 'BOOKING CONFIRMATION & NOTES',
+        notesBody: b.confirmation_note || b.location_or_notes || `Confirmed booking ${b.booking_ref}.`,
+        footerLine: 'Thank you for booking with Elight Electrical Shop. Present this receipt or your Booking Ref at our Meru Town desk.'
+      });
+
+      const safeFileName = `Booking-Receipt-${b.booking_ref || b.booking_id}.pdf`;
+      const disposition = req.query.preview === '1' ? 'inline' : 'attachment';
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `${disposition}; filename="${safeFileName}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      return res.send(pdfBuffer);
+    } catch (err) {
+      console.error('downloadCustomerBookingReceipt error:', err);
       res.status(500).json({ success: false, message: err.message });
     }
   },
