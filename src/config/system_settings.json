@@ -62,6 +62,48 @@
   },
   "audit_log": [
     {
+      "timestamp": "2026-11-24T06:38:29.921Z",
+      "department": "Admin & Security",
+      "actor": "Alice Muthoni (Finance Manager)",
+      "action": "User Sign-In",
+      "details": "Alice Muthoni (Finance Manager) signed in via Supabase Auth with role \"finance_manager\"."
+    },
+    {
+      "timestamp": "2026-11-24T06:38:27.818Z",
+      "department": "Admin & Security",
+      "actor": "Alice Muthoni (Finance Manager)",
+      "action": "User Sign-In",
+      "details": "Alice Muthoni (Finance Manager) signed in via Supabase Auth with role \"finance_manager\"."
+    },
+    {
+      "timestamp": "2026-11-24T06:38:24.776Z",
+      "department": "Admin & Security",
+      "actor": "Alice Muthoni (Finance Manager)",
+      "action": "User Sign-In",
+      "details": "Alice Muthoni (Finance Manager) signed in via Supabase Auth with role \"finance_manager\"."
+    },
+    {
+      "timestamp": "2026-11-24T06:33:42.043Z",
+      "department": "Admin & Security",
+      "actor": "Alice Muthoni (Finance Manager)",
+      "action": "User Sign-In",
+      "details": "Alice Muthoni (Finance Manager) signed in via Supabase Auth with role \"finance_manager\"."
+    },
+    {
+      "timestamp": "2026-11-24T06:33:40.743Z",
+      "department": "Admin & Security",
+      "actor": "Alice Muthoni (Finance Manager)",
+      "action": "User Sign-In",
+      "details": "Alice Muthoni (Finance Manager) signed in via Supabase Auth with role \"finance_manager\"."
+    },
+    {
+      "timestamp": "2026-11-24T06:33:39.596Z",
+      "department": "Admin & Security",
+      "actor": "Alice Muthoni (Finance Manager)",
+      "action": "User Sign-In",
+      "details": "Alice Muthoni (Finance Manager) signed in via Supabase Auth with role \"finance_manager\"."
+    },
+    {
       "timestamp": "2026-11-24T05:21:55.636Z",
       "department": "Finance & Treasury",
       "actor": "Alice Muthoni (Finance)",
@@ -718,48 +760,6 @@
       "actor": "Administrator",
       "action": "User Account Created",
       "details": "Created cashier account for Verify Test Staff (@verify_1794556988035) synced to Supabase Auth."
-    },
-    {
-      "timestamp": "2026-11-13T08:03:06.932Z",
-      "department": "Admin & Security",
-      "actor": "Esther Karimi (Cashier)",
-      "action": "User Sign-In",
-      "details": "Esther Karimi (Cashier) signed in via Supabase Auth with role \"cashier\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:03:06.115Z",
-      "department": "Admin & Security",
-      "actor": "Esther Karimi (Cashier)",
-      "action": "User Sign-In",
-      "details": "Esther Karimi (Cashier) signed in via Supabase Auth with role \"cashier\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:03:04.327Z",
-      "department": "Admin & Security",
-      "actor": "Dr. Anthony Njoroge (Customer)",
-      "action": "User Sign-In",
-      "details": "Dr. Anthony Njoroge (Customer) signed in via Supabase Auth with role \"customer\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:03:01.646Z",
-      "department": "Admin & Security",
-      "actor": "Grace Kerubo (Inventory Manager)",
-      "action": "User Sign-In",
-      "details": "Grace Kerubo (Inventory Manager) signed in via Supabase Auth with role \"inventory_manager\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:03:00.424Z",
-      "department": "Admin & Security",
-      "actor": "Francis Mutua (Driver)",
-      "action": "User Sign-In",
-      "details": "Francis Mutua (Driver) signed in via Supabase Auth with role \"driver\"."
-    },
-    {
-      "timestamp": "2026-11-13T08:02:59.261Z",
-      "department": "Admin & Security",
-      "actor": "Dennis Ndwiga (Dispatch Manager)",
-      "action": "User Sign-In",
-      "details": "Dennis Ndwiga (Dispatch Manager) signed in via Supabase Auth with role \"dispatch_manager\"."
     }
   ]
 }
