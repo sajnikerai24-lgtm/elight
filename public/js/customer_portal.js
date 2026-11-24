@@ -1222,6 +1222,8 @@ if (custSvcFbForm) {
     const payload = {
       customer_name: myCustomerProfile?.full_name || String(loggedCustomerUser?.full_name || '').replace(/\s*\(customer\)\s*$/i, '') || 'Customer',
       customer_email: myCustomerProfile?.email || loggedCustomerUser?.email || '',
+      customer_phone: myCustomerProfile?.phone || loggedCustomerUser?.phone || '',
+      module_tag: 'services',
       feedback_type: 'review',
       rating: Number(document.getElementById('fb_service_rating').value || 5),
       subject: document.getElementById('fb_service_subject').value.trim(),

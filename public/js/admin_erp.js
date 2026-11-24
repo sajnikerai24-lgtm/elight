@@ -5219,6 +5219,22 @@ function openModuleFeedbackModal(moduleName) {
   switchModalFeedbackTab('submit');
   renderModalFeedbackHistory();
   openModal('module-feedback-modal');
+  refreshDepartmentModalFeedback(userDept || activeFeedbackModuleTag);
+}
+
+async function refreshDepartmentModalFeedback(deptTag) {
+  try {
+    const userRole = currentUser ? normalizeRole(currentUser.role) : 'admin';
+    const userDept = getDepartmentForRole(userRole);
+    const queryDept = userDept || (deptTag && deptTag !== 'general' ? deptTag : '');
+    const deptParam = queryDept ? `&department=${encodeURIComponent(queryDept)}` : '';
+    const res = await fetch(`/api/feedback?scope=all${deptParam}`);
+    const data = await res.json();
+    if (res.ok && data.success && Array.isArray(data.feedback)) {
+      allFeedbackList = data.feedback;
+      renderModalFeedbackHistory();
+    }
+  } catch (e) {}
 }
 
 function switchModalFeedbackTab(tab) {
@@ -5238,6 +5254,7 @@ function switchModalFeedbackTab(tab) {
     if (submitView) submitView.style.display = 'none';
     if (historyView) historyView.style.display = 'block';
     renderModalFeedbackHistory();
+    refreshDepartmentModalFeedback(activeFeedbackModuleTag);
   }
 }
 
@@ -5316,6 +5333,9 @@ function renderModalFeedbackHistory() {
             <strong>Reply:</strong> ${escapeHTML(f.admin_reply)}
           </div>
         ` : ''}
+        <div style="margin-top:8px; display:flex; justify-content:flex-end;">
+          <button type="button" class="btn-sm btn-primary" style="padding:4px 10px; font-size:0.74rem;" onclick="replyToFeedback(${f.feedback_id}, '${escapeHTML(f.feedback_type)}')">Reply / Resolve</button>
+        </div>
       </div>
     `;
   }).join('');
@@ -5501,7 +5521,10 @@ async function replyToFeedback(feedbackId, fbType) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || 'Failed to save feedback response');
     showToast('Feedback response saved!', 'success');
-    loadAdminFeedback();
+    await loadAdminFeedback();
+    if (document.getElementById('module-feedback-modal')?.classList.contains('active')) {
+      await refreshDepartmentModalFeedback(activeFeedbackModuleTag);
+    }
   } catch (err) {
     showToast(err.message, 'error');
   }

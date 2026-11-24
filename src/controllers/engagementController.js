@@ -638,15 +638,34 @@ const engagementController = {
           list = localList.filter(f => f.feedback_type === 'review' && f.status === 'published');
         }
       } else {
-        // Preserve department tag (module_tag) recorded in local store when Supabase schema omits module_tag
+        // Merge department tag (module_tag) and phone from local store if DB row lacks it, plus any local-only records
+        const seenIds = new Set();
         list = list.map(row => {
-          if (row.module_tag) return row;
-          const match = localList.find(l =>
+          seenIds.add(Number(row.feedback_id));
+          const matchById = localList.find(l => Number(l.feedback_id) === Number(row.feedback_id));
+          const matchByMeta = matchById || localList.find(l =>
             String(l.customer_name || '').trim() === String(row.customer_name || '').trim() &&
             String(l.subject || '').trim() === String(row.subject || '').trim()
           );
-          return match && match.module_tag ? { ...row, module_tag: match.module_tag } : row;
+          const resolvedTag = (row.module_tag && String(row.module_tag).toLowerCase() !== 'general')
+            ? row.module_tag
+            : (matchByMeta?.module_tag || row.module_tag || 'general');
+          return {
+            ...row,
+            module_tag: resolvedTag,
+            customer_phone: row.customer_phone || matchByMeta?.customer_phone || null
+          };
         });
+        for (const loc of localList) {
+          const idNum = Number(loc.feedback_id);
+          const alreadyExists = (idNum && seenIds.has(idNum)) || list.some(r =>
+            String(r.customer_name || '').trim() === String(loc.customer_name || '').trim() &&
+            String(r.subject || '').trim() === String(loc.subject || '').trim()
+          );
+          if (!alreadyExists && (scope === 'all' || (loc.feedback_type === 'review' && loc.status === 'published'))) {
+            list.push(loc);
+          }
+        }
       }
 
       // Department-level strict isolation:
@@ -738,20 +757,35 @@ const engagementController = {
         created_at: new Date().toISOString()
       };
 
-      localList.unshift(newFeedback);
-      writeLocalFeedback(localList);
-
       try {
-        await supabase.from('customer_feedback').insert([{
+        const insertPayload = {
           customer_name: newFeedback.customer_name,
           customer_email: newFeedback.customer_email,
+          customer_phone: newFeedback.customer_phone,
           feedback_type: newFeedback.feedback_type,
+          module_tag: newFeedback.module_tag,
           rating: newFeedback.rating,
           subject: newFeedback.subject,
           message: newFeedback.message,
           status: newFeedback.status
-        }]);
+        };
+        let { data: insertedRow, error: insErr } = await supabase
+          .from('customer_feedback')
+          .insert([insertPayload])
+          .select('*')
+          .single();
+        if (insErr && (String(insErr.message || '').includes('module_tag') || String(insErr.message || '').includes('customer_phone'))) {
+          const { module_tag: _m, customer_phone: _p, ...fallbackPayload } = insertPayload;
+          const retry = await supabase.from('customer_feedback').insert([fallbackPayload]).select('*').single();
+          insertedRow = retry.data;
+        }
+        if (insertedRow?.feedback_id) {
+          newFeedback.feedback_id = insertedRow.feedback_id;
+        }
       } catch (e) {}
+
+      localList.unshift(newFeedback);
+      writeLocalFeedback(localList);
 
       const responseMsg = cleanType === 'complaint'
         ? 'Thank you for reporting this issue. Your complaint has been logged with Elight Management for priority resolution.'
@@ -763,6 +797,8 @@ const engagementController = {
       if (['cashier', 'finance', 'inventory', 'services', 'dispatch'].includes(cleanDept)) {
         fbTargets.push(cleanDept);
       }
+      if (cleanDept === 'services') fbTargets.push('technicians');
+      if (cleanDept === 'dispatch') fbTargets.push('driver');
       if (cleanType === 'complaint') fbTargets.push('overview');
 
       moduleNotifications.notify({
@@ -794,7 +830,17 @@ const engagementController = {
       const { status, admin_reply, user_role, user_department } = req.body;
 
       const localList = readLocalFeedback();
-      const item = localList.find(f => String(f.feedback_id) === String(id));
+      let item = localList.find(f => String(f.feedback_id) === String(id));
+      if (!item) {
+        try {
+          const { data: dbRow } = await supabase
+            .from('customer_feedback')
+            .select('*')
+            .eq('feedback_id', Number(id))
+            .maybeSingle();
+          if (dbRow) item = dbRow;
+        } catch (e) {}
+      }
 
       if (item && user_role) {
         const r = String(user_role).trim().toLowerCase();
@@ -821,6 +867,9 @@ const engagementController = {
       if (item) {
         if (status) item.status = status;
         if (admin_reply !== undefined) item.admin_reply = admin_reply;
+        if (!localList.some(f => String(f.feedback_id) === String(id))) {
+          localList.unshift(item);
+        }
         writeLocalFeedback(localList);
       }
 

@@ -127,7 +127,8 @@ function canNonAdminAccessErpNotification(n, allowedSet, userDepartment) {
   // For feedback notifications with a specific department tag, isolate non-admins to their own department
   if (mods.includes('feedback') && n.department && n.department !== 'general') {
     const dept = String(n.department).toLowerCase();
-    const matchDept = allowedSet.has(dept) || (userDepartment && (userDepartment === dept || userDepartment === 'customer_care'));
+    const mappedUserDept = userDepartment === 'driver' ? 'dispatch' : userDepartment;
+    const matchDept = allowedSet.has(dept) || (mappedUserDept && (mappedUserDept === dept || mappedUserDept === 'customer_care'));
     if (!matchDept) return false;
   }
   return true;
