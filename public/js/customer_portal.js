@@ -7,6 +7,7 @@
 let loggedCustomerUser = null;
 let myCustomerProfile = null;
 let myCustomerServices = [];
+let myCustomerPayments = [];
 
 const CUSTOMER_ACCOUNT_MENU_ITEMS = [
   { href: '/customer', label: '📊 Account Overview' },
@@ -193,6 +194,7 @@ async function loadMyCustomerPortal() {
     const bookings = data.bookings || [];
     const services = data.services || [];
     myCustomerServices = services;
+    myCustomerPayments = payments;
 
     // Populate Profile Section (only if present on current page)
     const displayName = myCustomerProfile.full_name ||
@@ -293,7 +295,11 @@ async function loadMyCustomerPortal() {
             <td>${escapeHTML(p.cashier_name || 'Esther Karimi')}</td>
             <td>
               ${p.source === 'service' && p.request_id
-                ? `<button type="button" class="btn-sm btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick="downloadServiceFeeReceipt(${p.request_id})">📥 Download PDF</button>`
+                ? `<div style="display:flex; gap:5px; flex-wrap:wrap;">
+                     <button type="button" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:4px 8px; font-size:0.74rem; font-weight:700;" onclick="openServiceReceiptModal(${p.request_id})">👁️ View</button>
+                     <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:4px 8px; font-size:0.74rem; font-weight:700;" onclick="printServiceReceipt(${p.request_id})">🖨️ Print</button>
+                     <button type="button" class="btn-sm btn-primary" style="padding:4px 8px; font-size:0.74rem;" onclick="downloadServiceFeeReceipt(${p.request_id})">📥 PDF</button>
+                   </div>`
                 : `<span style="font-size:0.76rem; color:#087443; font-weight:700;">✓ Verified</span>`}
             </td>
           </tr>
@@ -330,13 +336,17 @@ async function loadMyCustomerPortal() {
           const fee = Number(s.service_fee || 0);
           const isPaid = String(s.payment_status || '').toLowerCase() === 'paid';
           const isCompleted = String(s.status || '').toLowerCase() === 'completed';
+          const isConfirmed = Boolean(s.customer_confirmed);
           const statusLabel = String(s.status || 'pending').replace(/_/g, ' ');
 
           let payBadge = '<span class="badge-tag" style="background:#f1f5f9; color:#475569;">Not Billed Yet</span>';
           if (isPaid) {
             payBadge = `<span class="badge-tag" style="background:#dcfce7; color:#15803d; font-weight:700;">✅ Paid (${escapeHTML(s.service_receipt_no || 'Confirmed')})</span>`;
+            if (s.service_payment_method) {
+              payBadge += `<div style="font-size:0.73rem; color:#475569; margin-top:3px;">${escapeHTML(s.service_payment_method)}${s.service_payment_ref ? ` • Ref: ${escapeHTML(s.service_payment_ref)}` : ''}</div>`;
+            }
           } else if (isCompleted && fee > 0) {
-            payBadge = '<span class="badge-tag" style="background:#fef3c7; color:#b45309; font-weight:700;">⏳ Awaiting Finance Confirmation</span>';
+            payBadge = '<span class="badge-tag" style="background:#fef3c7; color:#b45309; font-weight:700;">⏳ Ready for Payment</span>';
           }
 
           return `
@@ -348,13 +358,21 @@ async function loadMyCustomerPortal() {
               </td>
               <td>
                 <span class="badge-tag badge-${escapeHTML(s.status)}">${escapeHTML(statusLabel)}</span>
+                ${isConfirmed ? `<div style="margin-top:4px;"><span class="badge-tag" style="background:#dbeafe; color:#1e40af; font-weight:700;">✔️ Confirmed by You</span></div>` : ''}
+                ${s.customer_confirmation_notes ? `<div style="font-size:0.74rem; color:#1e3a8a; margin-top:2px;">Note: ${escapeHTML(s.customer_confirmation_notes)}</div>` : ''}
                 ${s.completion_notes ? `<div style="font-size:0.76rem; color:#475569; margin-top:3px;">${escapeHTML(s.completion_notes)}</div>` : ''}
               </td>
               <td><strong>${fee > 0 ? `KES ${fee.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Pending Charge'}</strong></td>
               <td>${payBadge}</td>
               <td style="white-space:nowrap;">
                 <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                  ${isPaid ? `<button type="button" class="btn-sm btn-primary" style="padding:5px 10px; font-size:0.76rem;" onclick="downloadServiceFeeReceipt(${s.request_id})">📥 Download Receipt</button>` : ''}
+                  ${isCompleted && !isConfirmed ? `<button type="button" class="btn-sm" style="background:#16a34a; color:#fff; padding:5px 10px; font-size:0.76rem; font-weight:700;" onclick="openConfirmServiceModal(${s.request_id})">✓ Confirm Service</button>` : ''}
+                  ${isCompleted && !isPaid && fee > 0 ? `<button type="button" class="btn-sm" style="background:#087443; color:#fff; padding:5px 10px; font-size:0.76rem; font-weight:700;" onclick="openCustomerServicePayModal(${s.request_id})">💳 Pay Service</button>` : ''}
+                  ${isPaid ? `
+                    <button type="button" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:5px 10px; font-size:0.76rem; font-weight:700;" onclick="openServiceReceiptModal(${s.request_id})">👁️ View Receipt</button>
+                    <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:5px 10px; font-size:0.76rem; font-weight:700;" onclick="printServiceReceipt(${s.request_id})">🖨️ Print Receipt</button>
+                    <button type="button" class="btn-sm btn-primary" style="padding:5px 10px; font-size:0.76rem;" onclick="downloadServiceFeeReceipt(${s.request_id})">📥 PDF</button>
+                  ` : ''}
                   ${isCompleted ? `<button type="button" class="btn-sm" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:5px 10px; font-size:0.76rem; font-weight:700;" onclick="openServiceFeedbackModal(${s.request_id})">💬 Give Feedback</button>` : ''}
                 </div>
               </td>
@@ -525,14 +543,361 @@ if (custProfileFormEl) custProfileFormEl.addEventListener('submit', async (e) =>
   }
 });
 
-function buildCustomerReceiptQuery(requestId) {
-  const params = new URLSearchParams({
+function getCustomerIdentityPayload() {
+  return {
     email: myCustomerProfile?.email || loggedCustomerUser?.email || '',
     phone: myCustomerProfile?.phone || loggedCustomerUser?.phone || '',
     name: myCustomerProfile?.full_name || loggedCustomerUser?.full_name || '',
     role: String(loggedCustomerUser?.role || '').toLowerCase()
-  });
+  };
+}
+
+function buildCustomerReceiptQuery(requestId, preview = false) {
+  const params = new URLSearchParams(getCustomerIdentityPayload());
+  if (preview) params.set('preview', '1');
   return `/api/customer/services/${requestId}/receipt?${params.toString()}`;
+}
+
+function resolveServiceReceiptData(requestId) {
+  const idNum = Number(requestId);
+  const svc = myCustomerServices.find(s => Number(s.request_id) === idNum);
+  if (svc) return svc;
+  const pay = myCustomerPayments.find(p => p.source === 'service' && Number(p.request_id) === idNum);
+  if (pay) {
+    return {
+      request_id: idNum,
+      service_type: pay.service_type || 'Electrical Service',
+      service_fee: Number(pay.amount || 0),
+      service_receipt_no: pay.receipt_no || `RCP-SR-${idNum}`,
+      service_payment_method: pay.payment_method || 'M-Pesa',
+      service_payment_ref: pay.payment_ref || 'VERIFIED',
+      service_paid_at: pay.paid_at,
+      service_payment_confirmed_by: pay.cashier_name || 'Elight Electrical Shop',
+      customer_name: myCustomerProfile?.full_name || loggedCustomerUser?.full_name || 'Valued Customer',
+      phone: myCustomerProfile?.phone || loggedCustomerUser?.phone || '-',
+      customer_email: myCustomerProfile?.email || loggedCustomerUser?.email || '-',
+      location: myCustomerProfile?.location || 'Meru County',
+      payment_status: 'paid'
+    };
+  }
+  return null;
+}
+
+function buildPrintableServiceReceiptHtml(sr) {
+  const receiptNo = sr.service_receipt_no || `RCP-SR-${sr.request_id}`;
+  const paidAtStr = sr.service_paid_at || sr.approved_at || sr.created_at;
+  const paidDate = paidAtStr ? new Date(paidAtStr).toLocaleString('en-KE') : 'N/A';
+  const feeText = `KES ${Number(sr.service_fee || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const custConfirmedText = sr.customer_confirmed
+    ? `Confirmed by Customer${sr.customer_confirmed_at ? ` (${new Date(sr.customer_confirmed_at).toLocaleDateString('en-KE')})` : ''}`
+    : 'Not Yet Confirmed';
+
+  return `
+    <div style="font-family:'Segoe UI',Arial,sans-serif; color:#0f172a; border:1px solid #cbd5e1; border-radius:10px; overflow:hidden; background:#ffffff;">
+      <div style="background:#102b46; color:#ffffff; padding:18px 22px; border-bottom:4px solid #ffc107; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <div style="font-size:1.15rem; font-weight:800; letter-spacing:0.4px;">ELIGHT ELECTRICAL SHOP</div>
+          <div style="font-size:0.78rem; color:#e2e8f0; margin-top:2px;">Meru Town, Meru County, Kenya • Tel: +254 700 123 456 • elightelectrical@ke.com</div>
+        </div>
+        <div style="background:#dcfce7; color:#15803d; padding:5px 12px; border-radius:999px; font-size:0.78rem; font-weight:800;">OFFICIAL RECEIPT • PAID</div>
+      </div>
+
+      <div style="padding:18px 22px;">
+        <div style="text-align:center; font-size:0.95rem; font-weight:800; color:#102b46; letter-spacing:0.5px; margin-bottom:14px;">OFFICIAL SERVICE FEE PAYMENT RECEIPT</div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; font-size:0.84rem; margin-bottom:14px;">
+          <div>
+            <div><strong>Receipt No:</strong> <code>${escapeHTML(receiptNo)}</code></div>
+            <div><strong>Service Job Ref:</strong> #SR-${escapeHTML(String(sr.request_id))}</div>
+            <div><strong>Payment Date:</strong> ${escapeHTML(paidDate)}</div>
+          </div>
+          <div>
+            <div><strong>Payment Method:</strong> ${escapeHTML(sr.service_payment_method || 'M-Pesa')}</div>
+            <div><strong>Payment Ref:</strong> <code>${escapeHTML(sr.service_payment_ref || 'VERIFIED')}</code></div>
+            <div><strong>Customer Confirmation:</strong> ${escapeHTML(custConfirmedText)}</div>
+          </div>
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; font-size:0.84rem; margin-bottom:14px;">
+          <tbody>
+            <tr>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; color:#475569; width:24%;">Customer Name</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; font-weight:700;">${escapeHTML(sr.customer_name || 'Valued Customer')}</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; color:#475569; width:22%;">Service Type</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; font-weight:700;">${escapeHTML(sr.service_type || 'Electrical Service')}</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; color:#475569;">Phone</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0;">${escapeHTML(sr.phone || '-')}</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; color:#475569;">Technician</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0;">${escapeHTML(sr.technician_name || sr.assigned_technician_name || 'Assigned Tech')}</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; color:#475569;">Site Location</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0;">${escapeHTML(sr.location || 'Meru County')}</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0; color:#475569;">Recorded By</td>
+              <td style="padding:7px 8px; border-bottom:1px solid #e2e8f0;">${escapeHTML(sr.service_payment_confirmed_by || 'Elight Finance Desk')}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="background:#ecfdf5; border:1px solid #86efac; border-radius:8px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+          <div>
+            <div style="font-size:0.78rem; font-weight:700; color:#166534;">TOTAL SERVICE FEE PAID</div>
+            <div style="font-size:0.74rem; color:#475569;">Verified payment for completed electrical service</div>
+          </div>
+          <div style="font-size:1.3rem; font-weight:800; color:#087443;">${escapeHTML(feeText)}</div>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; font-size:0.8rem; color:#334155;">
+          <strong>Work &amp; Materials Summary:</strong>
+          ${escapeHTML(sr.completion_notes || 'Service completed and approved.')}${sr.materials_used ? ` • Materials: ${escapeHTML(sr.materials_used)}` : ''}
+          ${sr.customer_confirmation_notes ? `<br><strong>Customer Remark:</strong> ${escapeHTML(sr.customer_confirmation_notes)}` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function ensureServiceReceiptModal() {
+  let modal = document.getElementById('cust-service-receipt-modal');
+  if (modal) return modal;
+  modal = document.createElement('div');
+  modal.id = 'cust-service-receipt-modal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:680px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
+        <h3 style="margin:0;">🧾 Official Service Fee Receipt</h3>
+        <button type="button" class="btn-sm" onclick="closeCustModal('cust-service-receipt-modal')">✕</button>
+      </div>
+      <div id="cust-service-receipt-body" style="max-height:70vh; overflow-y:auto;"></div>
+      <div class="modal-actions" style="margin-top:14px; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" id="receiptModalPrintBtn" class="btn-sm" style="background:#0f172a; color:#fff; font-weight:700;">🖨️ Print Receipt</button>
+          <button type="button" id="receiptModalViewPdfBtn" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:700;">📄 View PDF</button>
+          <button type="button" id="receiptModalDownloadBtn" class="btn-sm btn-primary">📥 Download PDF</button>
+        </div>
+        <button type="button" class="btn-sm" onclick="closeCustModal('cust-service-receipt-modal')">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  return modal;
+}
+
+function openServiceReceiptModal(requestId) {
+  const sr = resolveServiceReceiptData(requestId);
+  if (!sr || String(sr.payment_status || '').toLowerCase() !== 'paid') {
+    showToast('Receipt will be available once payment is completed.', 'info');
+    return;
+  }
+  ensureServiceReceiptModal();
+  const bodyEl = document.getElementById('cust-service-receipt-body');
+  if (bodyEl) bodyEl.innerHTML = buildPrintableServiceReceiptHtml(sr);
+
+  const printBtn = document.getElementById('receiptModalPrintBtn');
+  if (printBtn) printBtn.onclick = () => printServiceReceipt(requestId);
+
+  const viewPdfBtn = document.getElementById('receiptModalViewPdfBtn');
+  if (viewPdfBtn) viewPdfBtn.onclick = () => window.open(buildCustomerReceiptQuery(requestId, true), '_blank', 'noopener');
+
+  const dlBtn = document.getElementById('receiptModalDownloadBtn');
+  if (dlBtn) dlBtn.onclick = () => downloadServiceFeeReceipt(requestId);
+
+  openCustModal('cust-service-receipt-modal');
+}
+
+function printServiceReceipt(requestId) {
+  const sr = resolveServiceReceiptData(requestId);
+  if (!sr || String(sr.payment_status || '').toLowerCase() !== 'paid') {
+    showToast('Receipt will be available to print once payment is completed.', 'info');
+    return;
+  }
+
+  const receiptMarkup = buildPrintableServiceReceiptHtml(sr);
+  const fullDoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receipt ${escapeHTML(sr.service_receipt_no || `SR-${sr.request_id}`)}</title><style>@page{margin:14mm;}body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:12px;background:#fff;}</style></head><body>${receiptMarkup}</body></html>`;
+
+  const oldFrame = document.getElementById('elight-print-receipt-frame');
+  if (oldFrame) oldFrame.remove();
+
+  const iframe = document.createElement('iframe');
+  iframe.id = 'elight-print-receipt-frame';
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(fullDoc);
+  doc.close();
+
+  setTimeout(() => {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch (e) {
+      const win = window.open('', '_blank', 'width=820,height=720');
+      if (win) {
+        win.document.open();
+        win.document.write(fullDoc);
+        win.document.close();
+        win.focus();
+        win.print();
+      }
+    }
+  }, 150);
+}
+
+function openConfirmServiceModal(requestId) {
+  const svc = myCustomerServices.find(s => Number(s.request_id) === Number(requestId));
+  if (!svc) return;
+  document.getElementById('conf_service_request_id').value = svc.request_id;
+  document.getElementById('conf_service_notes').value = '';
+  const sumEl = document.getElementById('conf-service-summary');
+  if (sumEl) {
+    sumEl.innerHTML = `
+      <strong>#SR-${svc.request_id}: ${escapeHTML(svc.service_type)}</strong><br>
+      Technician: <strong>${escapeHTML(svc.technician_name || svc.assigned_technician_name || 'Assigned Team')}</strong>
+      ${svc.completion_notes ? `<div style="margin-top:4px; color:#334155;">Completion Report: ${escapeHTML(svc.completion_notes)}</div>` : ''}
+      ${Number(svc.service_fee || 0) > 0 ? `<div style="margin-top:4px; color:#087443; font-weight:700;">Service Fee: KES ${Number(svc.service_fee).toLocaleString('en-KE', { minimumFractionDigits: 2 })}</div>` : ''}
+    `;
+  }
+  openCustModal('cust-service-confirm-modal');
+}
+
+function syncCustServicePayRefRules() {
+  const method = String(document.getElementById('cust_svc_pay_method')?.value || 'M-Pesa').toLowerCase();
+  const input = document.getElementById('cust_svc_pay_ref');
+  const label = document.getElementById('cust_svc_pay_ref_label');
+  if (!input) return;
+
+  if (method.includes('m-pesa') || method.includes('mpesa')) {
+    if (label) label.textContent = 'M-Pesa Transaction Reference *';
+    input.required = true;
+    input.maxLength = 10;
+    input.inputMode = 'text';
+    input.style.textTransform = 'uppercase';
+    input.placeholder = 'e.g. SLK884290Q';
+    input.oninput = () => {
+      input.value = input.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
+    };
+    input.value = input.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
+  } else if (method.includes('bank')) {
+    if (label) label.textContent = 'Bank Transfer Reference (Numbers Only) *';
+    input.required = true;
+    input.maxLength = 12;
+    input.inputMode = 'numeric';
+    input.style.textTransform = 'none';
+    input.placeholder = 'e.g. 123456789012';
+    input.oninput = () => {
+      input.value = input.value.replace(/[^0-9]/g, '').slice(0, 12);
+    };
+    input.value = input.value.replace(/[^0-9]/g, '').slice(0, 12);
+  } else {
+    if (label) label.textContent = 'Cash Receipt / Reference (Optional)';
+    input.required = false;
+    input.maxLength = 40;
+    input.inputMode = 'text';
+    input.style.textTransform = 'none';
+    input.placeholder = 'Optional cash receipt code';
+    input.oninput = null;
+  }
+}
+
+function openCustomerServicePayModal(requestId) {
+  const svc = myCustomerServices.find(s => Number(s.request_id) === Number(requestId));
+  if (!svc) return;
+  const fee = Number(svc.service_fee || 0);
+  document.getElementById('pay_service_request_id').value = svc.request_id;
+  document.getElementById('cust_svc_pay_amount').value = fee.toFixed(2);
+  document.getElementById('cust_svc_pay_method').value = 'M-Pesa';
+  document.getElementById('cust_svc_pay_ref').value = '';
+  syncCustServicePayRefRules();
+
+  const sumEl = document.getElementById('pay-service-summary');
+  if (sumEl) {
+    sumEl.innerHTML = `
+      <strong>#SR-${svc.request_id}: ${escapeHTML(svc.service_type)}</strong><br>
+      Technician: ${escapeHTML(svc.technician_name || svc.assigned_technician_name || 'Assigned Team')} • Status: <strong>${svc.customer_confirmed ? 'Confirmed Completed' : 'Completed'}</strong>
+    `;
+  }
+  openCustModal('cust-service-pay-modal');
+}
+
+const custSvcConfirmForm = document.getElementById('custServiceConfirmForm');
+if (custSvcConfirmForm) {
+  custSvcConfirmForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const requestId = Number(document.getElementById('conf_service_request_id').value);
+    const notes = document.getElementById('conf_service_notes').value.trim();
+
+    try {
+      const res = await fetch(`/api/customer/services/${requestId}/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...getCustomerIdentityPayload(),
+          confirmation_notes: notes
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Unable to confirm service completion.');
+      closeCustModal('cust-service-confirm-modal');
+      showToast(data.message || 'Service confirmed completed!', 'success');
+      await loadMyCustomerPortal();
+    } catch (err) {
+      showToast(err.message || 'Failed confirming service.', 'error');
+    }
+  });
+}
+
+const custSvcPayForm = document.getElementById('custServicePayForm');
+if (custSvcPayForm) {
+  custSvcPayForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const requestId = Number(document.getElementById('pay_service_request_id').value);
+    const amountPaid = Number(document.getElementById('cust_svc_pay_amount').value || 0);
+    const method = document.getElementById('cust_svc_pay_method').value;
+    const rawRef = document.getElementById('cust_svc_pay_ref').value.trim();
+    const methodLower = method.toLowerCase();
+
+    if ((methodLower.includes('m-pesa') || methodLower.includes('mpesa')) && !/^[A-Z0-9]{1,10}$/.test(rawRef.toUpperCase())) {
+      showToast('M-Pesa reference must be up to 10 alphanumeric characters (e.g. SLK884290Q).', 'error');
+      document.getElementById('cust_svc_pay_ref')?.focus();
+      return;
+    }
+    if (methodLower.includes('bank') && !/^[0-9]{1,12}$/.test(rawRef)) {
+      showToast('Bank transfer reference must contain numbers only (up to 12 digits).', 'error');
+      document.getElementById('cust_svc_pay_ref')?.focus();
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/customer/services/${requestId}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...getCustomerIdentityPayload(),
+          amount_paid: amountPaid,
+          payment_method: method,
+          transaction_ref: rawRef
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Payment failed.');
+      closeCustModal('cust-service-pay-modal');
+      showToast(data.message || 'Service payment recorded! Opening receipt...', 'success');
+      await loadMyCustomerPortal();
+      openServiceReceiptModal(requestId);
+    } catch (err) {
+      showToast(err.message || 'Service payment failed.', 'error');
+    }
+  });
 }
 
 async function downloadServiceFeeReceipt(requestId) {

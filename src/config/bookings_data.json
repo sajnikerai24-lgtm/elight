@@ -1,5 +1,24 @@
 [
   {
+    "booking_id": 21,
+    "booking_ref": "BK-ELIGHT-1747",
+    "booking_type": "service",
+    "customer_name": "mike",
+    "customer_email": "mike@gmail.com",
+    "customer_phone": "0736789034",
+    "product_id": null,
+    "item_or_service_name": "Chandelier & Decorative Lighting Mounting",
+    "quantity": 1,
+    "preferred_date": "2026-11-25",
+    "preferred_time": "Pending Service Manager Assignment",
+    "location_or_notes": "",
+    "estimated_amount": 950,
+    "status": "confirmed",
+    "confirmation_note": "Confirmed! Service \"Chandelier & Decorative Lighting Mounting\" scheduled for 2026-11-25 (Arrival time to be assigned by Service Manager). Our technical desk will call 0736789034 prior to dispatch.",
+    "created_at": "2026-11-24T07:10:45.504611+00:00",
+    "booking_fee": 200
+  },
+  {
     "booking_id": 20,
     "booking_ref": "BK-ELIGHT-9897",
     "booking_type": "service",

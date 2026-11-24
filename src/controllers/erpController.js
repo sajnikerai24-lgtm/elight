@@ -408,6 +408,24 @@ function validateAccountPhone(rawPhone, { required = true } = {}) {
   return { valid: true, value: digits };
 }
 
+function customerOwnsServiceRecord(sr, source = {}) {
+  const role = String(source.role || '').trim().toLowerCase();
+  if (role === 'admin') return true;
+  const email = String(source.email || '').trim().toLowerCase();
+  const phone = String(source.phone || '').trim();
+  const rawName = String(source.name || source.customer_name || '').trim();
+  const baseName = rawName.replace(/\s*\(customer\)\s*$/i, '').toLowerCase();
+
+  const sEmail = String(sr.customer_email || '').toLowerCase().trim();
+  const sPhone = String(sr.phone || '').trim();
+  const sName = String(sr.customer_name || '').toLowerCase().trim();
+  return Boolean(
+    (email && sEmail && email === sEmail) ||
+    (phone && sPhone && (phone === sPhone || (phone.length >= 8 && sPhone.includes(phone.slice(-8))))) ||
+    (baseName && sName && baseName === sName)
+  );
+}
+
 const erpController = {
   // ==========================================
   // AUTHENTICATION & DEMO ACCOUNTS
@@ -1788,32 +1806,102 @@ const erpController = {
     }
   },
 
-  downloadCustomerServiceReceipt: async (req, res) => {
+  confirmCustomerServiceCompletion: async (req, res) => {
     try {
       const srId = Number(req.params.id);
       if (!srId) return res.status(400).json({ success: false, message: 'Invalid service ID.' });
-
-      const email = String(req.query.email || '').trim().toLowerCase();
-      const phone = String(req.query.phone || '').trim();
-      const rawName = String(req.query.name || '').trim();
-      const baseName = rawName.replace(/\s*\(customer\)\s*$/i, '').toLowerCase();
-      const isAdminBypass = String(req.query.role || '').toLowerCase() === 'admin';
 
       const allServices = await interModuleSync.getServiceRequests();
       const sr = allServices.find(s => Number(s.request_id) === srId);
       if (!sr) return res.status(404).json({ success: false, message: 'Service record not found.' });
 
-      if (!isAdminBypass) {
-        const sEmail = String(sr.customer_email || '').toLowerCase().trim();
-        const sPhone = String(sr.phone || '').trim();
-        const sName = String(sr.customer_name || '').toLowerCase().trim();
-        const matchesCustomer =
-          (email && sEmail && email === sEmail) ||
-          (phone && sPhone && (phone === sPhone || (phone.length >= 8 && sPhone.includes(phone.slice(-8))))) ||
-          (baseName && sName && baseName === sName);
-        if (!matchesCustomer) {
-          return res.status(403).json({ success: false, message: 'Forbidden: This service receipt belongs to another customer.' });
-        }
+      const identity = {
+        role: req.body.role || req.query.role,
+        email: req.body.email || req.query.email,
+        phone: req.body.phone || req.query.phone,
+        name: req.body.name || req.body.customer_name || req.query.name
+      };
+      if (!customerOwnsServiceRecord(sr, identity)) {
+        return res.status(403).json({ success: false, message: 'Forbidden: This service job belongs to another customer.' });
+      }
+
+      const cleanActor = String(identity.name || '').trim().replace(/\s*\(customer\)\s*$/i, '') || sr.customer_name;
+      const updated = await interModuleSync.confirmServiceByCustomer(srId, {
+        customer_name: cleanActor,
+        confirmation_notes: req.body.confirmation_notes
+      });
+
+      return res.json({
+        success: true,
+        request: updated,
+        message: `Service #SR-${srId} confirmed completed by customer.`
+      });
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+  },
+
+  payCustomerServiceFee: async (req, res) => {
+    try {
+      const srId = Number(req.params.id);
+      if (!srId) return res.status(400).json({ success: false, message: 'Invalid service ID.' });
+
+      const allServices = await interModuleSync.getServiceRequests();
+      const sr = allServices.find(s => Number(s.request_id) === srId);
+      if (!sr) return res.status(404).json({ success: false, message: 'Service record not found.' });
+
+      const identity = {
+        role: req.body.role || req.query.role,
+        email: req.body.email || req.query.email,
+        phone: req.body.phone || req.query.phone,
+        name: req.body.name || req.body.customer_name || req.query.name
+      };
+      if (!customerOwnsServiceRecord(sr, identity)) {
+        return res.status(403).json({ success: false, message: 'Forbidden: This service job belongs to another customer.' });
+      }
+
+      const method = String(req.body.payment_method || 'M-Pesa').trim();
+      const isCashMethod = method.toLowerCase().includes('cash');
+      const rawRef = String(req.body.transaction_ref || '').trim() || (isCashMethod ? `CSHSR${srId}` : '');
+      const refCheck = validatePaymentReference(method, rawRef, {
+        required: true,
+        label: 'Transaction reference'
+      });
+      if (!refCheck.valid) {
+        return res.status(400).json({ success: false, message: refCheck.message });
+      }
+
+      const feeDue = Number(sr.service_fee || 0) > 0 ? Number(sr.service_fee) : Number(req.body.amount_paid || 0);
+      const payerName = String(identity.name || '').trim().replace(/\s*\(customer\)\s*$/i, '') || sr.customer_name || 'Customer';
+
+      const updated = await interModuleSync.confirmServiceFeePayment(srId, {
+        amount_paid: feeDue,
+        payment_method: method,
+        transaction_ref: refCheck.value,
+        actor: `Customer Portal (${payerName})`
+      });
+
+      return res.json({
+        success: true,
+        request: updated,
+        message: `Payment of KES ${Number(updated.service_fee || 0).toLocaleString()} received for #SR-${srId}. Official Receipt ${updated.service_receipt_no} is ready to view and print.`
+      });
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+  },
+
+  downloadCustomerServiceReceipt: async (req, res) => {
+    try {
+      const srId = Number(req.params.id);
+      if (!srId) return res.status(400).json({ success: false, message: 'Invalid service ID.' });
+
+      const allServices = await interModuleSync.getServiceRequests();
+      const sr = allServices.find(s => Number(s.request_id) === srId);
+      if (!sr) return res.status(404).json({ success: false, message: 'Service record not found.' });
+
+      if (!customerOwnsServiceRecord(sr, req.query)) {
+        return res.status(403).json({ success: false, message: 'Forbidden: This service receipt belongs to another customer.' });
       }
 
       if (String(sr.payment_status || '').toLowerCase() !== 'paid') {
@@ -1844,7 +1932,7 @@ const erpController = {
           ['Customer Name:', sr.customer_name || 'Valued Customer', 'Service Type:', sr.service_type || 'Electrical Service'],
           ['Phone:', sr.phone || '-', 'Technician:', sr.technician_name || sr.assigned_technician_name || 'Assigned Tech'],
           ['Site Location:', sr.location || 'Meru County', 'Service Approved:', sr.approved_by || 'Service Manager'],
-          ['Customer Email:', sr.customer_email || '-', 'Finance Confirmed:', sr.service_payment_confirmed_by || 'Finance Manager']
+          ['Customer Confirmed:', sr.customer_confirmed ? `Yes (${String(sr.customer_confirmed_at || '').slice(0, 10) || 'Confirmed'})` : 'No', 'Payment Recorded:', sr.service_payment_confirmed_by || 'Finance / Customer Portal']
         ],
         amountLabel: 'TOTAL SERVICE FEE PAID',
         amountSubtext: 'Verified and confirmed received by Elight Electrical Shop Finance Department',

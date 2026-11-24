@@ -484,7 +484,11 @@ const interModuleSync = {
             customer_email: sr.customer_email || (local && local.customer_email) || null,
             service_fee: Number(sr.service_fee ?? local?.service_fee ?? 0),
             billing_status: sr.billing_status || local?.billing_status || (Number(sr.service_fee ?? local?.service_fee ?? 0) > 0 && sr.status === 'completed' ? 'pending_payment' : 'not_billed'),
-            payment_status: sr.payment_status || local?.payment_status || 'unpaid'
+            payment_status: sr.payment_status || local?.payment_status || 'unpaid',
+            customer_confirmed: Boolean(sr.customer_confirmed ?? local?.customer_confirmed ?? false),
+            customer_confirmed_at: sr.customer_confirmed_at || local?.customer_confirmed_at || null,
+            customer_confirmed_by: sr.customer_confirmed_by || local?.customer_confirmed_by || null,
+            customer_confirmation_notes: sr.customer_confirmation_notes || local?.customer_confirmation_notes || null
           };
         });
         for (const loc of localRequests) {
@@ -1540,6 +1544,62 @@ const interModuleSync = {
       refNo: `#SR-${srId}`,
       recipientPhone: req.phone || '',
       recipientName: req.customer_name || ''
+    });
+
+    return req;
+  },
+
+  confirmServiceByCustomer: async (requestId, { customer_name, confirmation_notes }) => {
+    const srId = Number(requestId);
+    await interModuleSync.getServiceRequests();
+    const requests = readJson(SERVICE_REQUESTS_PATH, DEFAULT_SERVICE_REQUESTS);
+    const req = requests.find(r => Number(r.request_id) === srId);
+    if (!req) throw new Error(`Service Request #SR-${srId} not found.`);
+    if (String(req.status || '').toLowerCase() !== 'completed') {
+      throw new Error('You can only confirm a service job after it has been marked completed.');
+    }
+    if (req.customer_confirmed) {
+      return req;
+    }
+
+    const actorName = String(customer_name || req.customer_name || 'Customer').trim();
+    const cleanNotes = String(confirmation_notes || '').trim();
+    const confirmedAt = new Date().toISOString();
+
+    req.customer_confirmed = true;
+    req.customer_confirmed_at = confirmedAt;
+    req.customer_confirmed_by = actorName;
+    if (cleanNotes) req.customer_confirmation_notes = cleanNotes;
+    writeJson(SERVICE_REQUESTS_PATH, requests);
+
+    try {
+      await supabase
+        .from('service_requests')
+        .update({
+          customer_confirmed: true,
+          customer_confirmed_at: confirmedAt,
+          customer_confirmed_by: actorName,
+          customer_confirmation_notes: cleanNotes || null
+        })
+        .eq('request_id', srId);
+    } catch (e) {}
+
+    appendSystemAudit(
+      'Service & Field Operations',
+      actorName,
+      'Customer Confirmed Service Completion',
+      `Customer ${actorName} confirmed completion of Service #SR-${srId} (${req.service_type})${cleanNotes ? `: "${cleanNotes}"` : '.'}`
+    );
+
+    moduleNotifications.notify({
+      targetModules: ['services', 'finance_services'],
+      sourceModule: 'customer',
+      senderName: actorName,
+      title: `Customer Confirmed Service #SR-${srId}`,
+      message: `${actorName} confirmed completion of ${req.service_type} (#SR-${srId}).${Number(req.service_fee || 0) > 0 && String(req.payment_status || '').toLowerCase() !== 'paid' ? ` Fee due: KES ${Number(req.service_fee).toLocaleString()}.` : ''}`,
+      severity: 'success',
+      refNo: `#SR-${srId}`,
+      actionModule: 'services'
     });
 
     return req;

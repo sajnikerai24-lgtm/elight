@@ -29,6 +29,8 @@ router.get('/warranties', erpController.getWarranties);
 router.post('/warranties', erpController.createWarranty);
 router.get('/customer/my-portal', erpController.getCustomerPortal);
 router.put('/customer/my-profile', erpController.updateCustomerProfile);
+router.post('/customer/services/:id/confirm', erpController.confirmCustomerServiceCompletion);
+router.post('/customer/services/:id/pay', erpController.payCustomerServiceFee);
 router.get('/customer/services/:id/receipt', erpController.downloadCustomerServiceReceipt);
 
 // Service Manager & Technician Module

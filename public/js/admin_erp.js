@@ -1130,6 +1130,7 @@ async function loadServiceRequests() {
           <td>${techCellHtml}</td>
           <td>
             <span class="badge-tag badge-${s.status}">${escapeHTML(String(s.status || '').replace(/_/g, ' '))}</span>
+            ${s.customer_confirmed ? `<div style="font-size:0.72rem; color:#15803d; font-weight:700; margin-top:3px;">✔️ Confirmed by Customer</div>` : ''}
             ${s.status === 'returned_for_rework' && s.return_reason ? `<div style="font-size:0.72rem; color:#b45309; margin-top:3px;">↩️ ${escapeHTML(s.return_reason)}</div>` : ''}
           </td>
           <td>

@@ -77,7 +77,7 @@
                   <th>Completion Status</th>
                   <th>Service Fee</th>
                   <th>Payment Status</th>
-                  <th>Receipt &amp; Feedback</th>
+                  <th>Actions &amp; Receipt</th>
                 </tr>
               </thead>
               <tbody id="cust-services-tbody">
@@ -117,6 +117,72 @@
               <button type="submit" class="btn-sm btn-primary">Submit Feedback</button>
             </div>
           </form>
+        </div>
+      </div>
+
+      <div class="modal-overlay" id="cust-service-confirm-modal">
+        <div class="modal">
+          <h3>✓ Confirm Completed Service</h3>
+          <form id="custServiceConfirmForm">
+            <input type="hidden" id="conf_service_request_id">
+            <div id="conf-service-summary" style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:10px 12px; font-size:0.86rem; margin-bottom:12px;"></div>
+            <div class="form-group">
+              <label>Confirmation Note (Optional)</label>
+              <textarea id="conf_service_notes" class="form-control" rows="2" placeholder="e.g. Work tested and completed satisfactorily."></textarea>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn-sm" onclick="closeCustModal('cust-service-confirm-modal')">Cancel</button>
+              <button type="submit" class="btn-sm" style="background:#087443; color:#fff; font-weight:700;">✓ Confirm Service Completed</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="modal-overlay" id="cust-service-pay-modal">
+        <div class="modal">
+          <h3>💳 Pay for Completed Service</h3>
+          <form id="custServicePayForm">
+            <input type="hidden" id="pay_service_request_id">
+            <div id="pay-service-summary" style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; padding:10px 12px; font-size:0.86rem; margin-bottom:12px;"></div>
+            <div class="form-group">
+              <label>Service Fee Amount (KES) *</label>
+              <input type="number" id="cust_svc_pay_amount" class="form-control" step="0.01" min="1" readonly style="font-weight:800; color:#087443; background:#f8fafc;">
+            </div>
+            <div class="form-group">
+              <label>Payment Method *</label>
+              <select id="cust_svc_pay_method" class="form-control" onchange="syncCustServicePayRefRules()">
+                <option value="M-Pesa">M-Pesa (Till #5894210)</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Cash">Cash (Showroom / Technician)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label id="cust_svc_pay_ref_label">M-Pesa Transaction Reference *</label>
+              <input type="text" id="cust_svc_pay_ref" class="form-control" placeholder="e.g. SLK884290Q" required>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn-sm" onclick="closeCustModal('cust-service-pay-modal')">Cancel</button>
+              <button type="submit" class="btn-sm" style="background:#087443; color:#fff; font-weight:700;">💳 Complete Payment &amp; View Receipt</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="modal-overlay" id="cust-service-receipt-modal">
+        <div class="modal" style="max-width:680px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
+            <h3 style="margin:0;">🧾 Official Service Fee Receipt</h3>
+            <button type="button" class="btn-sm" onclick="closeCustModal('cust-service-receipt-modal')">✕</button>
+          </div>
+          <div id="cust-service-receipt-body" style="max-height:70vh; overflow-y:auto;"></div>
+          <div class="modal-actions" style="margin-top:14px; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" id="receiptModalPrintBtn" class="btn-sm" style="background:#0f172a; color:#fff; font-weight:700;">🖨️ Print Receipt</button>
+              <button type="button" id="receiptModalViewPdfBtn" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:700;">📄 View PDF</button>
+              <button type="button" id="receiptModalDownloadBtn" class="btn-sm btn-primary">📥 Download PDF</button>
+            </div>
+            <button type="button" class="btn-sm" onclick="closeCustModal('cust-service-receipt-modal')">Close</button>
+          </div>
         </div>
       </div>
 
