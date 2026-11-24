@@ -437,6 +437,20 @@ const erpController = {
       });
 
       if (matches.length === 0) {
+        const { data: sups } = await supabase
+          .from('suppliers')
+          .select('supplier_id, username, email, supplier_name')
+          .limit(50);
+        const supHit = (sups || []).find(s =>
+          String(s.username || '').trim().toLowerCase() === cleanIdentifier ||
+          String(s.email || '').trim().toLowerCase() === cleanIdentifier
+        );
+        if (supHit) {
+          return res.status(403).json({
+            success: false,
+            message: 'This is a Supplier account. Please sign in at the Supplier Portal (/supplier-login).'
+          });
+        }
         return res.status(401).json({ success: false, message: 'Invalid username, email, or phone number.' });
       }
 

@@ -195,32 +195,80 @@ exports.supplierLogin = async (req, res) => {
     }
 
     const cleanId = rawIdentifier.toLowerCase();
+    const cleanAlphaNum = cleanId.replace(/[^a-z0-9]/g, '');
+    const digitsOnly = cleanId.replace(/\D/g, '');
+    const normPhone = (digitsOnly.startsWith('254') && digitsOnly.length === 12) ? ('0' + digitsOnly.slice(3)) : digitsOnly;
 
-    // Resolve supplier record by username, email, supplier_code, or phone
-    const { data: allSuppliers } = await supabase
+    // Resolve supplier record by username, email, supplier_code, phone, supplier_name, or contact_person
+    const { data: allSuppliers, error: listSupErr } = await supabase
       .from('suppliers')
-      .select('supplier_id, username, email, supplier_code, phone, password, status, auth_user_id');
+      .select('*')
+      .order('supplier_id', { ascending: true });
 
-    const matchedSup = (allSuppliers || []).find(s =>
-      String(s.username || '').trim().toLowerCase() === cleanId ||
-      String(s.email || '').trim().toLowerCase() === cleanId ||
-      String(s.supplier_code || '').trim().toLowerCase() === cleanId ||
-      String(s.phone || '').trim().toLowerCase() === cleanId
-    );
+    if (listSupErr) {
+      console.error('Supplier login lookup error:', listSupErr.message);
+      return res.status(500).json({ success: false, message: 'Database error looking up supplier account.' });
+    }
 
+    const matchedList = (allSuppliers || []).filter(s => {
+      const u = String(s.username || '').trim().toLowerCase();
+      const e = String(s.email || '').trim().toLowerCase();
+      const c = String(s.supplier_code || '').trim().toLowerCase();
+      const nm = String(s.supplier_name || '').trim().toLowerCase();
+      const cp = String(s.contact_person || '').trim().toLowerCase();
+      const ph = String(s.phone || '').replace(/\D/g, '');
+      const phNorm = (ph.startsWith('254') && ph.length === 12) ? ('0' + ph.slice(3)) : ph;
+
+      if (u === cleanId || e === cleanId || c === cleanId || nm === cleanId || cp === cleanId) return true;
+      if (cleanAlphaNum.length >= 3 && u && (u === cleanAlphaNum || u.startsWith(cleanAlphaNum))) return true;
+      if (/^[\d+\s-]+$/.test(rawIdentifier) && digitsOnly.length >= 4 && (ph === digitsOnly || phNorm === normPhone)) return true;
+      return false;
+    });
+
+    const matchedSup = matchedList[0] || null;
     const authEmail = String(matchedSup?.email || (cleanId.includes('@') ? cleanId : '')).trim().toLowerCase();
     if (!authEmail) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid supplier username or password.'
+        message: 'Supplier account not found. Enter your synced supplier username (e.g. philips) or email.'
       });
     }
 
     // Authenticate via Supabase Auth using resolved supplier email
-    const { data, error } = await supabase.createAuthClient().auth.signInWithPassword({
+    let { data, error } = await supabase.createAuthClient().auth.signInWithPassword({
       email: authEmail,
       password
     });
+
+    // Auto-repair Supabase Auth password if it matches the synced password stored on public.suppliers
+    if ((error || !data?.session) && matchedSup && matchedSup.password && String(matchedSup.password) === password) {
+      try {
+        if (matchedSup.auth_user_id) {
+          await supabase.auth.admin.updateUserById(matchedSup.auth_user_id, {
+            email: authEmail,
+            password,
+            email_confirm: true,
+            app_metadata: { role: 'supplier', supplier_id: Number(matchedSup.supplier_id), username: matchedSup.username }
+          });
+        } else {
+          const { data: createdAuth } = await supabase.auth.admin.createUser({
+            email: authEmail,
+            password,
+            email_confirm: true,
+            app_metadata: { role: 'supplier', supplier_id: Number(matchedSup.supplier_id), username: matchedSup.username },
+            user_metadata: { full_name: matchedSup.contact_person || matchedSup.supplier_name, company_name: matchedSup.supplier_name }
+          });
+          if (createdAuth?.user?.id) {
+            await supabase.from('suppliers').update({ auth_user_id: createdAuth.user.id }).eq('supplier_id', matchedSup.supplier_id);
+          }
+        }
+        const retry = await supabase.createAuthClient().auth.signInWithPassword({ email: authEmail, password });
+        data = retry.data;
+        error = retry.error;
+      } catch (syncErr) {
+        console.warn('Supplier auth auto-sync warning:', syncErr.message);
+      }
+    }
 
     if (error || !data?.session || !data?.user) {
       return res.status(401).json({

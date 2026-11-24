@@ -41,7 +41,7 @@ const KNOWN_USERNAMES = {
   1: 'philips',
   2: 'schneider',
   3: 'metsec',
-  4: 'shreerangk'
+  4: 'shreerang'
 };
 
 async function main() {
@@ -69,9 +69,8 @@ async function main() {
     const supId = Number(sup.supplier_id);
     const email = String(sup.email || '').trim().toLowerCase();
 
-    let username = sup.username
-      ? String(sup.username).trim().toLowerCase()
-      : (KNOWN_USERNAMES[supId] || makeUsernameFromSupplier(sup));
+    let username = KNOWN_USERNAMES[supId] ||
+      (sup.username ? String(sup.username).trim().toLowerCase() : makeUsernameFromSupplier(sup));
     if (usedUsernames.has(username)) {
       username = `${username}${supId}`;
     }
