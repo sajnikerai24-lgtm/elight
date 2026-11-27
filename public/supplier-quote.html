@@ -239,7 +239,6 @@
   <script src="js/live_sync.js"></script>
   <script src="js/supplier_common.js"></script>
   <script>
-    const MAX_TENDER_UNIT_PRICE = 5000;
     let activeTenderItems = [];
 
     function setPriceInputHighlight(input, state) {
@@ -274,16 +273,6 @@
           hint.textContent = 'Enter price > KSh 0';
         }
         return { valid: false, message: `Enter a valid unit price greater than KSh 0 for "${it.product_name}".` };
-      }
-
-      if (val > MAX_TENDER_UNIT_PRICE + 0.0001) {
-        setPriceInputHighlight(input, 'error');
-        if (hint) {
-          hint.style.display = 'block';
-          hint.style.color = '#dc2626';
-          hint.textContent = 'Price cannot exceed KSh 5,000.00';
-        }
-        return { valid: false, message: `Unit price for "${it.product_name}" (${formatKES(val)}) cannot exceed KSh 5,000.00.` };
       }
 
       setPriceInputHighlight(input, 'valid');
@@ -410,12 +399,12 @@
               <td><strong>${escapeHtml(it.product_name)}</strong></td>
               <td style="text-align:center; font-weight:700;">${qty} units</td>
               <td style="text-align:right;">
-                <input type="number" step="0.01" min="0.01" max="5000"
+                <input type="number" step="0.01" min="0.01"
                   class="price-input"
                   id="tender_price_${idx}"
                   value="${initialPrice}"
                   placeholder="Enter unit price (KSh)"
-                  title="Enter unit price in KSh (max KSh 5,000)"
+                  title="Enter unit price in KSh"
                   required
                   oninput="handleTenderPriceInput(${idx})">
                 <div id="tender_price_hint_${idx}" style="font-size:0.74rem; color:#64748b; font-weight:700; margin-top:4px; display:none;"></div>

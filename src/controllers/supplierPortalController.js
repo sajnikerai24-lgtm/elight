@@ -11,7 +11,6 @@ const moduleNotifications = require('../utils/moduleNotifications');
 
 const BUCKET_NAME = 'supplier-documents';
 const MAX_DOC_BYTES = 5 * 1024 * 1024; // 5 MB
-const MAX_TENDER_UNIT_PRICE = 5000; // Hard upper cap for any product price in supplier restock tenders
 const MAX_QUOTATION_UNIT_PRICE = 1500; // Legacy fallback only when a product cannot be matched in inventory/catalog
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'png', 'jpg', 'jpeg', 'webp', 'txt', 'csv', 'doc', 'docx']);
 const FINANCE_RECORDS_PATH = path.join(__dirname, '../config/finance_records.json');
@@ -23,7 +22,7 @@ function formatKshNumber(val) {
 function computeCatalogMaxUnitPrice(prod) {
   if (!prod) return null;
   const explicit = Number(prod.max_unit_price || 0);
-  if (!Number.isNaN(explicit) && explicit > 0) return Number(Math.min(MAX_TENDER_UNIT_PRICE, explicit).toFixed(2));
+  if (!Number.isNaN(explicit) && explicit > 0) return Number(explicit.toFixed(2));
   const buy = Number(prod.buying_price || 0);
   const sell = Number(prod.selling_price || 0);
   if (buy <= 0 && sell <= 0) return null;
@@ -33,7 +32,7 @@ function computeCatalogMaxUnitPrice(prod) {
     const ceiling = Math.round(sell * 0.92);
     computed = buy > 0 ? Math.max(buy, ceiling) : Math.max(10, ceiling);
   }
-  return Number(Math.min(MAX_TENDER_UNIT_PRICE, computed).toFixed(2));
+  return Number(computed.toFixed(2));
 }
 
 async function loadCatalogLookup() {
@@ -74,7 +73,7 @@ function resolvePurchaseItemBounds(poItem, catalogLookup = null) {
   if (hasExplicitMax) {
     return {
       min_unit_price: null,
-      max_unit_price: Number(Math.min(MAX_TENDER_UNIT_PRICE, rawMax).toFixed(2)),
+      max_unit_price: Number(rawMax.toFixed(2)),
       has_explicit_limits: true
     };
   }
@@ -83,13 +82,13 @@ function resolvePurchaseItemBounds(poItem, catalogLookup = null) {
   if (catalogMax !== null && catalogMax > 0) {
     return {
       min_unit_price: null,
-      max_unit_price: Math.min(MAX_TENDER_UNIT_PRICE, catalogMax),
+      max_unit_price: catalogMax,
       has_explicit_limits: true
     };
   }
   return {
     min_unit_price: null,
-    max_unit_price: Math.min(MAX_TENDER_UNIT_PRICE, MAX_QUOTATION_UNIT_PRICE),
+    max_unit_price: MAX_QUOTATION_UNIT_PRICE,
     has_explicit_limits: false
   };
 }
@@ -849,10 +848,6 @@ exports.submitSupplierQuotation = async (req, res) => {
       const bounds = resolvePurchaseItemBounds(matchedPoItem || item, catalogLookup);
       if (rawPrice === undefined || rawPrice === null || String(rawPrice).trim() === '' || Number.isNaN(unitPrice) || unitPrice <= 0) {
         validationErrors.push(`Enter a valid unit price greater than KSh 0 for "${productName}".`);
-        continue;
-      }
-      if (unitPrice > MAX_TENDER_UNIT_PRICE + 0.0001) {
-        validationErrors.push(`Unit price for "${productName}" (KSh ${formatKshNumber(unitPrice)}) cannot exceed KSh 5,000.00.`);
         continue;
       }
 
@@ -2256,12 +2251,6 @@ exports.erpCreatePurchaseOrder = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: `Maximum acceptable unit price (KES) for "${productName}" must be greater than KSh 0.`
-        });
-      }
-      if (maxPrice > MAX_TENDER_UNIT_PRICE + 0.0001) {
-        return res.status(400).json({
-          success: false,
-          message: `Maximum acceptable unit price (KES) for "${productName}" cannot exceed KSh 5,000.00.`
         });
       }
 

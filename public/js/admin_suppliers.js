@@ -553,7 +553,7 @@
 
   function suggestProductMaxPrice(prod) {
     const explicit = Number(prod?.max_unit_price || 0);
-    if (!Number.isNaN(explicit) && explicit > 0) return Number(Math.min(5000, explicit).toFixed(2));
+    if (!Number.isNaN(explicit) && explicit > 0) return Number(explicit.toFixed(2));
     const buy = Number(prod?.buying_price || 0);
     const sell = Number(prod?.selling_price || 0);
     const base = buy > 0 ? buy : (sell > 0 ? Math.round(sell * 0.72) : 200);
@@ -562,7 +562,7 @@
       const ceiling = Math.round(sell * 0.92);
       computed = buy > 0 ? Math.max(buy, ceiling) : Math.max(10, ceiling);
     }
-    return Math.min(5000, computed);
+    return computed;
   }
 
   window.onPOItemProductChange = function (selectEl) {
@@ -601,7 +601,7 @@
       </div>
       <div>
         <label style="font-size:0.72rem; font-weight:700; color:#475569; display:block; margin-bottom:2px;">Max Unit Price (KES) *</label>
-        <input type="number" class="po-item-max" min="1" max="5000" step="0.01" value="${firstMax}" required style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.83rem;">
+        <input type="number" class="po-item-max" min="1" step="0.01" value="${firstMax}" required style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.83rem;">
       </div>
       <button type="button" class="btn-sm" title="Remove item" style="background:#fee2e2; color:#b91c1c; padding:7px 8px;" onclick="if(document.querySelectorAll('.po-create-item-row').length > 1) this.closest('.po-create-item-row').remove();">&times;</button>
     `;
@@ -644,9 +644,6 @@
       }
       if (Number.isNaN(maxPrice) || maxPrice <= 0) {
         return showToast(`Maximum acceptable unit price for "${productName}" must be greater than KSh 0.`, 'error');
-      }
-      if (maxPrice > 5000) {
-        return showToast(`Maximum acceptable unit price for "${productName}" cannot exceed KSh 5,000.00.`, 'error');
       }
 
       items.push({
