@@ -3647,16 +3647,16 @@ const erpController = {
       );
 
       moduleNotifications.notify({
-        targetModules: ['finance', 'finance_releases'],
+        targetModules: ['finance'],
         sourceModule: 'cashier',
         senderName: cleanCashier,
         title: hasUnpaidBalance
-          ? `⚠️ Order ${orderNo} Sent to Finance — Customer Balance: KES ${balanceDue.toLocaleString()}`
-          : `Order ${orderNo} Sent to Finance for Confirmation`,
+          ? `⚠️ Order ${orderNo} Recorded — Customer Balance: KES ${balanceDue.toLocaleString()}`
+          : `Order ${orderNo} Recorded by Cashier`,
         message: `Cashier ${cleanCashier} served ${cleanCustomer}: Paid KES ${cleanPaid.toLocaleString()} of KES ${totalAmount.toLocaleString()} (${cleanMethod}).${hasUnpaidBalance ? ` Customer Balance Due: KES ${balanceDue.toLocaleString()}.${newOrder.balance_note ? ` Note: ${newOrder.balance_note}` : ''}` : ' Full payment settled.'}`,
         severity: hasUnpaidBalance ? 'warning' : 'info',
         refNo: orderNo,
-        actionModule: 'finance_releases'
+        actionModule: 'finance_ledger'
       });
 
       moduleNotifications.notify({
@@ -4003,16 +4003,16 @@ const erpController = {
       );
 
       moduleNotifications.notify({
-        targetModules: ['finance', 'finance_releases'],
+        targetModules: ['finance'],
         sourceModule: 'cashier',
         senderName: cleanCashier,
         title: hasUnpaid
-          ? `⚠️ Order ${order.order_no} Passed to Finance — Balance Due: KES ${balanceDue.toLocaleString()}`
-          : `Order ${order.order_no} Passed to Finance for Confirmation`,
+          ? `⚠️ Order ${order.order_no} Paid — Balance Due: KES ${balanceDue.toLocaleString()}`
+          : `Order ${order.order_no} Paid by Customer`,
         message: `Cashier ${cleanCashier} served ${order.customer_name}: Paid KES ${amountPaid.toLocaleString()} of KES ${totalAmount.toLocaleString()} (${cleanMethod} Ref: ${refCode}).${hasUnpaid ? ` Unpaid Balance: KES ${balanceDue.toLocaleString()}.${order.balance_note ? ` Note: ${order.balance_note}` : ''}` : ' Settled in full.'}`,
         severity: hasUnpaid ? 'warning' : 'info',
         refNo: order.order_no,
-        actionModule: 'finance_releases'
+        actionModule: 'finance_ledger'
       });
 
       moduleNotifications.notify({
@@ -4715,7 +4715,7 @@ const erpController = {
           cashier: ['cashier', 'new_sale', 'feedback', 'help'],
           service_manager: ['services', 'bookings', 'feedback', 'help'],
           technician: ['technicians', 'feedback', 'help'],
-          finance_manager: ['finance', 'finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
+          finance_manager: ['finance', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
           dispatch_manager: ['dispatch', 'bookings', 'feedback', 'help'],
           driver: ['driver', 'feedback', 'help'],
           inventory_manager: ['inventory', 'inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices', 'feedback', 'help'],
@@ -4727,7 +4727,7 @@ const erpController = {
 
         if (cfgPerms.includes('cashier') && !cfgPerms.includes('new_sale')) cfgPerms.push('new_sale');
         if (cfgPerms.includes('finance')) {
-          ['finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments'].forEach(sub => {
+          ['finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments'].forEach(sub => {
             if (!cfgPerms.includes(sub)) cfgPerms.push(sub);
           });
         }
@@ -4802,7 +4802,7 @@ const erpController = {
           cashier: ['cashier', 'new_sale', 'feedback', 'help'],
           service_manager: ['services', 'bookings', 'feedback', 'help'],
           technician: ['technicians', 'feedback', 'help'],
-          finance_manager: ['finance', 'finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
+          finance_manager: ['finance', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
           dispatch_manager: ['dispatch', 'bookings', 'feedback', 'help'],
           driver: ['driver', 'feedback', 'help'],
           inventory_manager: ['inventory', 'inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices', 'feedback', 'help'],
@@ -4811,7 +4811,7 @@ const erpController = {
         const perms = (cfg.role_permissions && Array.isArray(cfg.role_permissions[roleKey]))
           ? [...cfg.role_permissions[roleKey]]
           : [...(defaultMap[roleKey] || [])];
-        if (perms.includes('finance')) perms.push('finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments');
+        if (perms.includes('finance')) perms.push('finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments');
         if (perms.includes('inventory')) perms.push('inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices');
         if (perms.includes('cashier')) perms.push('new_sale');
         nonAdminOpts = {
@@ -4870,7 +4870,7 @@ const erpController = {
           cashier: ['cashier', 'new_sale', 'feedback', 'help'],
           service_manager: ['services', 'bookings', 'feedback', 'help'],
           technician: ['technicians', 'feedback', 'help'],
-          finance_manager: ['finance', 'finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
+          finance_manager: ['finance', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
           dispatch_manager: ['dispatch', 'bookings', 'feedback', 'help'],
           driver: ['driver', 'feedback', 'help'],
           inventory_manager: ['inventory', 'inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices', 'feedback', 'help'],
@@ -4879,7 +4879,7 @@ const erpController = {
         const perms = (cfg.role_permissions && Array.isArray(cfg.role_permissions[roleKey]))
           ? [...cfg.role_permissions[roleKey]]
           : [...(defaultMap[roleKey] || [])];
-        if (perms.includes('finance')) perms.push('finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments');
+        if (perms.includes('finance')) perms.push('finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments');
         if (perms.includes('inventory')) perms.push('inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices');
         if (perms.includes('cashier')) perms.push('new_sale');
         allowedModules = Array.from(new Set(perms));

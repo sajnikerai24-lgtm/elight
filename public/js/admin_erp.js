@@ -654,7 +654,6 @@ const OPERATIONAL_MODULES_LABELS = {
   cashier: 'Cashier Module',
   new_sale: 'New Sale',
   finance: 'Finance Manager',
-  finance_releases: 'Order Releases & Credit',
   technicians: 'Technician Portal',
   inventory: 'Inventory Manager',
   services: 'Service Manager',
@@ -684,7 +683,6 @@ const PERMISSION_MATRIX_MODULES = [
   { key: 'cashier', shortLabel: 'Cashier' },
   { key: 'new_sale', shortLabel: 'New Sale' },
   { key: 'finance', shortLabel: 'Finance' },
-  { key: 'finance_releases', shortLabel: 'Releases' },
   { key: 'technicians', shortLabel: 'Technician' },
   { key: 'inventory', shortLabel: 'Inventory' },
   { key: 'services', shortLabel: 'Services' },
@@ -4895,7 +4893,6 @@ const ALL_ERP_MODULES = [
   'cashier',
   'new_sale',
   'finance',
-  'finance_releases',
   'finance_services',
   'finance_ledger',
   'finance_invoices',
@@ -4925,7 +4922,7 @@ const ROLE_ALLOWED_MODULES = {
   cashier: ['cashier', 'new_sale', 'feedback', 'help'],
   service_manager: ['services', 'bookings', 'feedback', 'help'],
   technician: ['technicians', 'feedback', 'help'],
-  finance_manager: ['finance', 'finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
+  finance_manager: ['finance', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
   dispatch_manager: ['dispatch', 'bookings', 'feedback', 'help'],
   driver: ['driver', 'feedback', 'help'],
   inventory_manager: ['inventory', 'inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices', 'feedback', 'help'],
@@ -4963,7 +4960,7 @@ function getAllowedModulesForRole(rawRole) {
       perms.push('new_sale');
     }
     if (perms.includes('finance')) {
-      ['finance_releases', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments'].forEach(sub => {
+      ['finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments'].forEach(sub => {
         if (!perms.includes(sub)) perms.push(sub);
       });
     }

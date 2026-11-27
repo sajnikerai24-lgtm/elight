@@ -617,7 +617,6 @@
     admin: 'users-search-input',
     customer_care: 'cc-search-input',
     cashier: 'cashier-search-input',
-    finance_releases: 'fin-releases-search',
     inventory: 'erp-inv-search',
     feedback: 'admin-feedback-search',
     activity: 'activity-search-input'

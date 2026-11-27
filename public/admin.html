@@ -101,7 +101,6 @@
           </button>
           <ul class="erp-submenu">
             <li><button class="erp-nav-btn" onclick="switchModule('finance')"><span class="nav-ico">💵</span> <span>Finance Treasury &amp; P&amp;L</span></button></li>
-            <li><button class="erp-nav-btn" onclick="switchModule('finance_releases')"><span class="nav-ico">🛡️</span> <span>Order Releases &amp; Credit</span></button></li>
             <li><button class="erp-nav-btn" onclick="switchModule('finance_services')"><span class="nav-ico">🛠️</span> <span>Service Fee Payments</span></button></li>
             <li><button class="erp-nav-btn" onclick="switchModule('finance_ledger')"><span class="nav-ico">📒</span> <span>Financial Ledger</span></button></li>
             <li><button class="erp-nav-btn" onclick="switchModule('finance_invoices')"><span class="nav-ico">🧾</span> <span>Supplier Invoices</span></button></li>
@@ -888,27 +887,22 @@
           </div>
         </div>
 
-        <!-- Order Releases & Credit Policy Gate (5 Fulfillment Pipelines) -->
+        <!-- Quick Finance Operations Bar -->
         <div style="background:linear-gradient(135deg, #1e3a8a, #0f172a); color:#fff; border-radius:10px; padding:18px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
           <div>
             <div style="display:flex; align-items:center; gap:8px; font-size:1.05rem; font-weight:800; color:#fbbf24;">
-              <span>🛡️</span> Order Releases &amp; Credit Verification Desk
+              <span>💼</span> Finance Operations &amp; Payment Receipts
             </div>
             <p style="margin:4px 0 0 0; font-size:0.86rem; color:#cbd5e1; max-width:620px;">
-              Enforce official fulfillment pipelines. All customer orders require Finance verification and credit policy checks before release for Delivery or Counter Collection.
+              Manage service fee confirmations, supplier invoices &amp; disbursements, and view, print, or download payment receipts across Cash, M-Pesa, and Bank channels.
             </p>
-            <div style="display:flex; gap:16px; margin-top:8px; font-size:0.84rem; flex-wrap:wrap;">
-              <div>⏳ Pending Release: <strong id="fin-dash-pending-full-count" style="color:#93c5fd;">0</strong></div>
-              <div>🛡️ Pending Credit Review: <strong id="fin-dash-pending-credit-count" style="color:#fcd34d;">0</strong></div>
-              <div>💳 Outstanding Receivables: <strong id="fin-dash-receivables-amount" style="color:#fca5a5;">KES 0.00</strong></div>
-            </div>
           </div>
-          <div>
-            <button class="btn-sm" style="background:#fbbf24; color:#0f172a; font-weight:800; padding:10px 16px; border:none; cursor:pointer;" onclick="switchModule('finance_releases')">
-              Open Order Releases Desk →
-            </button>
-            <button class="btn-sm" style="background:#10b981; color:#fff; font-weight:800; padding:10px 16px; border:none; cursor:pointer; margin-left:8px;" onclick="switchModule('finance_services')">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-sm" style="background:#10b981; color:#fff; font-weight:800; padding:10px 16px; border:none; cursor:pointer;" onclick="switchModule('finance_services')">
               🛠️ Service Fee Confirmations →
+            </button>
+            <button class="btn-sm" style="background:#fbbf24; color:#0f172a; font-weight:800; padding:10px 16px; border:none; cursor:pointer;" onclick="switchModule('finance_ledger')">
+              📒 Financial Ledger &amp; Receipts →
             </button>
           </div>
         </div>
