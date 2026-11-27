@@ -1088,6 +1088,16 @@
             <button type="button" class="btn-sm fin-acct-filter" id="fin-filter-mpesa" onclick="filterFinanceByAccount('M-Pesa')" style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">📱 M-Pesa Till</button>
             <button type="button" class="btn-sm fin-acct-filter" id="fin-filter-bank" onclick="filterFinanceByAccount('Bank')" style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">🏦 Bank Account</button>
           </div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <select id="fin-category-filter" onchange="renderFinanceRecordsTable()" style="padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.84rem; background:#fff; font-weight:600;">
+              <option value="all">All Receipt / Entry Types</option>
+              <option value="Product Sale">🛍️ Order &amp; Product Sales</option>
+              <option value="Service Fee Payment">🛠️ Service Fee Receipts</option>
+              <option value="Booking Fee Payment">📅 Booking Fee Receipts</option>
+              <option value="Supplier">💳 Supplier Disbursements</option>
+              <option value="expense">▼ Expenses &amp; Outflows</option>
+            </select>
+          </div>
         </div>
         <div class="table-responsive">
           <table>
@@ -1101,10 +1111,11 @@
                 <th>Payment Method</th>
                 <th>M-Pesa / Ref #</th>
                 <th>Status</th>
+                <th>Payment Receipt</th>
               </tr>
             </thead>
             <tbody id="finance-table-body">
-              <tr><td colspan="8" style="text-align:center; padding:20px;">Loading financial ledger...</td></tr>
+              <tr><td colspan="9" style="text-align:center; padding:20px;">Loading financial ledger...</td></tr>
             </tbody>
           </table>
         </div>
@@ -2954,6 +2965,25 @@
           <button type="submit" class="btn-sm btn-primary" style="background:#087443; font-weight:700;">✅ Confirm Payment &amp; Issue Receipt</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: Finance Unified Payment Receipt Viewer / Printer / Downloader -->
+  <div class="modal-overlay" id="finance-receipt-modal">
+    <div class="modal" style="max-width:720px; width:95%;">
+      <div class="modal-header" style="background:#102b46; color:#fff; border-bottom:3px solid #ffc107;">
+        <h3 id="fin-receipt-modal-title" style="margin:0; font-size:1.05rem;">🧾 Official Payment Receipt</h3>
+        <button class="close-btn" onclick="closeModal('finance-receipt-modal')" style="color:#fff;">&times;</button>
+      </div>
+      <div id="fin-receipt-modal-body" style="padding:18px; background:#fff; max-height:72vh; overflow-y:auto;"></div>
+      <div style="padding:12px 18px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" id="finReceiptPrintBtn" class="btn-sm" style="background:#0f172a; color:#fff; font-weight:700; padding:8px 14px;">🖨️ Print Receipt</button>
+          <button type="button" id="finReceiptViewPdfBtn" class="btn-sm" style="background:#0284c7; color:#fff; font-weight:700; padding:8px 14px;">📄 View PDF</button>
+          <button type="button" id="finReceiptDownloadBtn" class="btn-sm btn-primary" style="font-weight:700; padding:8px 14px;">📥 Download PDF</button>
+        </div>
+        <button type="button" class="btn-sm" onclick="closeModal('finance-receipt-modal')">Close</button>
+      </div>
     </div>
   </div>
 

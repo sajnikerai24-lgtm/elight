@@ -1510,6 +1510,55 @@ exports.confirmSupplierPaymentReceived = async (req, res) => {
   }
 };
 
+async function buildSupplierPaymentReceiptContext(db, payment, supplierObj = null) {
+  const [invRes, poRes, supRes] = await Promise.all([
+    payment.invoice_id
+      ? db.from('supplier_invoices').select('invoice_id, invoice_number, total_amount, amount_paid, status').eq('invoice_id', payment.invoice_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    payment.po_id
+      ? db.from('purchase_orders').select('po_id, po_number, status, total_amount').eq('po_id', payment.po_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    (!supplierObj && payment.supplier_id)
+      ? db.from('suppliers').select('supplier_id, supplier_name, contact_person, phone, email').eq('supplier_id', payment.supplier_id).maybeSingle()
+      : Promise.resolve({ data: supplierObj })
+  ]);
+
+  const sup = supplierObj || supRes.data || {};
+  const payNum = payment.payment_number || `PAY-${payment.payment_id}`;
+  const receiptNumber = `RCP-${payNum}`;
+  const isConfirmed = /confirmed received/i.test(payment.notes || '');
+
+  const pdfBuffer = buildOfficialReceiptPdf({
+    documentTitle: 'OFFICIAL SUPPLIER PAYMENT RECEIPT',
+    metaLeft: [
+      `Receipt No: ${receiptNumber}`,
+      `Payment Voucher: ${payNum}`,
+      `Disbursement Date: ${String(payment.payment_date || payment.created_at || '').slice(0, 10) || 'N/A'}`
+    ],
+    metaRight: [
+      `Status: ${isConfirmed ? 'CONFIRMED RECEIVED BY SUPPLIER' : 'DISBURSED BY FINANCE'}`,
+      `Transaction Ref: ${payment.transaction_ref || 'N/A'}`,
+      `Payment Method: ${payment.payment_method || 'Bank Transfer / M-Pesa'}`
+    ],
+    statusPositive: isConfirmed,
+    sectionTitle: 'PAYEE & SETTLEMENT DETAILS',
+    detailRows: [
+      ['Supplier / Payee:', sup.supplier_name || `Supplier #${payment.supplier_id || '-'}`, 'Purchase Order:', poRes.data?.po_number || (payment.po_id ? `PO-${payment.po_id}` : 'N/A')],
+      ['Contact Person:', sup.contact_name || sup.contact_person || '-', 'Supplier Invoice:', invRes.data?.invoice_number || (payment.invoice_id ? `INV-${payment.invoice_id}` : 'N/A')],
+      ['Supplier Phone:', sup.phone || '-', 'Supplier Email:', sup.email || '-'],
+      ['Disbursed By:', payment.recorded_by || 'Finance Manager', 'Receipt Verified:', isConfirmed ? 'Yes (Supplier Confirmed)' : 'Awaiting Confirmation']
+    ],
+    amountLabel: 'TOTAL AMOUNT PAID TO SUPPLIER',
+    amountSubtext: 'Settled in full/part per verified Finance Manager disbursement record',
+    amountValue: Number(payment.amount_paid || 0),
+    notesTitle: 'PAYMENT NOTES & CONFIRMATION LOG',
+    notesBody: payment.notes || 'Finance Manager disbursed payment via verified supplier credentials.',
+    footerLine: 'This is an official electronic payment receipt issued for verified supplier disbursement records.'
+  });
+
+  return { pdfBuffer, payNum };
+}
+
 exports.downloadSupplierPaymentReceipt = async (req, res) => {
   try {
     const paymentId = Number(req.params.paymentId);
@@ -1528,47 +1577,7 @@ exports.downloadSupplierPaymentReceipt = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Payment record not found for your supplier account.' });
     }
 
-    const [invRes, poRes] = await Promise.all([
-      payment.invoice_id
-        ? db.from('supplier_invoices').select('invoice_id, invoice_number, total_amount, amount_paid, status').eq('invoice_id', payment.invoice_id).maybeSingle()
-        : Promise.resolve({ data: null }),
-      payment.po_id
-        ? db.from('purchase_orders').select('po_id, po_number, status, total_amount').eq('po_id', payment.po_id).maybeSingle()
-        : Promise.resolve({ data: null })
-    ]);
-
-    const payNum = payment.payment_number || `PAY-${paymentId}`;
-    const receiptNumber = `RCP-${payNum}`;
-    const isConfirmed = /confirmed received/i.test(payment.notes || '');
-
-    const pdfBuffer = buildOfficialReceiptPdf({
-      documentTitle: 'OFFICIAL SUPPLIER PAYMENT RECEIPT',
-      metaLeft: [
-        `Receipt No: ${receiptNumber}`,
-        `Payment Voucher: ${payNum}`,
-        `Disbursement Date: ${String(payment.payment_date || payment.created_at || '').slice(0, 10) || 'N/A'}`
-      ],
-      metaRight: [
-        `Status: ${isConfirmed ? 'CONFIRMED RECEIVED BY SUPPLIER' : 'DISBURSED BY FINANCE'}`,
-        `Transaction Ref: ${payment.transaction_ref || 'N/A'}`,
-        `Payment Method: ${payment.payment_method || 'Bank Transfer / M-Pesa'}`
-      ],
-      statusPositive: isConfirmed,
-      sectionTitle: 'PAYEE & SETTLEMENT DETAILS',
-      detailRows: [
-        ['Supplier / Payee:', req.supplier?.supplier_name || `Supplier #${req.supplierId}`, 'Purchase Order:', poRes.data?.po_number || (payment.po_id ? `PO-${payment.po_id}` : 'N/A')],
-        ['Contact Person:', req.supplier?.contact_name || '-', 'Supplier Invoice:', invRes.data?.invoice_number || (payment.invoice_id ? `INV-${payment.invoice_id}` : 'N/A')],
-        ['Supplier Phone:', req.supplier?.phone || '-', 'Supplier Email:', req.supplier?.email || '-'],
-        ['Disbursed By:', payment.recorded_by || 'Finance Manager', 'Receipt Verified:', isConfirmed ? 'Yes (Supplier Confirmed)' : 'Awaiting Confirmation']
-      ],
-      amountLabel: 'TOTAL AMOUNT PAID TO SUPPLIER',
-      amountSubtext: 'Settled in full/part per verified Finance Manager disbursement record',
-      amountValue: Number(payment.amount_paid || 0),
-      notesTitle: 'PAYMENT NOTES & CONFIRMATION LOG',
-      notesBody: payment.notes || 'Finance Manager disbursed payment via verified supplier credentials.',
-      footerLine: 'This is an official electronic payment receipt issued for verified supplier disbursement records.'
-    });
-
+    const { pdfBuffer, payNum } = await buildSupplierPaymentReceiptContext(db, payment, req.supplier);
     const safeFileName = `Payment-Receipt-${payNum.replace(/[^a-zA-Z0-9._-]/g, '_')}.pdf`;
     const disposition = req.query.preview === '1' ? 'inline' : 'attachment';
     res.setHeader('Content-Type', 'application/pdf');
@@ -1578,6 +1587,36 @@ exports.downloadSupplierPaymentReceipt = async (req, res) => {
   } catch (err) {
     console.error('downloadSupplierPaymentReceipt error:', err);
     return res.status(500).json({ success: false, message: 'Failed generating payment receipt.' });
+  }
+};
+
+exports.erpDownloadSupplierPaymentReceipt = async (req, res) => {
+  try {
+    const paymentId = Number(req.params.paymentId);
+    if (!paymentId) {
+      return res.status(400).json({ success: false, message: 'Invalid payment ID.' });
+    }
+
+    const { data: payment, error: findErr } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('payment_id', paymentId)
+      .maybeSingle();
+
+    if (findErr || !payment) {
+      return res.status(404).json({ success: false, message: 'Supplier payment record not found.' });
+    }
+
+    const { pdfBuffer, payNum } = await buildSupplierPaymentReceiptContext(supabase, payment, null);
+    const safeFileName = `Supplier-Payment-Receipt-${payNum.replace(/[^a-zA-Z0-9._-]/g, '_')}.pdf`;
+    const disposition = req.query.preview === '1' ? 'inline' : 'attachment';
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `${disposition}; filename="${safeFileName}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    return res.send(pdfBuffer);
+  } catch (err) {
+    console.error('erpDownloadSupplierPaymentReceipt error:', err);
+    return res.status(500).json({ success: false, message: 'Failed generating supplier payment receipt.' });
   }
 };
 

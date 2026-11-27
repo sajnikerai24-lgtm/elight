@@ -147,7 +147,7 @@ function requireErpRoles(allowedRoles) {
   return [
     blockSuppliersFromStaff,
     async (req, res, next) => {
-      const role = normalizeRole(req.headers['x-user-role'] || (req.body && req.body.user_role));
+      const role = normalizeRole(req.headers['x-user-role'] || (req.body && req.body.user_role) || (req.query && req.query.user_role));
       if (!role || role === 'customer' || role === 'supplier' || !allowed.has(role)) {
         return res.status(403).json({
           success: false,

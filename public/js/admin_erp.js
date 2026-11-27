@@ -3366,23 +3366,32 @@ function renderFinanceRecordsTable() {
   const tbody = document.getElementById('finance-table-body');
   if (!tbody) return;
 
+  const categoryFilter = document.getElementById('fin-category-filter')?.value || 'all';
   let filtered = allFinanceRecords;
   if (currentFinanceAccountFilter === 'Cash') {
-    filtered = allFinanceRecords.filter(r => String(r.payment_method || '').toLowerCase().includes('cash'));
+    filtered = filtered.filter(r => String(r.payment_method || '').toLowerCase().includes('cash'));
   } else if (currentFinanceAccountFilter === 'M-Pesa') {
-    filtered = allFinanceRecords.filter(r => {
+    filtered = filtered.filter(r => {
       const m = String(r.payment_method || '').toLowerCase();
       return m.includes('pesa') || m.includes('till') || m.includes('paybill') || (!m.includes('cash') && !m.includes('bank') && !m.includes('transfer'));
     });
   } else if (currentFinanceAccountFilter === 'Bank') {
-    filtered = allFinanceRecords.filter(r => {
+    filtered = filtered.filter(r => {
       const m = String(r.payment_method || '').toLowerCase();
       return m.includes('bank') || m.includes('transfer') || m.includes('cheque') || m.includes('eft');
     });
   }
 
+  if (categoryFilter === 'expense') {
+    filtered = filtered.filter(r => String(r.type || '').toLowerCase() !== 'sale');
+  } else if (categoryFilter === 'Supplier') {
+    filtered = filtered.filter(r => /supplier/i.test(String(r.category || '')) || /supplier/i.test(String(r.description || '')));
+  } else if (categoryFilter !== 'all') {
+    filtered = filtered.filter(r => String(r.category || '').toLowerCase() === categoryFilter.toLowerCase());
+  }
+
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:#64748b;">No ${currentFinanceAccountFilter === 'all' ? '' : currentFinanceAccountFilter + ' '}financial entries recorded.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:#64748b;">No ${currentFinanceAccountFilter === 'all' ? '' : currentFinanceAccountFilter + ' '}financial entries recorded.</td></tr>`;
     return;
   }
 
@@ -3408,9 +3417,250 @@ function renderFinanceRecordsTable() {
       </td>
       <td><code>${escapeHTML(r.reference_no || 'N/A')}</code></td>
       <td><span class="badge-tag badge-${r.status}">${r.status}</span></td>
+      <td style="white-space:nowrap;">
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+          <button type="button" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:4px 7px; font-size:0.74rem; font-weight:700;" onclick="viewFinanceReceipt('record', '${escapeHTML(String(r.record_id))}')">👁️ View</button>
+          <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:4px 7px; font-size:0.74rem; font-weight:700;" onclick="printFinanceReceipt('record', '${escapeHTML(String(r.record_id))}')">🖨️ Print</button>
+          <button type="button" class="btn-sm btn-primary" style="padding:4px 7px; font-size:0.74rem;" onclick="downloadFinanceReceipt('record', '${escapeHTML(String(r.record_id))}')">📥 PDF</button>
+        </div>
+      </td>
     </tr>
   `).join('');
 }
+
+function getFinanceCallerRoleParam() {
+  return encodeURIComponent(normalizeRole(currentUser?.role || 'finance_manager'));
+}
+
+function getFinanceReceiptPdfUrl(kind, id, preview = false) {
+  const role = getFinanceCallerRoleParam();
+  const safeId = encodeURIComponent(String(id || ''));
+  const prev = preview ? '&preview=1' : '';
+  if (kind === 'order') return `/api/finance/receipts/order/${safeId}?user_role=${role}${prev}`;
+  if (kind === 'service') return `/api/finance/receipts/service/${safeId}?user_role=${role}${prev}`;
+  if (kind === 'booking') return `/api/finance/receipts/booking/${safeId}?user_role=${role}${prev}`;
+  if (kind === 'supplier_payment') return `/api/erp/suppliers/payments/${safeId}/receipt?user_role=${role}${prev}`;
+  return `/api/finance/receipts/record/${safeId}?user_role=${role}${prev}`;
+}
+
+function getFinanceReceiptFileName(kind, id) {
+  const clean = String(id || 'receipt').replace(/[^a-zA-Z0-9._-]/g, '_');
+  if (kind === 'order') return `Order-Receipt-${clean}.pdf`;
+  if (kind === 'service') return `Service-Receipt-SR-${clean}.pdf`;
+  if (kind === 'booking') return `Booking-Receipt-${clean}.pdf`;
+  if (kind === 'supplier_payment') return `Supplier-Payment-Receipt-${clean}.pdf`;
+  return `Finance-Receipt-FIN-${clean}.pdf`;
+}
+
+function buildFinanceReceiptPreviewHtml(kind, id) {
+  let title = 'OFFICIAL PAYMENT RECEIPT';
+  let statusText = 'CONFIRMED & VERIFIED';
+  let receiptNo = `RCP-${id}`;
+  let refLabel = 'Reference #';
+  let refValue = String(id);
+  let dateVal = '—';
+  let partyLabel = 'Customer / Payee';
+  let partyName = 'Elight Electrical Shop Record';
+  let partyMeta = '';
+  let method = 'M-Pesa / Cash';
+  let txRef = 'VERIFIED';
+  let amount = 0;
+  let notes = '';
+
+  if (kind === 'order') {
+    const o = (allFinanceReleases || []).find(x => String(x.order_number) === String(id));
+    title = 'OFFICIAL ORDER PAYMENT RECEIPT';
+    if (o) {
+      receiptNo = o.receipt_no || `RCP-${o.order_number}`;
+      refLabel = 'Order #';
+      refValue = `#${o.order_number}`;
+      dateVal = formatActivityTime(o.created_at);
+      partyLabel = 'Customer';
+      partyName = o.customer_name || 'Walk-in Customer';
+      partyMeta = `${o.customer_phone || ''} • ${String(o.fulfillment_type || '').replace(/_/g, ' ')}`;
+      method = o.payment_method || 'M-Pesa / Cash';
+      txRef = o.payment_reference || 'VERIFIED';
+      amount = Number(o.amount_paid || 0);
+      statusText = Number(o.balance_due || 0) <= 0 ? 'FULLY PAID' : `PARTIAL (Due: ${formatKES(o.balance_due)})`;
+      notes = `Order Total: ${formatKES(o.total_amount)} • Cashier: ${o.cashier_name || 'Counter'}${o.credit_policy_notes ? ` • ${o.credit_policy_notes}` : ''}`;
+    }
+  } else if (kind === 'service') {
+    const s = (allFinanceServiceChargesCached || []).find(x => String(x.request_id) === String(id));
+    title = 'OFFICIAL SERVICE FEE PAYMENT RECEIPT';
+    if (s) {
+      receiptNo = s.service_receipt_no || `RCP-SR-${s.request_id}`;
+      refLabel = 'Service Job #';
+      refValue = `#SR-${s.request_id}`;
+      dateVal = formatActivityTime(s.service_paid_at || s.approved_at || s.created_at);
+      partyLabel = 'Customer';
+      partyName = s.customer_name || 'Customer';
+      partyMeta = `${s.phone || ''} • Tech: ${s.technician_name || 'Assigned'}`;
+      method = s.service_payment_method || 'M-Pesa';
+      txRef = s.service_payment_ref || 'VERIFIED';
+      amount = Number(s.service_fee || 0);
+      statusText = 'SERVICE FEE PAID';
+      notes = `${s.service_type || 'Electrical Service'}${s.completion_notes ? ` — ${s.completion_notes}` : ''}`;
+    }
+  } else if (kind === 'supplier_payment') {
+    const cache = window.__financeSupPaymentsCache || {};
+    const p = (cache.payments || []).find(x => String(x.payment_id) === String(id));
+    const sup = p && cache.supMap ? cache.supMap[Number(p.supplier_id)] : null;
+    title = 'OFFICIAL SUPPLIER DISBURSEMENT RECEIPT';
+    if (p) {
+      receiptNo = `RCP-${p.payment_number || `PAY-${p.payment_id}`}`;
+      refLabel = 'Voucher #';
+      refValue = p.payment_number || `PAY-${p.payment_id}`;
+      dateVal = p.payment_date || formatActivityTime(p.created_at);
+      partyLabel = 'Supplier / Payee';
+      partyName = sup?.supplier_name || `Supplier #${p.supplier_id}`;
+      partyMeta = `Recorded By: ${p.recorded_by || 'Finance Manager'}`;
+      method = p.payment_method || 'Bank Transfer';
+      txRef = p.transaction_ref || 'N/A';
+      amount = Number(p.amount_paid || 0);
+      statusText = /confirmed received/i.test(p.notes || '') ? 'CONFIRMED BY SUPPLIER' : 'DISBURSED BY FINANCE';
+      notes = p.notes || 'Supplier invoice/PO settlement disbursement.';
+    }
+  } else {
+    const r = (allFinanceRecords || []).find(x => String(x.record_id) === String(id));
+    if (r) {
+      const isSale = String(r.type || '').toLowerCase() === 'sale';
+      title = isSale ? 'OFFICIAL FINANCIAL INCOME RECEIPT' : 'OFFICIAL PAYMENT / EXPENSE VOUCHER';
+      receiptNo = `RCP-FIN-${r.record_id}`;
+      refLabel = 'Ledger Ref';
+      refValue = `#FIN-${r.record_id}`;
+      dateVal = formatActivityTime(r.created_at);
+      partyLabel = 'Category';
+      partyName = r.category || 'Treasury Entry';
+      partyMeta = isSale ? 'Shop Income / Inflow' : 'Operational Expense / Outflow';
+      method = r.payment_method || 'M-Pesa';
+      txRef = r.reference_no || 'N/A';
+      amount = Number(r.amount || 0);
+      statusText = String(r.status || 'CONFIRMED').toUpperCase();
+      notes = r.description || '';
+    }
+  }
+
+  return `
+    <div style="font-family:'Segoe UI',Arial,sans-serif; color:#0f172a; border:1px solid #cbd5e1; border-radius:10px; overflow:hidden; background:#fff;">
+      <div style="background:#102b46; color:#fff; padding:16px 20px; border-bottom:4px solid #ffc107; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div>
+          <div style="font-size:1.12rem; font-weight:800;">ELIGHT ELECTRICAL SHOP</div>
+          <div style="font-size:0.78rem; color:#e2e8f0;">Finance &amp; Treasury Department • Meru Town, Meru County</div>
+        </div>
+        <span style="background:#dcfce7; color:#15803d; padding:4px 10px; border-radius:999px; font-size:0.76rem; font-weight:800;">${escapeHTML(statusText)}</span>
+      </div>
+      <div style="padding:16px 20px;">
+        <div style="text-align:center; font-size:0.94rem; font-weight:800; color:#102b46; margin-bottom:12px;">${escapeHTML(title)}</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-size:0.84rem; margin-bottom:12px;">
+          <div>
+            <div><strong>Receipt No:</strong> <code>${escapeHTML(receiptNo)}</code></div>
+            <div><strong>${escapeHTML(refLabel)}:</strong> ${escapeHTML(refValue)}</div>
+            <div><strong>Date:</strong> ${escapeHTML(dateVal)}</div>
+          </div>
+          <div>
+            <div><strong>Payment Method:</strong> ${escapeHTML(method)}</div>
+            <div><strong>Transaction Ref:</strong> <code>${escapeHTML(txRef)}</code></div>
+            <div><strong>${escapeHTML(partyLabel)}:</strong> ${escapeHTML(partyName)}</div>
+          </div>
+        </div>
+        ${partyMeta ? `<div style="font-size:0.82rem; color:#475569; margin-bottom:10px;">${escapeHTML(partyMeta)}</div>` : ''}
+        <div style="background:#ecfdf5; border:1px solid #86efac; border-radius:8px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <strong style="color:#166534; font-size:0.84rem;">TOTAL VERIFIED AMOUNT</strong>
+          <strong style="color:#087443; font-size:1.25rem;">${formatKES(amount)}</strong>
+        </div>
+        ${notes ? `<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; font-size:0.82rem; color:#334155;"><strong>Details:</strong> ${escapeHTML(notes)}</div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+window.viewFinanceReceipt = function (kind, id) {
+  const modal = document.getElementById('finance-receipt-modal');
+  const body = document.getElementById('fin-receipt-modal-body');
+  if (!modal || !body) {
+    window.open(getFinanceReceiptPdfUrl(kind, id, true), '_blank', 'noopener');
+    return;
+  }
+  const titleMap = {
+    order: '🧾 Order Payment Receipt',
+    service: '🛠️ Service Fee Receipt',
+    booking: '📅 Booking Fee Receipt',
+    supplier_payment: '💳 Supplier Payment Receipt',
+    record: '📒 Financial Transaction Receipt'
+  };
+  const titleEl = document.getElementById('fin-receipt-modal-title');
+  if (titleEl) titleEl.textContent = titleMap[kind] || '🧾 Official Payment Receipt';
+
+  body.innerHTML = buildFinanceReceiptPreviewHtml(kind, id);
+  const pBtn = document.getElementById('finReceiptPrintBtn');
+  if (pBtn) pBtn.onclick = () => window.printFinanceReceipt(kind, id);
+  const vBtn = document.getElementById('finReceiptViewPdfBtn');
+  if (vBtn) vBtn.onclick = () => window.open(getFinanceReceiptPdfUrl(kind, id, true), '_blank', 'noopener');
+  const dBtn = document.getElementById('finReceiptDownloadBtn');
+  if (dBtn) dBtn.onclick = () => window.downloadFinanceReceipt(kind, id);
+  openModal('finance-receipt-modal');
+};
+
+window.printFinanceReceipt = function (kind, id) {
+  const markup = buildFinanceReceiptPreviewHtml(kind, id);
+  const docHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHTML(getFinanceReceiptFileName(kind, id))}</title><style>@page{margin:14mm;}body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:12px;background:#fff;}</style></head><body>${markup}</body></html>`;
+  const old = document.getElementById('erp-print-receipt-frame');
+  if (old) old.remove();
+  const iframe = document.createElement('iframe');
+  iframe.id = 'erp-print-receipt-frame';
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+  const d = iframe.contentWindow.document;
+  d.open();
+  d.write(docHtml);
+  d.close();
+  setTimeout(() => {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch (e) {
+      const win = window.open('', '_blank', 'width=840,height=720');
+      if (win) {
+        win.document.open();
+        win.document.write(docHtml);
+        win.document.close();
+        win.focus();
+        win.print();
+      }
+    }
+  }, 150);
+};
+
+window.downloadFinanceReceipt = async function (kind, id) {
+  try {
+    showToast('Downloading official PDF receipt...', 'info');
+    const url = getFinanceReceiptPdfUrl(kind, id, false);
+    const res = await fetch(url, {
+      headers: { 'X-User-Role': normalizeRole(currentUser?.role || 'finance_manager') }
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || 'Unable to download receipt PDF.');
+    }
+    const blob = await res.blob();
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl;
+    a.download = getFinanceReceiptFileName(kind, id);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objUrl), 1500);
+    showToast('Payment receipt downloaded!', 'success');
+  } catch (err) {
+    showToast(err.message || 'Receipt download failed.', 'error');
+  }
+};
 
 function openAdjustBalancesModal() {
   const userRole = normalizeRole(currentUser?.role);
@@ -3746,6 +3996,17 @@ function renderFinanceReleasesTable() {
       }
     }
 
+    let receiptBtnsHtml = '';
+    if (Number(order.amount_paid || 0) > 0 || order.payment_status === 'paid' || isReleased) {
+      receiptBtnsHtml = `
+        <div style="display:flex; gap:4px; justify-content:flex-end; flex-wrap:wrap; margin-top:6px;">
+          <button type="button" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:3px 7px; font-size:0.72rem; font-weight:700;" onclick="viewFinanceReceipt('order', '${escapeHTML(order.order_number)}')">👁️ View</button>
+          <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:3px 7px; font-size:0.72rem; font-weight:700;" onclick="printFinanceReceipt('order', '${escapeHTML(order.order_number)}')">🖨️ Print</button>
+          <button type="button" class="btn-sm btn-primary" style="padding:3px 7px; font-size:0.72rem;" onclick="downloadFinanceReceipt('order', '${escapeHTML(order.order_number)}')">📥 PDF</button>
+        </div>
+      `;
+    }
+
     return `
       <tr>
         <td>
@@ -3785,8 +4046,9 @@ function renderFinanceReleasesTable() {
           </div>
           ${order.finance_released_by ? `<div style="font-size:0.72rem; color:#475569; margin-top:2px;">By: ${escapeHTML(order.finance_released_by)}</div>` : ''}
         </td>
-        <td style="white-space:nowrap;">
+        <td style="white-space:nowrap; text-align:right;">
           ${actionButtons}
+          ${receiptBtnsHtml}
         </td>
       </tr>
     `;
@@ -6983,7 +7245,12 @@ async function loadFinanceServiceCharges() {
           </td>
           <td>
             ${isPaid
-              ? `<span style="font-size:0.78rem; color:#087443; font-weight:700;">Confirmed by ${escapeHTML(s.service_payment_confirmed_by || 'Finance')}</span>`
+              ? `<div style="font-size:0.76rem; color:#087443; font-weight:700; margin-bottom:5px;">Confirmed by ${escapeHTML(s.service_payment_confirmed_by || 'Finance')}</div>
+                 <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                   <button type="button" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:4px 7px; font-size:0.73rem; font-weight:700;" onclick="viewFinanceReceipt('service', ${s.request_id})">👁️ View</button>
+                   <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:4px 7px; font-size:0.73rem; font-weight:700;" onclick="printFinanceReceipt('service', ${s.request_id})">🖨️ Print</button>
+                   <button type="button" class="btn-sm btn-primary" style="padding:4px 7px; font-size:0.73rem;" onclick="downloadFinanceReceipt('service', ${s.request_id})">📥 PDF</button>
+                 </div>`
               : (fee > 0
                 ? `<button type="button" class="btn-sm" style="background:#087443; color:#fff; font-weight:700;" onclick="openFinanceServicePayModal(${s.request_id})">💵 Confirm Payment</button>`
                 : `<span style="font-size:0.78rem; color:#64748b;">No Fee Charged</span>`)}

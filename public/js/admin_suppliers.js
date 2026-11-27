@@ -850,14 +850,15 @@
       const bundle = await fetchFinanceSuppliersData();
       if (!bundle) return;
       const { data, supMap } = bundle;
+      window.__financeSupPaymentsCache = { payments: data.payments || [], supMap };
 
       host.innerHTML = `
         <div style="background:#fff; border:1px solid #cbd5e1; border-radius:12px; padding:20px;">
           <div class="table-responsive">
             <table>
-              <thead><tr><th>Payment #</th><th>Supplier</th><th>Date</th><th>Method</th><th>Transaction Ref</th><th>Amount Paid (KES)</th><th>Recorded By</th></tr></thead>
+              <thead><tr><th>Payment #</th><th>Supplier</th><th>Date</th><th>Method</th><th>Transaction Ref</th><th>Amount Paid (KES)</th><th>Recorded By</th><th>Receipt</th></tr></thead>
               <tbody>
-                ${data.payments.length === 0 ? '<tr><td colspan="7" style="text-align:center;">No supplier payments recorded yet.</td></tr>' : data.payments.map(p => `
+                ${data.payments.length === 0 ? '<tr><td colspan="8" style="text-align:center;">No supplier payments recorded yet.</td></tr>' : data.payments.map(p => `
                   <tr>
                     <td><strong>${esc(p.payment_number)}</strong></td>
                     <td>${esc(supMap[Number(p.supplier_id)]?.supplier_name || `Supplier #${p.supplier_id}`)}</td>
@@ -866,6 +867,13 @@
                     <td><code>${esc(p.transaction_ref)}</code></td>
                     <td style="color:#087443;font-weight:800;">${fmtMoney(p.amount_paid)}</td>
                     <td>${esc(p.recorded_by)}</td>
+                    <td style="white-space:nowrap;">
+                      <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                        <button type="button" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:4px 7px; font-size:0.74rem; font-weight:700;" onclick="viewFinanceReceipt('supplier_payment', ${p.payment_id})">👁️ View</button>
+                        <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:4px 7px; font-size:0.74rem; font-weight:700;" onclick="printFinanceReceipt('supplier_payment', ${p.payment_id})">🖨️ Print</button>
+                        <button type="button" class="btn-sm btn-primary" style="padding:4px 7px; font-size:0.74rem;" onclick="downloadFinanceReceipt('supplier_payment', ${p.payment_id})">📥 PDF</button>
+                      </div>
+                    </td>
                   </tr>
                 `).join('')}
               </tbody>

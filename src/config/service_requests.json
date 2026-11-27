@@ -1,5 +1,39 @@
 [
   {
+    "request_id": 24,
+    "customer_name": "mike",
+    "phone": "0736789034",
+    "location": "Meru County",
+    "service_type": "Chandelier & Decorative Lighting Mounting",
+    "description": "Customer Booking [BK-ELIGHT-1747]: Chandelier & Decorative Lighting Mounting (Pending Service Manager Assignment). Notes: Standard booking",
+    "assigned_technician_id": 4,
+    "technician_name": "Brian Kipchumba (Technician)",
+    "materials_used": "Issued (MR-2026-00694): 1x 1.5mm Single Core PVC Lighting Cable (100m Red)",
+    "status": "completed",
+    "scheduled_date": "2026-11-25",
+    "created_at": "2026-11-24T07:10:46.22559+00:00",
+    "booking_ref": "BK-ELIGHT-1747",
+    "customer_email": "mike@gmail.com",
+    "assigned_time": "Pending Service Manager Assignment",
+    "completion_notes": "mounting",
+    "completed_at": "2026-11-24T07:17:06.087+00:00",
+    "approved_by": "Service Manager",
+    "approved_at": "2026-11-24T07:17:38.688+00:00",
+    "return_reason": null,
+    "service_fee": 950,
+    "billing_status": "paid",
+    "payment_status": "paid",
+    "service_payment_method": "M-Pesa",
+    "service_payment_ref": "0123456789",
+    "service_receipt_no": "RCP-SR-24-8013",
+    "service_paid_at": "2026-11-24T12:00:08.013+00:00",
+    "service_payment_confirmed_by": "Alice Muthoni (Finance Manager)",
+    "customer_confirmed": false,
+    "customer_confirmed_at": null,
+    "customer_confirmed_by": null,
+    "customer_confirmation_notes": null
+  },
+  {
     "request_id": 22,
     "booking_ref": "BK-ELIGHT-9897",
     "customer_name": "mary",
@@ -38,7 +72,11 @@
     "service_payment_ref": "cash101",
     "service_receipt_no": "RCP-SR-22-4693",
     "service_paid_at": "2026-11-16T07:21:34.693+00:00",
-    "service_payment_confirmed_by": "Alice Muthoni (Finance Manager)"
+    "service_payment_confirmed_by": "Alice Muthoni (Finance Manager)",
+    "customer_confirmed": false,
+    "customer_confirmed_at": null,
+    "customer_confirmed_by": null,
+    "customer_confirmation_notes": null
   },
   {
     "request_id": 10,
@@ -68,7 +106,11 @@
     "service_payment_ref": null,
     "service_receipt_no": null,
     "service_paid_at": null,
-    "service_payment_confirmed_by": null
+    "service_payment_confirmed_by": null,
+    "customer_confirmed": false,
+    "customer_confirmed_at": null,
+    "customer_confirmed_by": null,
+    "customer_confirmation_notes": null
   },
   {
     "request_id": 9,
@@ -98,7 +140,11 @@
     "service_payment_ref": null,
     "service_receipt_no": null,
     "service_paid_at": null,
-    "service_payment_confirmed_by": null
+    "service_payment_confirmed_by": null,
+    "customer_confirmed": false,
+    "customer_confirmed_at": null,
+    "customer_confirmed_by": null,
+    "customer_confirmation_notes": null
   },
   {
     "request_id": 8,
@@ -128,7 +174,11 @@
     "service_payment_ref": null,
     "service_receipt_no": null,
     "service_paid_at": null,
-    "service_payment_confirmed_by": null
+    "service_payment_confirmed_by": null,
+    "customer_confirmed": false,
+    "customer_confirmed_at": null,
+    "customer_confirmed_by": null,
+    "customer_confirmation_notes": null
   },
   {
     "request_id": 7,
@@ -158,7 +208,11 @@
     "service_payment_ref": null,
     "service_receipt_no": null,
     "service_paid_at": null,
-    "service_payment_confirmed_by": null
+    "service_payment_confirmed_by": null,
+    "customer_confirmed": false,
+    "customer_confirmed_at": null,
+    "customer_confirmed_by": null,
+    "customer_confirmation_notes": null
   },
   {
     "request_id": 6,
@@ -188,7 +242,11 @@
     "service_payment_ref": null,
     "service_receipt_no": null,
     "service_paid_at": null,
-    "service_payment_confirmed_by": null
+    "service_payment_confirmed_by": null,
+    "customer_confirmed": false,
+    "customer_confirmed_at": null,
+    "customer_confirmed_by": null,
+    "customer_confirmation_notes": null
   },
   {
     "request_id": 5,
@@ -218,7 +276,11 @@
     "service_payment_ref": null,
     "service_receipt_no": null,
     "service_paid_at": null,
-    "service_payment_confirmed_by": null
+    "service_payment_confirmed_by": null,
+    "customer_confirmed": false,
+    "customer_confirmed_at": null,
+    "customer_confirmed_by": null,
+    "customer_confirmation_notes": null
   },
   {
     "request_id": 4,
@@ -248,7 +310,11 @@
     "service_payment_ref": null,
     "service_receipt_no": null,
     "service_paid_at": null,
-    "service_payment_confirmed_by": null
+    "service_payment_confirmed_by": null,
+    "customer_confirmed": false,
+    "customer_confirmed_at": null,
+    "customer_confirmed_by": null,
+    "customer_confirmation_notes": null
   },
   {
     "request_id": 3,
@@ -278,7 +344,11 @@
     "service_payment_ref": null,
     "service_receipt_no": null,
     "service_paid_at": null,
-    "service_payment_confirmed_by": null
+    "service_payment_confirmed_by": null,
+    "customer_confirmed": false,
+    "customer_confirmed_at": null,
+    "customer_confirmed_by": null,
+    "customer_confirmation_notes": null
   },
   {
     "request_id": 2,
@@ -308,7 +378,11 @@
     "service_payment_ref": null,
     "service_receipt_no": null,
     "service_paid_at": null,
-    "service_payment_confirmed_by": null
+    "service_payment_confirmed_by": null,
+    "customer_confirmed": false,
+    "customer_confirmed_at": null,
+    "customer_confirmed_by": null,
+    "customer_confirmation_notes": null
   },
   {
     "request_id": 1,
@@ -338,6 +412,10 @@
     "service_payment_ref": null,
     "service_receipt_no": null,
     "service_paid_at": null,
-    "service_payment_confirmed_by": null
+    "service_payment_confirmed_by": null,
+    "customer_confirmed": false,
+    "customer_confirmed_at": null,
+    "customer_confirmed_by": null,
+    "customer_confirmation_notes": null
   }
 ]

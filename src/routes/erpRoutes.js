@@ -69,6 +69,10 @@ router.get('/finance/pending-releases', erpController.getPendingFinanceReleases)
 router.post('/finance/orders/:orderNo/release', erpController.releaseOrderByFinance);
 router.get('/finance/service-charges', erpController.getServiceFeeCharges);
 router.post('/finance/services/:id/confirm-payment', erpController.confirmServiceFeePayment);
+router.get('/finance/receipts/order/:orderNo', erpController.downloadFinanceOrderReceipt);
+router.get('/finance/receipts/service/:id', erpController.downloadFinanceServiceReceipt);
+router.get('/finance/receipts/booking/:id', erpController.downloadFinanceBookingReceipt);
+router.get('/finance/receipts/record/:recordId', erpController.downloadFinanceLedgerReceipt);
 
 // Dispatch & Driver Module
 router.get('/dispatches', erpController.getDispatches);

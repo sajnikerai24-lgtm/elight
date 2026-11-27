@@ -59,6 +59,7 @@ router.get('/erp/suppliers/finance/overview', ...requireErpRoles(FINANCE_ROLES),
 router.put('/erp/suppliers/invoices/:invoiceId/review', ...requireErpRoles(STAFF_DOC_ROLES), controller.erpReviewInvoice);
 router.post('/erp/suppliers/invoices/:invoiceId/pay', ...requireErpRoles(FINANCE_ROLES), controller.erpPaySupplierInvoice);
 router.post('/erp/suppliers/purchase-orders/:poId/pay', ...requireErpRoles(FINANCE_ROLES), controller.erpPayForwardedPO);
+router.get('/erp/suppliers/payments/:paymentId/receipt', ...requireErpRoles(FINANCE_ROLES), controller.erpDownloadSupplierPaymentReceipt);
 
 // Internal Staff Document Preview
 router.get('/erp/suppliers/documents/:docType/:id', ...requireErpRoles(STAFF_DOC_ROLES), controller.erpDownloadSupplierDocument);

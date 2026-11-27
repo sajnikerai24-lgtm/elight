@@ -13,10 +13,16 @@
     "preferred_time": "Pending Service Manager Assignment",
     "location_or_notes": "",
     "estimated_amount": 950,
-    "status": "confirmed",
-    "confirmation_note": "Confirmed! Service \"Chandelier & Decorative Lighting Mounting\" scheduled for 2026-11-25 (Arrival time to be assigned by Service Manager). Our technical desk will call 0736789034 prior to dispatch.",
+    "status": "completed",
+    "confirmation_note": "Service fee KES 950 confirmed paid by Alice Muthoni (Finance Manager). Official Receipt: RCP-SR-24-8013.",
     "created_at": "2026-11-24T07:10:45.504611+00:00",
-    "booking_fee": 200
+    "booking_fee": 200,
+    "booking_fee_status": "pending",
+    "booking_payment_method": null,
+    "booking_payment_ref": null,
+    "booking_receipt_no": null,
+    "booking_paid_at": null,
+    "booking_payment_confirmed_by": null
   },
   {
     "booking_id": 20,
@@ -35,7 +41,13 @@
     "status": "completed",
     "confirmation_note": "Service fee KES 1,050 confirmed paid by Alice Muthoni (Finance Manager). Official Receipt: RCP-SR-22-4693.",
     "created_at": "2026-11-16T07:12:52.929189+00:00",
-    "booking_fee": 200
+    "booking_fee": 200,
+    "booking_fee_status": "pending",
+    "booking_payment_method": null,
+    "booking_payment_ref": null,
+    "booking_receipt_no": null,
+    "booking_paid_at": null,
+    "booking_payment_confirmed_by": null
   },
   {
     "booking_id": 9,
@@ -54,7 +66,13 @@
     "status": "confirmed",
     "confirmation_note": "Confirmed! 2 services (Residential Wiring & Socket Installation, Chandelier & Decorative Lighting Mounting) scheduled for 2026-11-14 (Arrival time to be assigned by Service Manager). Our technical desk will call 0789765432 prior to dispatch.",
     "created_at": "2026-11-13T08:25:22.012157+00:00",
-    "booking_fee": 200
+    "booking_fee": 200,
+    "booking_fee_status": "paid",
+    "booking_payment_method": "M-Pesa",
+    "booking_payment_ref": "SKLOPKJHUI",
+    "booking_receipt_no": "RCP-BK-9-2721",
+    "booking_paid_at": "2026-11-24T12:15:12.721+00:00",
+    "booking_payment_confirmed_by": "Customer Portal (jenu john)"
   },
   {
     "booking_id": 8,
@@ -73,7 +91,13 @@
     "status": "confirmed",
     "confirmation_note": "Appointment arrival time confirmed for 02:00 PM - 04:00 PM on 2026-11-28. Assigned by Service Manager.",
     "created_at": "2026-11-10T07:18:58.776435+00:00",
-    "booking_fee": 200
+    "booking_fee": 200,
+    "booking_fee_status": "pending",
+    "booking_payment_method": null,
+    "booking_payment_ref": null,
+    "booking_receipt_no": null,
+    "booking_paid_at": null,
+    "booking_payment_confirmed_by": null
   },
   {
     "booking_id": 7,
@@ -92,7 +116,13 @@
     "status": "confirmed",
     "confirmation_note": "Appointment arrival time confirmed for 02:00 PM - 04:00 PM on 2026-11-28. Assigned by Service Manager.",
     "created_at": "2026-11-10T07:17:17.123362+00:00",
-    "booking_fee": 200
+    "booking_fee": 200,
+    "booking_fee_status": "pending",
+    "booking_payment_method": null,
+    "booking_payment_ref": null,
+    "booking_receipt_no": null,
+    "booking_paid_at": null,
+    "booking_payment_confirmed_by": null
   },
   {
     "booking_id": 6,
@@ -111,7 +141,13 @@
     "status": "confirmed",
     "confirmation_note": "Confirmed! Service \"Solar System Diagnostic & Battery Maintenance\" scheduled for 2026-11-28 (Arrival time to be assigned by Service Manager). Our technical desk will call 0711223344 prior to dispatch.",
     "created_at": "2026-11-10T07:16:15.612183+00:00",
-    "booking_fee": 200
+    "booking_fee": 200,
+    "booking_fee_status": "pending",
+    "booking_payment_method": null,
+    "booking_payment_ref": null,
+    "booking_receipt_no": null,
+    "booking_paid_at": null,
+    "booking_payment_confirmed_by": null
   },
   {
     "booking_id": 5,
@@ -130,7 +166,13 @@
     "status": "confirmed",
     "confirmation_note": "Confirmed! 2 services (Residential Wiring & Socket Installation, Chandelier & Decorative Lighting Mounting) scheduled for 2026-11-25 (11:00 AM - 02:00 PM). Our technical desk will call 0722123456 prior to dispatch.",
     "created_at": "2026-11-10T06:51:19.000965+00:00",
-    "booking_fee": 200
+    "booking_fee": 200,
+    "booking_fee_status": "pending",
+    "booking_payment_method": null,
+    "booking_payment_ref": null,
+    "booking_receipt_no": null,
+    "booking_paid_at": null,
+    "booking_payment_confirmed_by": null
   },
   {
     "booking_id": 4,
@@ -149,7 +191,13 @@
     "status": "confirmed",
     "confirmation_note": "Confirmed! 3 services (Residential Wiring & Socket Installation, Chandelier & Decorative Lighting Mounting, Instant Shower / Water Heater Electrical Setup) scheduled for 2026-11-20 (08:00 AM - 11:00 AM). Our technical desk will call 0712345678 prior to dispatch.",
     "created_at": "2026-11-10T06:39:53.444361+00:00",
-    "booking_fee": 200
+    "booking_fee": 200,
+    "booking_fee_status": "pending",
+    "booking_payment_method": null,
+    "booking_payment_ref": null,
+    "booking_receipt_no": null,
+    "booking_paid_at": null,
+    "booking_payment_confirmed_by": null
   },
   {
     "booking_id": 3,
@@ -168,7 +216,13 @@
     "status": "confirmed",
     "confirmation_note": "Booking confirmed. Certified electrician assigned.",
     "created_at": "2026-11-01T06:06:58.959901+00:00",
-    "booking_fee": 200
+    "booking_fee": 200,
+    "booking_fee_status": "pending",
+    "booking_payment_method": null,
+    "booking_payment_ref": null,
+    "booking_receipt_no": null,
+    "booking_paid_at": null,
+    "booking_payment_confirmed_by": null
   },
   {
     "booking_id": 2,
@@ -187,7 +241,13 @@
     "status": "confirmed",
     "confirmation_note": "2 units reserved in warehouse under reference BK-ELIGHT-1002.",
     "created_at": "2026-11-01T06:06:58.959901+00:00",
-    "booking_fee": 200
+    "booking_fee": 200,
+    "booking_fee_status": "pending",
+    "booking_payment_method": null,
+    "booking_payment_ref": null,
+    "booking_receipt_no": null,
+    "booking_paid_at": null,
+    "booking_payment_confirmed_by": null
   },
   {
     "booking_id": 1,
@@ -206,6 +266,12 @@
     "status": "confirmed",
     "confirmation_note": "Confirmed! Technician team scheduled for morning arrival.",
     "created_at": "2026-11-01T06:06:58.959901+00:00",
-    "booking_fee": 200
+    "booking_fee": 200,
+    "booking_fee_status": "pending",
+    "booking_payment_method": null,
+    "booking_payment_ref": null,
+    "booking_receipt_no": null,
+    "booking_paid_at": null,
+    "booking_payment_confirmed_by": null
   }
 ]

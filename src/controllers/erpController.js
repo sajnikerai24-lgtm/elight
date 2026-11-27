@@ -444,6 +444,90 @@ function customerOwnsBookingRecord(b, source = {}) {
   );
 }
 
+function isFinanceOrAdminRole(req) {
+  const rawRole = String(req.headers['x-user-role'] || req.body?.user_role || req.query?.user_role || '').trim().toLowerCase();
+  if (!rawRole) return false;
+  return ['finance', 'finance_manager', 'accountant', 'admin', 'administrator', 'owner', 'superadmin'].includes(rawRole);
+}
+
+function sendOfficialPdfResponse(res, pdfBuffer, safeFileName, previewFlag) {
+  const disposition = String(previewFlag || '') === '1' ? 'inline' : 'attachment';
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `${disposition}; filename="${safeFileName}"`);
+  res.setHeader('Content-Length', pdfBuffer.length);
+  return res.send(pdfBuffer);
+}
+
+function buildServiceReceiptPdfBuffer(sr) {
+  const receiptNo = sr.service_receipt_no || `RCP-SR-${sr.request_id}`;
+  const paidDate = String(sr.service_paid_at || sr.approved_at || sr.created_at || '').slice(0, 10) || 'N/A';
+
+  return buildOfficialReceiptPdf({
+    documentTitle: 'OFFICIAL SERVICE FEE PAYMENT RECEIPT',
+    metaLeft: [
+      `Receipt No: ${receiptNo}`,
+      `Service Job Ref: #SR-${sr.request_id}`,
+      `Payment Date: ${paidDate}`
+    ],
+    metaRight: [
+      'Status: PAYMENT CONFIRMED BY FINANCE',
+      `Payment Ref: ${sr.service_payment_ref || 'VERIFIED'}`,
+      `Payment Method: ${sr.service_payment_method || 'M-Pesa'}`
+    ],
+    statusPositive: true,
+    sectionTitle: 'CUSTOMER & SERVICE JOB DETAILS',
+    detailRows: [
+      ['Customer Name:', sr.customer_name || 'Valued Customer', 'Service Type:', sr.service_type || 'Electrical Service'],
+      ['Phone:', sr.phone || '-', 'Technician:', sr.technician_name || sr.assigned_technician_name || 'Assigned Tech'],
+      ['Site Location:', sr.location || 'Meru County', 'Service Approved:', sr.approved_by || 'Service Manager'],
+      ['Customer Confirmed:', sr.customer_confirmed ? `Yes (${String(sr.customer_confirmed_at || '').slice(0, 10) || 'Confirmed'})` : 'No', 'Payment Recorded:', sr.service_payment_confirmed_by || 'Finance / Customer Portal']
+    ],
+    amountLabel: 'TOTAL SERVICE FEE PAID',
+    amountSubtext: 'Verified and confirmed received by Elight Electrical Shop Finance Department',
+    amountValue: Number(sr.service_fee || 0),
+    notesTitle: 'COMPLETION & MATERIALS SUMMARY',
+    notesBody: `Work Report: ${sr.completion_notes || 'Service completed and approved.'} | Materials: ${sr.materials_used || 'Standard tools & consumables'}`,
+    footerLine: 'Thank you for choosing Elight Electrical Shop. You may submit service feedback from your Customer Portal.'
+  });
+}
+
+function buildBookingReceiptPdfBuffer(b) {
+  const bookingFee = Number(b.booking_fee ?? 200);
+  const isPaid = String(b.booking_fee_status || '').toLowerCase() === 'paid';
+  const receiptNo = b.booking_receipt_no || `RCP-${b.booking_ref || `BK-${b.booking_id}`}`;
+  const issueDate = String(b.booking_paid_at || b.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+
+  return buildOfficialReceiptPdf({
+    documentTitle: 'OFFICIAL BOOKING FEE RECEIPT',
+    metaLeft: [
+      `Receipt No: ${receiptNo}`,
+      `Booking Ref: ${b.booking_ref || `BK-${b.booking_id}`}`,
+      `Date: ${issueDate}`
+    ],
+    metaRight: [
+      `Status: ${isPaid ? 'BOOKING FEE PAID' : 'CONFIRMED BOOKING FEE'}`,
+      `Payment Ref: ${b.booking_payment_ref || b.booking_ref || 'CONFIRMED'}`,
+      `Payment Method: ${b.booking_payment_method || 'M-Pesa / Cash at Shop'}`
+    ],
+    statusPositive: true,
+    sectionTitle: 'CUSTOMER & BOOKING DETAILS',
+    detailRows: [
+      ['Customer Name:', b.customer_name || 'Valued Customer', 'Booking Type:', b.booking_type === 'product' ? 'Product Reservation' : 'Electrical Service'],
+      ['Phone:', b.customer_phone || '-', 'Item / Service:', b.item_or_service_name || 'Booking'],
+      ['Scheduled Date:', b.preferred_date || '-', 'Time Slot:', b.preferred_time || 'Pending Assignment'],
+      ['Customer Email:', b.customer_email || '-', 'Est. Total:', `KES ${Number(b.estimated_amount || bookingFee).toLocaleString('en-KE', { minimumFractionDigits: 2 })}`]
+    ],
+    amountLabel: isPaid ? 'TOTAL BOOKING FEE PAID' : 'OFFICIAL BOOKING FEE',
+    amountSubtext: isPaid
+      ? 'Verified and confirmed received by Elight Electrical Shop'
+      : 'Standard booking reservation fee recorded for your appointment',
+    amountValue: bookingFee,
+    notesTitle: 'BOOKING CONFIRMATION & NOTES',
+    notesBody: b.confirmation_note || b.location_or_notes || `Confirmed booking ${b.booking_ref}.`,
+    footerLine: 'Thank you for booking with Elight Electrical Shop. Present this receipt or your Booking Ref at our Meru Town desk.'
+  });
+}
+
 const erpController = {
   // ==========================================
   // AUTHENTICATION & DEMO ACCOUNTS
@@ -1946,43 +2030,8 @@ const erpController = {
         });
       }
 
-      const receiptNo = sr.service_receipt_no || `RCP-SR-${sr.request_id}`;
-      const paidDate = String(sr.service_paid_at || sr.approved_at || sr.created_at || '').slice(0, 10) || 'N/A';
-
-      const pdfBuffer = buildOfficialReceiptPdf({
-        documentTitle: 'OFFICIAL SERVICE FEE PAYMENT RECEIPT',
-        metaLeft: [
-          `Receipt No: ${receiptNo}`,
-          `Service Job Ref: #SR-${sr.request_id}`,
-          `Payment Date: ${paidDate}`
-        ],
-        metaRight: [
-          'Status: PAYMENT CONFIRMED BY FINANCE',
-          `Payment Ref: ${sr.service_payment_ref || 'VERIFIED'}`,
-          `Payment Method: ${sr.service_payment_method || 'M-Pesa'}`
-        ],
-        statusPositive: true,
-        sectionTitle: 'CUSTOMER & SERVICE JOB DETAILS',
-        detailRows: [
-          ['Customer Name:', sr.customer_name || 'Valued Customer', 'Service Type:', sr.service_type || 'Electrical Service'],
-          ['Phone:', sr.phone || '-', 'Technician:', sr.technician_name || sr.assigned_technician_name || 'Assigned Tech'],
-          ['Site Location:', sr.location || 'Meru County', 'Service Approved:', sr.approved_by || 'Service Manager'],
-          ['Customer Confirmed:', sr.customer_confirmed ? `Yes (${String(sr.customer_confirmed_at || '').slice(0, 10) || 'Confirmed'})` : 'No', 'Payment Recorded:', sr.service_payment_confirmed_by || 'Finance / Customer Portal']
-        ],
-        amountLabel: 'TOTAL SERVICE FEE PAID',
-        amountSubtext: 'Verified and confirmed received by Elight Electrical Shop Finance Department',
-        amountValue: Number(sr.service_fee || 0),
-        notesTitle: 'COMPLETION & MATERIALS SUMMARY',
-        notesBody: `Work Report: ${sr.completion_notes || 'Service completed and approved.'} | Materials: ${sr.materials_used || 'Standard tools & consumables'}`,
-        footerLine: 'Thank you for choosing Elight Electrical Shop. You may submit service feedback from your Customer Portal.'
-      });
-
-      const safeFileName = `Service-Receipt-SR-${sr.request_id}.pdf`;
-      const disposition = req.query.preview === '1' ? 'inline' : 'attachment';
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `${disposition}; filename="${safeFileName}"`);
-      res.setHeader('Content-Length', pdfBuffer.length);
-      return res.send(pdfBuffer);
+      const pdfBuffer = buildServiceReceiptPdfBuffer(sr);
+      return sendOfficialPdfResponse(res, pdfBuffer, `Service-Receipt-SR-${sr.request_id}.pdf`, req.query.preview);
     } catch (err) {
       console.error('downloadCustomerServiceReceipt error:', err);
       res.status(500).json({ success: false, message: err.message });
@@ -2065,47 +2114,8 @@ const erpController = {
         return res.status(400).json({ success: false, message: 'Cancelled bookings do not have an active booking receipt.' });
       }
 
-      const bookingFee = Number(b.booking_fee ?? 200);
-      const isPaid = String(b.booking_fee_status || '').toLowerCase() === 'paid';
-      const receiptNo = b.booking_receipt_no || `RCP-${b.booking_ref || `BK-${b.booking_id}`}`;
-      const issueDate = String(b.booking_paid_at || b.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
-
-      const pdfBuffer = buildOfficialReceiptPdf({
-        documentTitle: 'OFFICIAL BOOKING FEE RECEIPT',
-        metaLeft: [
-          `Receipt No: ${receiptNo}`,
-          `Booking Ref: ${b.booking_ref || `BK-${b.booking_id}`}`,
-          `Date: ${issueDate}`
-        ],
-        metaRight: [
-          `Status: ${isPaid ? 'BOOKING FEE PAID' : 'CONFIRMED BOOKING FEE'}`,
-          `Payment Ref: ${b.booking_payment_ref || b.booking_ref || 'CONFIRMED'}`,
-          `Payment Method: ${b.booking_payment_method || 'M-Pesa / Cash at Shop'}`
-        ],
-        statusPositive: true,
-        sectionTitle: 'CUSTOMER & BOOKING DETAILS',
-        detailRows: [
-          ['Customer Name:', b.customer_name || 'Valued Customer', 'Booking Type:', b.booking_type === 'product' ? 'Product Reservation' : 'Electrical Service'],
-          ['Phone:', b.customer_phone || '-', 'Item / Service:', b.item_or_service_name || 'Booking'],
-          ['Scheduled Date:', b.preferred_date || '-', 'Time Slot:', b.preferred_time || 'Pending Assignment'],
-          ['Customer Email:', b.customer_email || '-', 'Est. Total:', `KES ${Number(b.estimated_amount || bookingFee).toLocaleString('en-KE', { minimumFractionDigits: 2 })}`]
-        ],
-        amountLabel: isPaid ? 'TOTAL BOOKING FEE PAID' : 'OFFICIAL BOOKING FEE',
-        amountSubtext: isPaid
-          ? 'Verified and confirmed received by Elight Electrical Shop'
-          : 'Standard booking reservation fee recorded for your appointment',
-        amountValue: bookingFee,
-        notesTitle: 'BOOKING CONFIRMATION & NOTES',
-        notesBody: b.confirmation_note || b.location_or_notes || `Confirmed booking ${b.booking_ref}.`,
-        footerLine: 'Thank you for booking with Elight Electrical Shop. Present this receipt or your Booking Ref at our Meru Town desk.'
-      });
-
-      const safeFileName = `Booking-Receipt-${b.booking_ref || b.booking_id}.pdf`;
-      const disposition = req.query.preview === '1' ? 'inline' : 'attachment';
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `${disposition}; filename="${safeFileName}"`);
-      res.setHeader('Content-Length', pdfBuffer.length);
-      return res.send(pdfBuffer);
+      const pdfBuffer = buildBookingReceiptPdfBuffer(b);
+      return sendOfficialPdfResponse(res, pdfBuffer, `Booking-Receipt-${b.booking_ref || b.booking_id}.pdf`, req.query.preview);
     } catch (err) {
       console.error('downloadCustomerBookingReceipt error:', err);
       res.status(500).json({ success: false, message: err.message });
@@ -2113,8 +2123,234 @@ const erpController = {
   },
 
   // ==========================================
-  // FINANCE MANAGER MODULE
+  // FINANCE MANAGER MODULE & ALL PAYMENT RECEIPTS
   // ==========================================
+  downloadFinanceOrderReceipt: async (req, res) => {
+    try {
+      if (!isFinanceOrAdminRole(req)) {
+        return res.status(403).json({ success: false, message: 'Access Denied: Only Finance Manager or Administrator can view/download ERP payment receipts.' });
+      }
+      const orderNo = String(req.params.orderNo || '').trim().replace(/^#/, '');
+      const upperNo = orderNo.toUpperCase();
+      const orders = readCashierOrders();
+      let raw = orders.find(o =>
+        [o.order_no, o.order_number, o.receipt_no, o.invoice_no, o.payment_ref, o.split_details?.mpesa_ref].some(
+          v => String(v || '').trim().toUpperCase() === upperNo
+        )
+      );
+
+      // Fallback 1: Lookup historical sale records from finance_records (Supabase or local store)
+      if (!raw) {
+        let finRecords = [];
+        try {
+          const { data } = await supabase.from('finance_records').select('*').eq('type', 'sale').order('record_id', { ascending: false }).limit(120);
+          if (Array.isArray(data) && data.length > 0) finRecords = data;
+        } catch (e) {}
+        if (finRecords.length === 0) {
+          finRecords = readFinanceRecords().filter(f => String(f.type || '').toLowerCase() === 'sale');
+        }
+        const matchedFin = finRecords.find(r => {
+          const ref = String(r.reference_no || `SALE-${r.record_id}`).trim().toUpperCase();
+          return ref === upperNo || (`SALE-${r.record_id}`).toUpperCase() === upperNo;
+        });
+        if (matchedFin) {
+          const cashierMatch = String(matchedFin.description || '').match(/\[Cashier:\s*([^\]]+)\]/i);
+          const cleanDesc = String(matchedFin.description || 'Shop Sale').replace(/\s*\[Cashier:[^\]]+\]/i, '').trim();
+          const amt = Number(matchedFin.amount || 0);
+          const ref = String(matchedFin.reference_no || `SALE-${matchedFin.record_id}`);
+          raw = {
+            order_no: ref,
+            receipt_no: `RCP-${ref}`,
+            invoice_no: `INV-${ref}`,
+            customer_name: cleanDesc || 'Elight Customer',
+            customer_phone: '-',
+            items: [{ product_name: cleanDesc || 'Electrical Goods Sale', quantity: 1, unit_price: amt }],
+            total_amount: amt,
+            amount_paid: amt,
+            balance_due: 0,
+            payment_status: 'paid',
+            payment_method: matchedFin.payment_method || 'M-Pesa',
+            payment_ref: ref,
+            cashier_name: cashierMatch ? cashierMatch[1].trim() : 'Counter Desk',
+            paid_at: matchedFin.created_at,
+            created_at: matchedFin.created_at
+          };
+        }
+      }
+
+      // Fallback 2: Booking-origin orders
+      if (!raw) {
+        const allBookings = await interModuleSync.getBookings();
+        const b = allBookings.find(item => String(item.booking_ref || `BK-${item.booking_id}`).toUpperCase() === upperNo);
+        if (b) {
+          const isPaid = String(b.booking_fee_status || b.status || '').toLowerCase() === 'paid' || String(b.status || '').toLowerCase() === 'completed';
+          const amt = Number(b.estimated_amount || b.booking_fee || 0);
+          raw = {
+            order_no: b.booking_ref || `BK-${b.booking_id}`,
+            receipt_no: b.booking_receipt_no || `RCP-${b.booking_ref}`,
+            customer_name: b.customer_name || 'Customer',
+            customer_phone: b.customer_phone || '-',
+            items: [{ product_name: b.item_or_service_name || 'Booked Item', quantity: Number(b.quantity || 1), unit_price: amt }],
+            total_amount: amt,
+            amount_paid: isPaid ? amt : 0,
+            balance_due: isPaid ? 0 : amt,
+            payment_status: isPaid ? 'paid' : 'pending',
+            payment_method: b.booking_payment_method || 'M-Pesa',
+            payment_ref: b.booking_payment_ref || b.booking_ref,
+            cashier_name: 'Booking Desk',
+            created_at: b.created_at
+          };
+        }
+      }
+
+      if (!raw) return res.status(404).json({ success: false, message: `Order "${orderNo}" not found.` });
+
+      const ord = normalizeOrderDualStatuses(raw);
+      const receiptNo = raw.receipt_no || `RCP-${ord.order_number}`;
+      const payDate = String(raw.paid_at || ord.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+      const itemSummary = (ord.items || []).map(i => `${i.quantity || 1}x ${i.product_name}`).join(', ') || 'Electrical Order Items';
+      const isFullyPaid = Number(ord.balance_due || 0) <= 0 && Number(ord.amount_paid || 0) > 0;
+
+      const pdfBuffer = buildOfficialReceiptPdf({
+        documentTitle: 'OFFICIAL ORDER PAYMENT RECEIPT',
+        metaLeft: [
+          `Receipt No: ${receiptNo}`,
+          `Order No: ${ord.order_number}`,
+          `Payment Date: ${payDate}`
+        ],
+        metaRight: [
+          `Status: ${isFullyPaid ? 'FULLY PAID & VERIFIED' : (ord.amount_paid > 0 ? 'PARTIAL SETTLEMENT' : 'UNPAID / CREDIT')}`,
+          `Payment Ref: ${ord.payment_reference || 'N/A'}`,
+          `Payment Method: ${ord.payment_method || 'M-Pesa / Cash'}`
+        ],
+        statusPositive: isFullyPaid,
+        sectionTitle: 'CUSTOMER & ORDER SETTLEMENT DETAILS',
+        detailRows: [
+          ['Customer Name:', ord.customer_name || 'Walk-in Customer', 'Invoice No:', ord.invoice_no],
+          ['Customer Phone:', ord.customer_phone || '-', 'Total Billed:', `KES ${Number(ord.total_amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 })}`],
+          ['Cashier Desk:', ord.cashier_name || 'Counter', 'Balance Due:', `KES ${Number(ord.balance_due || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 })}`],
+          ['Finance Release:', ord.finance_released_by || (ord.finance_release_status === 'released' ? 'Finance Manager' : 'Pending'), 'Fulfillment:', String(ord.fulfillment_type || 'delivery').replace(/_/g, ' ')]
+        ],
+        amountLabel: 'TOTAL AMOUNT PAID',
+        amountSubtext: `Order Total: KES ${Number(ord.total_amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 })} | Balance Due: KES ${Number(ord.balance_due || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 })}`,
+        amountValue: Number(ord.amount_paid || 0),
+        notesTitle: 'PURCHASED ITEMS & CREDIT NOTES',
+        notesBody: `${itemSummary}${ord.credit_policy_notes ? ` | Policy: ${ord.credit_policy_notes}` : ''}`,
+        footerLine: 'Official Finance Desk payment receipt — Elight Electrical Shop.'
+      });
+
+      const safeFile = `Order-Receipt-${String(ord.order_number).replace(/[^a-zA-Z0-9._-]/g, '_')}.pdf`;
+      return sendOfficialPdfResponse(res, pdfBuffer, safeFile, req.query.preview);
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  downloadFinanceServiceReceipt: async (req, res) => {
+    try {
+      if (!isFinanceOrAdminRole(req)) {
+        return res.status(403).json({ success: false, message: 'Access Denied: Only Finance Manager or Administrator can view/download service receipts.' });
+      }
+      const srId = Number(req.params.id);
+      if (!srId) return res.status(400).json({ success: false, message: 'Invalid service ID.' });
+
+      const allServices = await interModuleSync.getServiceRequests();
+      const sr = allServices.find(s => Number(s.request_id) === srId);
+      if (!sr) return res.status(404).json({ success: false, message: 'Service record not found.' });
+      if (String(sr.payment_status || '').toLowerCase() !== 'paid') {
+        return res.status(400).json({ success: false, message: 'Service fee payment has not been confirmed yet.' });
+      }
+
+      const pdfBuffer = buildServiceReceiptPdfBuffer(sr);
+      return sendOfficialPdfResponse(res, pdfBuffer, `Service-Receipt-SR-${sr.request_id}.pdf`, req.query.preview);
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  downloadFinanceBookingReceipt: async (req, res) => {
+    try {
+      if (!isFinanceOrAdminRole(req)) {
+        return res.status(403).json({ success: false, message: 'Access Denied: Only Finance Manager or Administrator can view/download booking receipts.' });
+      }
+      const idOrRef = String(req.params.id || '').trim();
+      const allBookings = await interModuleSync.getBookings();
+      const idNum = Number(idOrRef);
+      const b = allBookings.find(
+        item => (!Number.isNaN(idNum) && idNum > 0 && Number(item.booking_id) === idNum) ||
+          (item.booking_ref && String(item.booking_ref).toUpperCase() === idOrRef.toUpperCase())
+      );
+      if (!b) return res.status(404).json({ success: false, message: 'Booking record not found.' });
+
+      const pdfBuffer = buildBookingReceiptPdfBuffer(b);
+      return sendOfficialPdfResponse(res, pdfBuffer, `Booking-Receipt-${b.booking_ref || b.booking_id}.pdf`, req.query.preview);
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  downloadFinanceLedgerReceipt: async (req, res) => {
+    try {
+      if (!isFinanceOrAdminRole(req)) {
+        return res.status(403).json({ success: false, message: 'Access Denied: Only Finance Manager or Administrator can view/download ledger receipts.' });
+      }
+      const recId = String(req.params.recordId || '').trim();
+      let records = [];
+      try {
+        const { data, error } = await supabase.from('finance_records').select('*');
+        if (!error && Array.isArray(data) && data.length > 0) records = data;
+      } catch (e) {}
+      const localRecs = readFinanceRecords();
+      if (records.length === 0) records = localRecs;
+      else {
+        for (const loc of localRecs) {
+          if (!records.some(r => String(r.record_id) === String(loc.record_id))) records.push(loc);
+        }
+      }
+
+      const rec = records.find(r => String(r.record_id) === recId);
+      if (!rec) return res.status(404).json({ success: false, message: `Ledger entry #FIN-${recId} not found.` });
+
+      const isSale = String(rec.type || '').toLowerCase() === 'sale';
+      const receiptNo = `RCP-FIN-${rec.record_id}`;
+      const recDate = String(rec.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+      const docTitle = isSale ? 'OFFICIAL FINANCIAL INCOME RECEIPT' : 'OFFICIAL PAYMENT / EXPENSE VOUCHER';
+
+      const pdfBuffer = buildOfficialReceiptPdf({
+        documentTitle: docTitle,
+        metaLeft: [
+          `Receipt No: ${receiptNo}`,
+          `Ledger Ref: #FIN-${rec.record_id}`,
+          `Date: ${recDate}`
+        ],
+        metaRight: [
+          `Status: ${String(rec.status || 'CONFIRMED').toUpperCase()}`,
+          `Transaction Ref: ${rec.reference_no || 'N/A'}`,
+          `Payment Method: ${rec.payment_method || 'M-Pesa / Cash'}`
+        ],
+        statusPositive: true,
+        sectionTitle: 'FINANCIAL TRANSACTION DETAILS',
+        detailRows: [
+          ['Transaction Type:', isSale ? 'Income / Sale Inflow' : 'Expense / Disbursement Outflow', 'Category:', rec.category || 'General'],
+          ['Payment Channel:', rec.payment_method || 'M-Pesa', 'Reference No:', rec.reference_no || 'N/A'],
+          ['Recorded Status:', String(rec.status || 'confirmed').toUpperCase(), 'Recorded At:', String(rec.created_at || '').slice(0, 19).replace('T', ' ') || recDate],
+          ['Verified By:', 'Elight Finance Department', 'Ledger ID:', `#FIN-${rec.record_id}`]
+        ],
+        amountLabel: isSale ? 'TOTAL AMOUNT RECEIVED' : 'TOTAL AMOUNT DISBURSED',
+        amountSubtext: `${rec.category || 'Financial Entry'} (${rec.payment_method || 'Treasury'})`,
+        amountValue: Number(rec.amount || 0),
+        notesTitle: 'TRANSACTION DESCRIPTION',
+        notesBody: rec.description || 'Official Elight Electrical Shop treasury entry.',
+        footerLine: 'Official Finance Treasury Receipt / Voucher — Elight Electrical Shop.'
+      });
+
+      const safeFile = `Finance-Receipt-FIN-${String(rec.record_id).replace(/[^a-zA-Z0-9._-]/g, '_')}.pdf`;
+      return sendOfficialPdfResponse(res, pdfBuffer, safeFile, req.query.preview);
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
   getFinanceRecords: async (req, res) => {
     try {
       let records = [];
