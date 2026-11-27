@@ -114,7 +114,10 @@
           }
 
           box.innerHTML = pendingPOs.map(po => {
-            const itemsSummary = (po.items || []).map(i => `${i.ordered_qty || 1}x ${i.product_name}`).join(', ') || 'Restock electrical products';
+            const itemsSummary = (po.items || []).map(i => {
+              const maxTag = Number(i.max_unit_price || 0) > 0 ? ` (Max: ${formatKES(i.max_unit_price)})` : '';
+              return `${i.ordered_qty || 1}x ${i.product_name}${maxTag}`;
+            }).join(', ') || 'Restock electrical products';
             const orderDate = (po.order_date || po.created_at || new Date().toISOString()).slice(0, 10);
             return `
               <div class="order-card">

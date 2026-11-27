@@ -275,6 +275,20 @@
         return { valid: false, message: `Enter a valid unit price greater than KSh 0 for "${it.product_name}".` };
       }
 
+      const maxLimit = Number(it?.max_unit_price || 0);
+      if (!Number.isNaN(maxLimit) && maxLimit > 0 && val > maxLimit + 0.0001) {
+        setPriceInputHighlight(input, 'error');
+        if (hint) {
+          hint.style.display = 'block';
+          hint.style.color = '#dc2626';
+          hint.textContent = `Exceeds PO max price (${formatKES(maxLimit)})`;
+        }
+        return {
+          valid: false,
+          message: `Unit price for "${it.product_name}" (${formatKES(val)}) exceeds the Purchase Order maximum price of ${formatKES(maxLimit)} set by Inventory.`
+        };
+      }
+
       setPriceInputHighlight(input, 'valid');
       if (hint) {
         hint.style.display = 'none';
@@ -393,18 +407,23 @@
           const rawInitial = Number(it.unit_cost || 0);
           const initialPrice = rawInitial > 0 ? rawInitial : '';
           const lineTotal = initialPrice ? (qty * initialPrice) : 0;
+          const maxLimit = Number(it.max_unit_price || 0);
+          const hasMax = !Number.isNaN(maxLimit) && maxLimit > 0;
           return `
             <tr>
               <td><strong>${escapeHtml(cat)}</strong></td>
-              <td><strong>${escapeHtml(it.product_name)}</strong></td>
+              <td>
+                <strong>${escapeHtml(it.product_name)}</strong>
+                ${hasMax ? `<div style="font-size:0.75rem; color:#1e40af; font-weight:700; margin-top:3px;">PO Max Acceptable Price: ${formatKES(maxLimit)} / unit</div>` : ''}
+              </td>
               <td style="text-align:center; font-weight:700;">${qty} units</td>
               <td style="text-align:right;">
-                <input type="number" step="0.01" min="0.01"
+                <input type="number" step="0.01" min="0.01" ${hasMax ? `max="${maxLimit}"` : ''}
                   class="price-input"
                   id="tender_price_${idx}"
                   value="${initialPrice}"
-                  placeholder="Enter unit price (KSh)"
-                  title="Enter unit price in KSh"
+                  placeholder="${hasMax ? `Max ${formatKES(maxLimit)}` : 'Enter unit price (KSh)'}"
+                  title="${hasMax ? `Enter unit price in KSh (max ${formatKES(maxLimit)})` : 'Enter unit price in KSh'}"
                   required
                   oninput="handleTenderPriceInput(${idx})">
                 <div id="tender_price_hint_${idx}" style="font-size:0.74rem; color:#64748b; font-weight:700; margin-top:4px; display:none;"></div>

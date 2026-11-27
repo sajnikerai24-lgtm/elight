@@ -852,6 +852,10 @@ exports.submitSupplierQuotation = async (req, res) => {
       }
 
       const check = evaluateQuotationPrice(productName, unitPrice, bounds.max_unit_price);
+      if (!check.valid) {
+        validationErrors.push(check.message);
+        continue;
+      }
       const cleanPrice = Number(unitPrice.toFixed(2));
       const lineTotal = Number((availableQty * cleanPrice).toFixed(2));
       totalAmount += lineTotal;
