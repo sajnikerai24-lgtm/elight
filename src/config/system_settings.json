@@ -61,11 +61,25 @@
   },
   "audit_log": [
     {
-      "timestamp": "2026-11-27T10:19:11.285Z",
-      "department": "Cashier & Sales",
-      "actor": "Esther Karimi (Cashier) (Cashier)",
-      "action": "Cashier Served Order — Passed to Finance",
-      "details": "Order EL-TEST-RCP02 (Test Buyer): Paid KES 1,200 of KES 1,200 (Cash Ref: CASH-950833) • Settled in full. Passed to Finance for confirmation."
+      "timestamp": "2026-11-27T10:07:35.848Z",
+      "department": "Dispatch & Deliveries",
+      "actor": "Dennis Ndwiga (Dispatch)",
+      "action": "Driver Unassigned",
+      "details": "Dispatch #DSP-15 (EL-TEST-DSP999) driver updated from \"Francis Mutua (Driver)\" to \"Unassigned\"."
+    },
+    {
+      "timestamp": "2026-11-27T10:07:28.787Z",
+      "department": "Dispatch & Deliveries",
+      "actor": "Dennis Ndwiga (Dispatch)",
+      "action": "Driver Assigned for Delivery",
+      "details": "Dispatch #DSP-15 (EL-TEST-DSP999) driver updated from \"Unassigned\" to \"Francis Mutua (Driver)\"."
+    },
+    {
+      "timestamp": "2026-11-27T10:07:28.754Z",
+      "department": "Dispatch & Deliveries",
+      "actor": "Order Fulfillment Sync",
+      "action": "Delivery Dispatch Run Created",
+      "details": "Auto-created Delivery Run #DSP-15 for Order EL-TEST-DSP999 to Makutano, Meru. Queued for driver assignment."
     },
     {
       "timestamp": "2026-11-24T06:38:29.921Z",
