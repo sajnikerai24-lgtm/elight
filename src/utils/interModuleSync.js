@@ -1975,8 +1975,8 @@ const interModuleSync = {
     if (driverFilter && driverFilter !== 'all') {
       const filterLower = String(driverFilter).toLowerCase().trim();
       dispatches = dispatches.filter(d => {
-        const dName = String(d.driver_name || '').toLowerCase();
-        return dName.includes(filterLower) || filterLower.includes(dName);
+        const dName = String(d.driver_name || '').toLowerCase().trim();
+        return Boolean(dName) && (dName.includes(filterLower) || filterLower.includes(dName));
       });
     }
 
@@ -2001,11 +2001,19 @@ const interModuleSync = {
       return existing;
     }
 
+    const requestedDriver = String(options.driver_name || order.driver_name || '').trim();
+    const assignedDriver = requestedDriver || 'Unassigned';
+    const requestedDate = String(options.scheduled_date || order.scheduled_date || '').trim();
+    const scheduledDate = requestedDate || new Date().toISOString().split('T')[0];
+    const customNote = String(options.driver_notes || order.driver_notes || '').trim();
+
     let driverNote = `PAID Order (${order.payment_method || 'M-Pesa'} Ref: ${order.payment_ref || 'N/A'}). Cashier: ${order.cashier_name || 'Esther Karimi'}`;
     if (needsInstall) {
       driverNote = `[DELIVER & INSTALL] Deliver goods to site; immediate technician installation required upon delivery. (${order.payment_method || 'M-Pesa'}).`;
     } else if (bookedLater) {
       driverNote = `[DELIVER NOW - INSTALL BOOKED LATER] Deliver goods to customer site. Installation date will be booked later by customer.`;
+    } else if (customNote) {
+      driverNote = customNote;
     }
 
     const newDisp = {
@@ -2014,8 +2022,9 @@ const interModuleSync = {
       customer_name: order.customer_name || 'Customer',
       customer_phone: order.customer_phone || 'N/A',
       delivery_address: order.customer_location || 'Meru County Delivery Area',
-      driver_name: 'Unassigned',
-      scheduled_date: new Date().toISOString().split('T')[0],
+      driver_name: assignedDriver,
+      ...(options.driver_id ? { driver_id: options.driver_id } : {}),
+      scheduled_date: scheduledDate,
       status: 'pending_dispatch',
       fulfillment_type: fType,
       needs_installation: needsInstall,
@@ -2031,7 +2040,9 @@ const interModuleSync = {
       'Dispatch & Deliveries',
       'Order Fulfillment Sync',
       'Delivery Dispatch Run Created',
-      `Auto-created Delivery Run #DSP-${nextId} for Order ${order.order_no} to ${newDisp.delivery_address}. Queued for driver assignment.`
+      assignedDriver !== 'Unassigned'
+        ? `Created Delivery Run #DSP-${nextId} for Order ${order.order_no} to ${newDisp.delivery_address} (Driver: ${assignedDriver}).`
+        : `Auto-created Delivery Run #DSP-${nextId} for Order ${order.order_no} to ${newDisp.delivery_address}. Queued for driver assignment.`
     );
 
     moduleNotifications.notify({
@@ -2039,14 +2050,30 @@ const interModuleSync = {
       sourceModule: 'finance',
       senderName: 'Order Fulfillment Sync',
       title: `Delivery Run #DSP-${nextId} Queued (${order.order_no})`,
-      message: `Order ${order.order_no} for ${newDisp.customer_name} at ${newDisp.delivery_address} is ready for driver assignment.`,
+      message: assignedDriver !== 'Unassigned'
+        ? `Order ${order.order_no} for ${newDisp.customer_name} at ${newDisp.delivery_address} assigned to ${assignedDriver}.`
+        : `Order ${order.order_no} for ${newDisp.customer_name} at ${newDisp.delivery_address} is ready for driver assignment.`,
       severity: 'info',
       refNo: `#DSP-${nextId}`,
       actionModule: 'dispatch'
     });
 
+    if (assignedDriver !== 'Unassigned') {
+      moduleNotifications.notify({
+        targetModules: ['driver'],
+        sourceModule: 'dispatch',
+        senderName: 'Dispatch Manager',
+        title: `New Delivery Run #DSP-${nextId} Assigned`,
+        message: `${assignedDriver}: Deliver Order ${order.order_no} (${newDisp.customer_name}) to ${newDisp.delivery_address}.`,
+        severity: 'info',
+        refNo: `#DSP-${nextId}`,
+        recipientName: assignedDriver,
+        actionModule: 'driver'
+      });
+    }
+
     try {
-      await supabase.from('dispatches').insert([{
+      const { data: inserted } = await supabase.from('dispatches').insert([{
         order_no: newDisp.order_no,
         customer_name: newDisp.customer_name,
         customer_phone: newDisp.customer_phone,
@@ -2055,7 +2082,16 @@ const interModuleSync = {
         scheduled_date: newDisp.scheduled_date,
         status: newDisp.status,
         driver_notes: newDisp.driver_notes
-      }]);
+      }]).select().single();
+      if (inserted && inserted.dispatch_id) {
+        newDisp.dispatch_id = inserted.dispatch_id;
+        const latestDispatches = readJson(DISPATCHES_PATH, DEFAULT_DISPATCHES);
+        const idx = latestDispatches.findIndex(d => d.order_no === newDisp.order_no && d.created_at === newDisp.created_at);
+        if (idx >= 0) {
+          latestDispatches[idx].dispatch_id = inserted.dispatch_id;
+          writeJson(DISPATCHES_PATH, latestDispatches);
+        }
+      }
     } catch (e) {}
 
     return newDisp;
@@ -2247,6 +2283,78 @@ const interModuleSync = {
       if (driverNotes !== undefined) updates.driver_notes = driverNotes;
       if (driverName) updates.driver_name = driverName;
       await supabase.from('dispatches').update(updates).eq('dispatch_id', dispatchId);
+    } catch (e) {}
+
+    return disp;
+  },
+
+  assignDriverToDispatch: async (dispatchId, { driver_id = null, driver_name = 'Unassigned', actor = 'Dispatch Manager' } = {}) => {
+    const dispatches = readJson(DISPATCHES_PATH, DEFAULT_DISPATCHES);
+    let disp = dispatches.find(d => Number(d.dispatch_id) === Number(dispatchId));
+    if (!disp) {
+      try {
+        const { data } = await supabase
+          .from('dispatches')
+          .select('*')
+          .eq('dispatch_id', Number(dispatchId))
+          .maybeSingle();
+        if (data) {
+          dispatches.unshift(data);
+          disp = data;
+        }
+      } catch (e) {}
+    }
+    if (!disp) return null;
+
+    const cleanDriverName = String(driver_name || '').trim() || 'Unassigned';
+    const isUnassigned = cleanDriverName.toLowerCase() === 'unassigned';
+    const previousDriver = disp.driver_name || 'Unassigned';
+
+    disp.driver_name = isUnassigned ? 'Unassigned' : cleanDriverName;
+    if (!isUnassigned && driver_id) {
+      disp.driver_id = Number(driver_id) || driver_id;
+    } else if (isUnassigned) {
+      delete disp.driver_id;
+    }
+    disp.assigned_by = actor || 'Dispatch Manager';
+    disp.assigned_at = new Date().toISOString();
+    writeJson(DISPATCHES_PATH, dispatches);
+
+    if (disp.order_no) {
+      const orders = readJson(CASHIER_ORDERS_PATH, []);
+      const order = orders.find(o => String(o.order_no || o.order_number || '').toUpperCase() === String(disp.order_no).toUpperCase());
+      if (order) {
+        order.assigned_driver = disp.driver_name;
+        writeJson(CASHIER_ORDERS_PATH, orders);
+      }
+    }
+
+    appendSystemAudit(
+      'Dispatch & Deliveries',
+      actor || 'Dispatch Manager',
+      isUnassigned ? 'Driver Unassigned' : 'Driver Assigned for Delivery',
+      `Dispatch #DSP-${dispatchId} (${disp.order_no}) driver updated from "${previousDriver}" to "${disp.driver_name}".`
+    );
+
+    if (!isUnassigned) {
+      moduleNotifications.notify({
+        targetModules: ['driver', 'dispatch'],
+        sourceModule: 'dispatch',
+        senderName: actor || 'Dispatch Manager',
+        title: `Delivery Run #DSP-${dispatchId} Assigned to ${disp.driver_name}`,
+        message: `Order ${disp.order_no} (${disp.customer_name}) at ${disp.delivery_address} assigned to driver ${disp.driver_name}.`,
+        severity: 'info',
+        refNo: `#DSP-${dispatchId}`,
+        recipientName: disp.driver_name,
+        actionModule: 'driver'
+      });
+    }
+
+    try {
+      await supabase
+        .from('dispatches')
+        .update({ driver_name: disp.driver_name })
+        .eq('dispatch_id', Number(dispatchId));
     } catch (e) {}
 
     return disp;

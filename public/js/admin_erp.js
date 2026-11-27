@@ -4281,13 +4281,18 @@ async function loadDispatches() {
     ]);
 
     const dispatches = dispRes.dispatches || [];
-    const drivers = (usersRes.users || []).filter(u => u.role === 'driver');
+    const drivers = (usersRes.users || []).filter(u =>
+      normalizeRole(u.role) === 'driver' &&
+      String(u.status || 'active').trim().toLowerCase() === 'active'
+    );
+    const roleNorm = normalizeRole(currentUser?.role);
+    const canAssignDriver = ['dispatch_manager', 'dispatch', 'admin'].includes(roleNorm);
 
     // Populate driver select in modal
     const driverSelect = document.getElementById('disp_driver');
     if (driverSelect) {
-      driverSelect.innerHTML = `<option value="Unassigned">Unassigned</option>` + drivers.map(d => 
-        `<option value="${escapeHTML(d.full_name)}">${escapeHTML(d.full_name)}</option>`
+      driverSelect.innerHTML = `<option value="Unassigned">Unassigned</option>` + drivers.map(d =>
+        `<option value="${escapeHTML(d.full_name)}" data-driver-id="${escapeHTML(String(d.user_id || d.id || ''))}">${escapeHTML(d.full_name)}</option>`
       ).join('');
     }
 
@@ -4296,7 +4301,30 @@ async function loadDispatches() {
       return;
     }
 
-    tbody.innerHTML = dispatches.map(d => `
+    tbody.innerHTML = dispatches.map(d => {
+      const currentDriver = d.driver_name || 'Unassigned';
+      const isUnassigned = !currentDriver || String(currentDriver).trim().toLowerCase() === 'unassigned';
+      const driverOptions = drivers.map(drv => {
+        const drvName = drv.full_name || drv.username || 'Driver';
+        const drvId = drv.user_id || drv.id || '';
+        const isSelected = !isUnassigned && (
+          (d.driver_id && drvId && Number(d.driver_id) === Number(drvId)) ||
+          String(drvName).trim().toLowerCase() === String(currentDriver).trim().toLowerCase()
+        );
+        return `<option value="${escapeHTML(drvName)}" data-driver-id="${escapeHTML(String(drvId))}" ${isSelected ? 'selected' : ''}>${escapeHTML(drvName)}</option>`;
+      }).join('');
+
+      const driverCellHtml = canAssignDriver ? `
+        <select onchange="assignDispatchDriver(${d.dispatch_id}, this)" style="padding:4px 6px; border-radius:4px; font-size:0.8rem; font-weight:600; border:1px solid ${isUnassigned ? '#f59e0b' : '#10b981'}; background:${isUnassigned ? '#fffbeb' : '#f0fdf4'}; color:${isUnassigned ? '#b45309' : '#047857'}; max-width:190px;">
+          <option value="Unassigned" ${isUnassigned ? 'selected' : ''}>⚠️ Unassigned...</option>
+          ${driverOptions}
+        </select>
+        ${isUnassigned
+          ? '<div style="font-size:0.72rem; color:#d97706; margin-top:3px; font-weight:600;">⚠️ Pending Driver</div>'
+          : `<div style="font-size:0.72rem; color:#15803d; margin-top:3px; font-weight:700;">🚗 ${escapeHTML(currentDriver)}</div>`}
+      ` : `<strong>🚗 ${escapeHTML(currentDriver)}</strong>`;
+
+      return `
       <tr>
         <td><strong>#DSP-${d.dispatch_id}</strong></td>
         <td><code>${escapeHTML(d.order_no)}</code></td>
@@ -4305,7 +4333,7 @@ async function loadDispatches() {
           <small>${escapeHTML(d.customer_phone)}</small>
         </td>
         <td>${escapeHTML(d.delivery_address)}</td>
-        <td><strong>🚗 ${escapeHTML(d.driver_name || 'Unassigned')}</strong></td>
+        <td>${driverCellHtml}</td>
         <td>
           <div>${d.scheduled_date || 'N/A'}</div>
           <div style="margin-top:4px;">
@@ -4329,9 +4357,43 @@ async function loadDispatches() {
           ${d.delivery_failed_reason ? `<div style="font-size:0.72rem; color:#dc2626; margin-top:2px; font-weight:700;">⚠️ ${escapeHTML(d.delivery_failed_reason)}</div>` : ''}
         </td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red;">${err.message}</td></tr>`;
+  }
+}
+
+async function assignDispatchDriver(dispatchId, selectEl) {
+  const driverName = selectEl.value || 'Unassigned';
+  const driverId = selectEl.selectedOptions?.[0]?.dataset?.driverId || '';
+  try {
+    const res = await fetch(`/api/dispatches/${dispatchId}/assign-driver`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-role': currentUser?.role || 'dispatch_manager'
+      },
+      body: JSON.stringify({
+        driver_id: driverId || null,
+        driver_name: driverName,
+        actor: currentUser?.full_name || 'Dispatch Manager',
+        user_role: currentUser?.role || 'dispatch_manager'
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Driver assignment failed');
+    showToast(
+      driverName === 'Unassigned'
+        ? `Driver unassigned from #DSP-${dispatchId}`
+        : `Assigned ${driverName} to Dispatch #DSP-${dispatchId}`,
+      'success'
+    );
+    loadDispatches();
+    if (typeof loadDriverDeliveries === 'function') loadDriverDeliveries();
+  } catch (err) {
+    showToast(err.message, 'error');
+    loadDispatches();
   }
 }
 
@@ -4395,22 +4457,30 @@ async function handleDispatchRescheduleSubmit(e) {
 
 async function handleCreateDispatch(e) {
   e.preventDefault();
+  const driverEl = document.getElementById('disp_driver');
   const payload = {
     order_no: document.getElementById('disp_order_no').value.trim(),
     customer_name: document.getElementById('disp_cust_name').value.trim(),
     customer_phone: document.getElementById('disp_cust_phone').value.trim(),
     delivery_address: document.getElementById('disp_address').value.trim(),
-    driver_name: document.getElementById('disp_driver').value,
-    driver_notes: document.getElementById('disp_notes').value.trim()
+    driver_name: driverEl.value,
+    driver_id: driverEl.selectedOptions?.[0]?.dataset?.driverId || null,
+    driver_notes: document.getElementById('disp_notes').value.trim(),
+    actor: currentUser?.full_name || 'Dispatch Manager',
+    user_role: currentUser?.role || 'dispatch_manager'
   };
 
   try {
     const res = await fetch('/api/dispatches', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-role': currentUser?.role || 'dispatch_manager'
+      },
       body: JSON.stringify(payload)
     });
-    if (!res.ok) throw new Error('Dispatch creation failed');
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Dispatch creation failed');
     closeModal('dispatch-modal');
     showToast('Dispatch scheduled', 'success');
     loadDispatches();
@@ -4440,8 +4510,8 @@ async function loadDriverDeliveries() {
     if (isDriverRole && currentUser) {
       const driverNameLower = String(currentUser.full_name || currentUser.username || '').toLowerCase();
       runs = runs.filter(r => {
-        const dName = String(r.driver_name || '').toLowerCase();
-        return driverNameLower && (dName.includes(driverNameLower) || driverNameLower.includes(dName));
+        const dName = String(r.driver_name || '').toLowerCase().trim();
+        return Boolean(dName) && Boolean(driverNameLower) && (dName.includes(driverNameLower) || driverNameLower.includes(dName));
       });
     }
 
@@ -4923,7 +4993,7 @@ const ROLE_ALLOWED_MODULES = {
   service_manager: ['services', 'bookings', 'feedback', 'help'],
   technician: ['technicians', 'feedback', 'help'],
   finance_manager: ['finance', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
-  dispatch_manager: ['dispatch', 'bookings', 'feedback', 'help'],
+  dispatch_manager: ['dispatch', 'feedback', 'help'],
   driver: ['driver', 'feedback', 'help'],
   inventory_manager: ['inventory', 'inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices', 'feedback', 'help'],
   customer_care: ['customers', 'customer_care', 'feedback', 'help']

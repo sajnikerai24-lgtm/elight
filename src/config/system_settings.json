@@ -50,7 +50,6 @@
     ],
     "dispatch_manager": [
       "dispatch",
-      "bookings",
       "feedback",
       "help"
     ],

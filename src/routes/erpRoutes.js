@@ -77,6 +77,7 @@ router.get('/finance/receipts/record/:recordId', erpController.downloadFinanceLe
 // Dispatch & Driver Module
 router.get('/dispatches', erpController.getDispatches);
 router.post('/dispatches', erpController.createDispatch);
+router.put('/dispatches/:id/assign-driver', erpController.assignDispatchDriver);
 router.put('/dispatches/:id/status', erpController.updateDispatchStatus);
 router.post('/dispatches/:id/pack', erpController.updateDispatchPacking);
 router.post('/dispatches/:id/reschedule', erpController.rescheduleDispatchRun);

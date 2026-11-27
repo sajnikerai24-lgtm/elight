@@ -164,7 +164,7 @@ function readSystemConfig() {
       inventory_manager: ['inventory', 'feedback', 'help'],
       service_manager: ['services', 'bookings', 'feedback', 'help'],
       finance_manager: ['finance', 'reports', 'feedback', 'help'],
-      dispatch_manager: ['dispatch', 'bookings', 'feedback', 'help'],
+      dispatch_manager: ['dispatch', 'feedback', 'help'],
       driver: ['driver', 'feedback', 'help']
     },
     audit_log: []
@@ -3036,7 +3036,16 @@ const erpController = {
 
   createDispatch: async (req, res) => {
     try {
-      const { order_no, customer_name, customer_phone, delivery_address, driver_name, scheduled_date, driver_notes } = req.body;
+      const callerRole = String(req.body.user_role || req.headers['x-user-role'] || '').trim().toLowerCase();
+      const allowedRoles = ['dispatch_manager', 'dispatch', 'admin', 'administrator', 'owner', 'superadmin'];
+      if (callerRole && !allowedRoles.includes(callerRole)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access Denied: Only the Dispatch Manager or Administrator can create dispatches.'
+        });
+      }
+
+      const { order_no, customer_name, customer_phone, delivery_address, driver_id, driver_name, scheduled_date, driver_notes, actor } = req.body;
 
       if (order_no) {
         const orders = readCashierOrders();
@@ -3058,11 +3067,59 @@ const erpController = {
         customer_location: delivery_address,
         payment_method: 'Manual Dispatch',
         payment_ref: 'DISP-MANUAL',
-        cashier_name: driver_name || 'Dispatch Manager'
+        cashier_name: actor || 'Dispatch Manager'
+      }, {
+        driver_id: driver_id || null,
+        driver_name: driver_name || 'Unassigned',
+        scheduled_date: scheduled_date || null,
+        driver_notes: driver_notes || ''
       });
-      if (driver_notes && newDisp) newDisp.driver_notes = driver_notes;
 
       res.status(201).json({ success: true, dispatch: newDisp });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  assignDispatchDriver: async (req, res) => {
+    try {
+      const callerRole = String(req.body.user_role || req.headers['x-user-role'] || '').trim().toLowerCase();
+      const allowedRoles = ['dispatch_manager', 'dispatch', 'admin', 'administrator', 'owner', 'superadmin'];
+      if (callerRole && !allowedRoles.includes(callerRole)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access Denied: Only the Dispatch Manager or Administrator can assign delivery drivers.'
+        });
+      }
+
+      const dispatchId = Number(req.params.id);
+      if (!dispatchId) {
+        return res.status(400).json({ success: false, message: 'Invalid dispatch ID.' });
+      }
+
+      const { driver_id, driver_name, actor } = req.body;
+      const cleanDriverName = String(driver_name || '').trim();
+      if (!cleanDriverName) {
+        return res.status(400).json({ success: false, message: 'Please select a delivery driver (or Unassigned).' });
+      }
+
+      const updated = await interModuleSync.assignDriverToDispatch(dispatchId, {
+        driver_id: driver_id || null,
+        driver_name: cleanDriverName,
+        actor: actor || 'Dispatch Manager'
+      });
+
+      if (!updated) {
+        return res.status(404).json({ success: false, message: 'Dispatch record not found.' });
+      }
+
+      res.json({
+        success: true,
+        dispatch: updated,
+        message: updated.driver_name === 'Unassigned'
+          ? `Driver unassigned from Dispatch #DSP-${dispatchId}.`
+          : `Assigned ${updated.driver_name} to Dispatch #DSP-${dispatchId}.`
+      });
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -4716,7 +4773,7 @@ const erpController = {
           service_manager: ['services', 'bookings', 'feedback', 'help'],
           technician: ['technicians', 'feedback', 'help'],
           finance_manager: ['finance', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
-          dispatch_manager: ['dispatch', 'bookings', 'feedback', 'help'],
+          dispatch_manager: ['dispatch', 'feedback', 'help'],
           driver: ['driver', 'feedback', 'help'],
           inventory_manager: ['inventory', 'inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices', 'feedback', 'help'],
           customer_care: ['customers', 'customer_care', 'feedback', 'help']
@@ -4803,7 +4860,7 @@ const erpController = {
           service_manager: ['services', 'bookings', 'feedback', 'help'],
           technician: ['technicians', 'feedback', 'help'],
           finance_manager: ['finance', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
-          dispatch_manager: ['dispatch', 'bookings', 'feedback', 'help'],
+          dispatch_manager: ['dispatch', 'feedback', 'help'],
           driver: ['driver', 'feedback', 'help'],
           inventory_manager: ['inventory', 'inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices', 'feedback', 'help'],
           customer_care: ['customers', 'customer_care', 'feedback', 'help']
@@ -4871,7 +4928,7 @@ const erpController = {
           service_manager: ['services', 'bookings', 'feedback', 'help'],
           technician: ['technicians', 'feedback', 'help'],
           finance_manager: ['finance', 'finance_services', 'finance_ledger', 'finance_invoices', 'finance_payments', 'reports', 'feedback', 'help'],
-          dispatch_manager: ['dispatch', 'bookings', 'feedback', 'help'],
+          dispatch_manager: ['dispatch', 'feedback', 'help'],
           driver: ['driver', 'feedback', 'help'],
           inventory_manager: ['inventory', 'inventory_materials', 'inventory_movements', 'inventory_pos', 'inventory_quotations', 'inventory_deliveries', 'inventory_invoices', 'feedback', 'help'],
           customer_care: ['customers', 'customer_care', 'feedback', 'help']
