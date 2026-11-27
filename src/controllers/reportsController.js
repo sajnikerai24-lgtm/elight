@@ -571,10 +571,11 @@ const reportsController = {
 
         existingOrders.unshift({
           order_no: refNo,
-          receipt_no: '',
+          receipt_no: hasSubmittedRef ? `RCP-${refNo}` : '',
           source: 'Online Customer Order',
           customer_name: customer_name || 'Customer',
           customer_phone: customer_phone || '',
+          customer_email: String(req.body.customer_email || '').trim(),
           customer_location: delivery_address || 'Meru County',
           items: normalizedItems,
           subtotal: itemsSubtotal || cleanAmount,
@@ -689,7 +690,13 @@ const reportsController = {
         recipientName: customer_name || ''
       });
 
-      res.status(201).json({ success: true, order_no: refNo });
+      res.status(201).json({
+        success: true,
+        order_no: refNo,
+        receipt_no: hasSubmittedRef ? `RCP-${refNo}` : '',
+        payment_method: cleanMethod,
+        submitted_payment_ref: cleanReceipt || ''
+      });
     } catch (err) {
       console.error('Storefront checkout sync error:', err);
       res.status(500).json({ success: false, message: err.message });

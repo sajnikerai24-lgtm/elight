@@ -326,60 +326,167 @@ async function handleCheckout(e) {
       return;
     }
     showToast(`✅ Order ${orderNumber} placed via M-Pesa!`, 'success');
-    finalizeOrderPlacement(orderCtx, mpesaCode);
+    await finalizeOrderPlacement(orderCtx, mpesaCode);
     return;
   }
 
   // Cash on Delivery / Counter
   showToast(`✅ Order ${orderNumber} placed successfully!`, 'success');
-  finalizeOrderPlacement(orderCtx, '');
+  await finalizeOrderPlacement(orderCtx, '');
 }
 
-function finalizeOrderPlacement(orderCtx, mpesaReceipt) {
+async function downloadCheckoutPdfReceipt(url, fileName) {
+  try {
+    showToast('Downloading official payment receipt...', 'info');
+    const res = await fetch(url);
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.message || 'Unable to download receipt PDF.');
+    }
+    const blob = await res.blob();
+    const objUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => window.URL.revokeObjectURL(objUrl), 1500);
+    showToast('Official receipt downloaded!', 'success');
+  } catch (err) {
+    showToast(err.message || 'Failed downloading receipt.', 'error');
+  }
+}
+
+function printCheckoutReceiptHtml(docTitle, innerHtml) {
+  const fullDoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHTML(docTitle)}</title><style>@page{margin:14mm;}body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:18px;color:#0f172a;background:#fff;}</style></head><body><div style="border:1px solid #cbd5e1;border-radius:10px;overflow:hidden;"><div style="background:#102b46;color:#fff;padding:16px 20px;border-bottom:4px solid #ffc107;"><div style="font-size:1.15rem;font-weight:800;">ELIGHT ELECTRICAL SHOP</div><div style="font-size:0.78rem;color:#e2e8f0;">Meru Town, Meru County, Kenya • Tel: +254 700 123 456 • elightelectrical@ke.com</div></div><div style="padding:18px 20px;">${innerHtml}</div></div></body></html>`;
+  const oldFrame = document.getElementById('elight-cart-print-frame');
+  if (oldFrame) oldFrame.remove();
+
+  const iframe = document.createElement('iframe');
+  iframe.id = 'elight-cart-print-frame';
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(fullDoc);
+  doc.close();
+  setTimeout(() => {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch (e) {
+      const win = window.open('', '_blank', 'width=800,height=680');
+      if (win) {
+        win.document.open();
+        win.document.write(fullDoc);
+        win.document.close();
+        win.focus();
+        win.print();
+      }
+    }
+  }, 150);
+}
+
+async function finalizeOrderPlacement(orderCtx, mpesaReceipt) {
   const { orderNumber, name, phone, deliveryOption, delivery, location, requiresInstallation, paymentVal, paymentLabel, grandTotal, orderedSnapshot } = orderCtx;
+  const signedUser = getSignedInUser() || {};
 
   // Sync live order to ERP so Reports, Cashier, Finance, Dispatch & Inventory update immediately
-  fetch('/api/orders/checkout', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      order_no: orderNumber,
-      customer_name: name,
-      customer_phone: phone,
-      delivery_address: `${delivery} — ${location}`,
-      fulfillment_mode: deliveryOption === 'pickup' ? 'collection' : 'delivery',
-      requires_installation: Boolean(requiresInstallation),
-      payment_method: paymentVal === 'cash' ? 'Cash' : 'M-Pesa',
-      mpesa_receipt: mpesaReceipt || '',
-      total_amount: grandTotal,
-      items: orderedSnapshot
-    })
-  }).catch(err => console.warn('Checkout sync warning:', err));
+  try {
+    await fetch('/api/orders/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_no: orderNumber,
+        customer_name: name,
+        customer_phone: phone,
+        customer_email: signedUser.email || '',
+        delivery_address: `${delivery} — ${location}`,
+        fulfillment_mode: deliveryOption === 'pickup' ? 'collection' : 'delivery',
+        requires_installation: Boolean(requiresInstallation),
+        payment_method: paymentVal === 'cash' ? 'Cash' : 'M-Pesa',
+        mpesa_receipt: mpesaReceipt || '',
+        total_amount: grandTotal,
+        items: orderedSnapshot
+      })
+    });
+  } catch (err) {
+    console.warn('Checkout sync warning:', err);
+  }
 
   // Build receipt details
+  const receiptMarkup = `
+    <div style="margin-bottom:8px;"><strong>Receipt No:</strong> <code style="color:#087443; font-weight:800;">RCP-${escapeHTML(orderNumber)}</code></div>
+    <div style="margin-bottom:8px;"><strong>Order Number:</strong> <span style="color:#087443; font-weight:800;">${escapeHTML(orderNumber)}</span></div>
+    <div style="margin-bottom:8px;"><strong>Customer:</strong> ${escapeHTML(name)}${phone && phone !== 'Cash Customer' ? ` (${escapeHTML(phone)})` : ''}</div>
+    <div style="margin-bottom:8px;"><strong>Delivery:</strong> ${escapeHTML(delivery)} — ${escapeHTML(location)}</div>
+    <div style="margin-bottom:8px;"><strong>Payment Method:</strong> ${escapeHTML(paymentLabel)}</div>
+    ${mpesaReceipt ? `
+      <div style="margin-bottom:10px; background:#dcfce7; border:1px solid #86efac; border-radius:6px; padding:8px 10px; color:#14532d; font-size:0.86rem;">
+        ✅ <strong>M-Pesa Payment Reference:</strong><br>
+        Transaction Code: <strong style="font-family:monospace; font-size:0.95rem;">${escapeHTML(mpesaReceipt)}</strong> (Till 5894210)
+      </div>
+    ` : ''}
+    <div style="margin-top:12px; padding-top:8px; border-top:1px dashed var(--border);">
+      <strong>Items Ordered (${orderedSnapshot.reduce((s, i) => s + i.quantity, 0)}):</strong>
+      <ul style="margin: 6px 0 0 20px; font-size:0.85rem; color:#4b5563;">
+        ${orderedSnapshot.map(i => `<li>${escapeHTML(i.product_name)} × ${i.quantity} — ${formatKES(i.selling_price * i.quantity)}</li>`).join('')}
+      </ul>
+    </div>
+    <div style="margin-top:14px; padding-top:10px; border-top:2px solid var(--border); font-size:1.1rem; font-weight:800; color:var(--primary); display:flex; justify-content:space-between;">
+      <span>${mpesaReceipt ? 'Total Paid (M-Pesa):' : 'Total Due:'}</span>
+      <span>${formatKES(grandTotal)}</span>
+    </div>
+  `;
+
   if (orderReceiptDetails) {
-    orderReceiptDetails.innerHTML = `
-      <div style="margin-bottom:8px;"><strong>Order Number:</strong> <span style="color:#087443; font-weight:800;">${orderNumber}</span></div>
-      <div style="margin-bottom:8px;"><strong>Customer:</strong> ${escapeHTML(name)}${phone && phone !== 'Cash Customer' ? ` (${escapeHTML(phone)})` : ''}</div>
-      <div style="margin-bottom:8px;"><strong>Delivery:</strong> ${escapeHTML(delivery)} — ${escapeHTML(location)}</div>
-      <div style="margin-bottom:8px;"><strong>Payment Method:</strong> ${escapeHTML(paymentLabel)}</div>
-      ${mpesaReceipt ? `
-        <div style="margin-bottom:10px; background:#dcfce7; border:1px solid #86efac; border-radius:6px; padding:8px 10px; color:#14532d; font-size:0.86rem;">
-          ✅ <strong>M-Pesa Payment Reference:</strong><br>
-          Transaction Code: <strong style="font-family:monospace; font-size:0.95rem;">${escapeHTML(mpesaReceipt)}</strong> (Till 5894210)
-        </div>
-      ` : ''}
-      <div style="margin-top:12px; padding-top:8px; border-top:1px dashed var(--border);">
-        <strong>Items Ordered (${orderedSnapshot.reduce((s, i) => s + i.quantity, 0)}):</strong>
-        <ul style="margin: 6px 0 0 20px; font-size:0.85rem; color:#4b5563;">
-          ${orderedSnapshot.map(i => `<li>${escapeHTML(i.product_name)} × ${i.quantity} — ${formatKES(i.selling_price * i.quantity)}</li>`).join('')}
-        </ul>
-      </div>
-      <div style="margin-top:14px; padding-top:10px; border-top:2px solid var(--border); font-size:1.1rem; font-weight:800; color:var(--primary); display:flex; justify-content:space-between;">
-        <span>${mpesaReceipt ? 'Total Paid (M-Pesa):' : 'Total Due:'}</span>
-        <span>${formatKES(grandTotal)}</span>
-      </div>
-    `;
+    orderReceiptDetails.innerHTML = receiptMarkup;
+  }
+
+  const actionsEl = document.getElementById('order-receipt-actions');
+  if (actionsEl) {
+    const receiptParams = new URLSearchParams({
+      email: signedUser.email || '',
+      phone: phone || signedUser.phone || '',
+      name: name || signedUser.full_name || '',
+      role: String(signedUser.role || 'customer').toLowerCase()
+    });
+    const dlUrl = `/api/customer/orders/${encodeURIComponent(orderNumber)}/receipt?${receiptParams.toString()}`;
+    const viewUrl = `${dlUrl}&preview=1`;
+
+    actionsEl.innerHTML = '';
+    const printBtn = document.createElement('button');
+    printBtn.type = 'button';
+    printBtn.className = 'btn-sm';
+    printBtn.style.cssText = 'background:#0f172a; color:#fff; padding:9px 14px; font-size:0.86rem; font-weight:700; border-radius:6px; border:none; cursor:pointer;';
+    printBtn.textContent = mpesaReceipt ? '🖨️ Print Receipt' : '🖨️ Print Order Summary';
+    printBtn.onclick = () => printCheckoutReceiptHtml(`Receipt RCP-${orderNumber}`, receiptMarkup);
+    actionsEl.appendChild(printBtn);
+
+    if (mpesaReceipt) {
+      const viewPdfBtn = document.createElement('button');
+      viewPdfBtn.type = 'button';
+      viewPdfBtn.className = 'btn-sm';
+      viewPdfBtn.style.cssText = 'background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:9px 14px; font-size:0.86rem; font-weight:700; border-radius:6px; cursor:pointer;';
+      viewPdfBtn.textContent = '👁️ View Receipt (PDF)';
+      viewPdfBtn.onclick = () => window.open(viewUrl, '_blank', 'noopener');
+      actionsEl.appendChild(viewPdfBtn);
+
+      const dlPdfBtn = document.createElement('button');
+      dlPdfBtn.type = 'button';
+      dlPdfBtn.className = 'btn-sm btn-primary';
+      dlPdfBtn.style.cssText = 'padding:9px 14px; font-size:0.86rem; font-weight:700; border-radius:6px; cursor:pointer;';
+      dlPdfBtn.textContent = '📥 Download PDF';
+      dlPdfBtn.onclick = () => downloadCheckoutPdfReceipt(dlUrl, `Order-Receipt-${orderNumber}.pdf`);
+      actionsEl.appendChild(dlPdfBtn);
+    }
   }
 
   // Open modal

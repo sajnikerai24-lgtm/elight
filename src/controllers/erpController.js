@@ -444,6 +444,32 @@ function customerOwnsBookingRecord(b, source = {}) {
   );
 }
 
+function customerOwnsOrderRecord(o, source = {}) {
+  const role = String(source.role || '').trim().toLowerCase();
+  if (role === 'admin') return true;
+  const email = String(source.email || '').trim().toLowerCase();
+  const phone = String(source.phone || '').trim();
+  const rawName = String(source.name || source.customer_name || '').trim();
+  const baseName = rawName.replace(/\s*\(customer\)\s*$/i, '').toLowerCase();
+
+  const oEmail = String(o.customer_email || '').toLowerCase().trim();
+  const oPhone = String(o.customer_phone || '').trim();
+  const oName = String(o.customer_name || '').toLowerCase().trim();
+  return Boolean(
+    (email && oEmail && email === oEmail) ||
+    (phone && phone !== 'N/A' && oPhone && (
+      oPhone === phone ||
+      (phone.length >= 8 && oPhone.includes(phone.slice(-8))) ||
+      (oPhone.length >= 8 && phone.includes(oPhone.slice(-8)))
+    )) ||
+    (baseName && oName && (
+      baseName === oName ||
+      (baseName.length > 3 && oName.includes(baseName)) ||
+      (oName.length > 3 && baseName.includes(oName))
+    ))
+  );
+}
+
 function isFinanceOrAdminRole(req) {
   const rawRole = String(req.headers['x-user-role'] || req.body?.user_role || req.query?.user_role || '').trim().toLowerCase();
   if (!rawRole) return false;
@@ -525,6 +551,55 @@ function buildBookingReceiptPdfBuffer(b) {
     notesTitle: 'BOOKING CONFIRMATION & NOTES',
     notesBody: b.confirmation_note || b.location_or_notes || `Confirmed booking ${b.booking_ref}.`,
     footerLine: 'Thank you for booking with Elight Electrical Shop. Present this receipt or your Booking Ref at our Meru Town desk.'
+  });
+}
+
+function buildOrderReceiptPdfBuffer(raw) {
+  const ord = normalizeOrderDualStatuses(raw);
+  const receiptNo = raw.receipt_no || `RCP-${ord.order_number}`;
+  const submittedRef = String(raw.submitted_payment_ref || '').trim();
+  const hasConfirmedPaidAmt = Number(ord.amount_paid || 0) > 0 || ['paid', 'partial'].includes(String(ord.payment_status || '').toLowerCase());
+  const isSubmittedPending = !hasConfirmedPaidAmt && Boolean(submittedRef);
+  const payDate = String(raw.paid_at || ord.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+  const itemSummary = (ord.items || []).map(i => `${i.quantity || 1}x ${i.product_name}`).join(', ') || 'Electrical Order Items';
+  const isFullyPaid = Number(ord.balance_due || 0) <= 0 && Number(ord.amount_paid || 0) > 0;
+
+  const statusText = isFullyPaid
+    ? 'FULLY PAID & VERIFIED'
+    : (isSubmittedPending
+      ? 'M-PESA PAID (PENDING VERIFICATION)'
+      : (ord.amount_paid > 0 ? 'PARTIAL SETTLEMENT' : 'UNPAID / CREDIT'));
+  const paidValue = isSubmittedPending ? Number(ord.total_amount || 0) : Number(ord.amount_paid || 0);
+  const balanceText = isSubmittedPending
+    ? 'Pending Desk Verification'
+    : `KES ${Number(ord.balance_due || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 })}`;
+
+  return buildOfficialReceiptPdf({
+    documentTitle: 'OFFICIAL ORDER PAYMENT RECEIPT',
+    metaLeft: [
+      `Receipt No: ${receiptNo}`,
+      `Order No: ${ord.order_number}`,
+      `Payment Date: ${payDate}`
+    ],
+    metaRight: [
+      `Status: ${statusText}`,
+      `Payment Ref: ${submittedRef || ord.payment_reference || 'N/A'}`,
+      `Payment Method: ${ord.payment_method || 'M-Pesa / Cash'}`
+    ],
+    statusPositive: isFullyPaid || isSubmittedPending,
+    sectionTitle: 'CUSTOMER & ORDER SETTLEMENT DETAILS',
+    detailRows: [
+      ['Customer Name:', ord.customer_name || 'Walk-in Customer', 'Invoice No:', ord.invoice_no],
+      ['Customer Phone:', ord.customer_phone || '-', 'Total Billed:', `KES ${Number(ord.total_amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 })}`],
+      ['Cashier / Desk:', ord.cashier_name || (isSubmittedPending ? 'Online Storefront' : 'Counter'), 'Balance Due:', balanceText],
+      ['Finance Release:', ord.finance_released_by || (ord.finance_release_status === 'released' ? 'Finance Manager' : 'Pending'), 'Fulfillment:', String(ord.fulfillment_type || 'delivery').replace(/_/g, ' ')]
+    ],
+    amountLabel: isSubmittedPending ? 'AMOUNT PAID ONLINE (M-PESA)' : 'TOTAL AMOUNT PAID',
+    amountSubtext: `Order Total: KES ${Number(ord.total_amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 })} | ${isSubmittedPending ? `Submitted Ref: ${submittedRef}` : `Balance Due: ${balanceText}`}`,
+    amountValue: paidValue,
+    notesTitle: 'PURCHASED ITEMS & CREDIT NOTES',
+    notesBody: `${itemSummary}${raw.customer_location ? ` | Location: ${raw.customer_location}` : ''}${ord.credit_policy_notes ? ` | Policy: ${ord.credit_policy_notes}` : ''}`,
+    footerLine: 'Official payment receipt — Elight Electrical Shop (Meru, Kenya).'
   });
 }
 
@@ -1453,19 +1528,34 @@ const erpController = {
         })
         .map(normalizeOrderDualStatuses);
 
-      // 5. Fetch ONLY this customer's payments
+      // 5. Fetch ONLY this customer's payments (confirmed payments, partial settlements, and submitted online M-Pesa orders)
       const myPayments = myOrders
-        .filter(o => o.payment_status === 'paid')
-        .map(o => ({
-          payment_ref: o.payment_ref || ('REF-' + o.order_no),
-          order_no: o.order_no,
-          receipt_no: o.receipt_no || ('RCP-' + o.order_no),
-          amount: Number(o.total_amount || 0),
-          payment_method: o.payment_method || 'M-Pesa',
-          paid_at: o.paid_at || o.created_at,
-          cashier_name: o.cashier_name || 'Esther Karimi',
-          status: 'confirmed'
-        }));
+        .filter(o =>
+          o.payment_status === 'paid' ||
+          o.payment_status === 'partial' ||
+          Number(o.amount_paid || 0) > 0 ||
+          Boolean(String(o.submitted_payment_ref || '').trim())
+        )
+        .map(o => {
+          const isPaid = o.payment_status === 'paid';
+          const isPartial = o.payment_status === 'partial';
+          const amtPaid = Number(o.amount_paid || 0);
+          return {
+            source: 'order',
+            payment_ref: o.submitted_payment_ref || o.payment_ref || ('REF-' + o.order_no),
+            order_no: o.order_no,
+            receipt_no: o.receipt_no || ('RCP-' + o.order_no),
+            amount: amtPaid > 0 ? amtPaid : Number(o.total_amount || 0),
+            total_amount: Number(o.total_amount || 0),
+            balance_due: Number(o.balance_due || 0),
+            payment_method: o.payment_method || 'M-Pesa',
+            paid_at: o.paid_at || o.created_at,
+            cashier_name: o.cashier_name || (isPaid ? 'Esther Karimi' : 'Online M-Pesa (Pending Desk)'),
+            items: Array.isArray(o.items) ? o.items : [],
+            fulfillment_type: o.fulfillment_type,
+            status: isPaid ? 'confirmed' : (isPartial ? 'partial' : 'submitted_mpesa')
+          };
+        });
 
       // 6. Fetch ONLY this customer's deliveries
       const myOrderNos = new Set(myOrders.map(o => String(o.order_no).toUpperCase()));
@@ -2123,8 +2213,45 @@ const erpController = {
   },
 
   // ==========================================
-  // FINANCE MANAGER MODULE & ALL PAYMENT RECEIPTS
+  // CUSTOMER & FINANCE ORDER RECEIPTS
   // ==========================================
+  downloadCustomerOrderReceipt: async (req, res) => {
+    try {
+      const orderNo = String(req.params.orderNo || '').trim().replace(/^#/, '');
+      if (!orderNo) return res.status(400).json({ success: false, message: 'Invalid order number.' });
+
+      const upperNo = orderNo.toUpperCase();
+      const orders = readCashierOrders();
+      const raw = orders.find(o =>
+        [o.order_no, o.order_number, o.receipt_no, o.invoice_no, o.payment_ref, o.submitted_payment_ref, o.split_details?.mpesa_ref].some(
+          v => String(v || '').trim().toUpperCase() === upperNo
+        )
+      );
+      if (!raw) return res.status(404).json({ success: false, message: `Order "${orderNo}" not found.` });
+
+      if (!customerOwnsOrderRecord(raw, req.query)) {
+        return res.status(403).json({ success: false, message: 'Forbidden: This order payment receipt belongs to another customer.' });
+      }
+
+      const pSt = String(raw.payment_status || '').toLowerCase();
+      const hasPayment = pSt === 'paid' || pSt === 'partial' || Number(raw.amount_paid || 0) > 0 || Boolean(String(raw.submitted_payment_ref || '').trim());
+      if (!hasPayment) {
+        return res.status(400).json({
+          success: false,
+          message: 'Payment receipt will be available once payment or an M-Pesa transaction reference is recorded for this order.'
+        });
+      }
+
+      const ord = normalizeOrderDualStatuses(raw);
+      const pdfBuffer = buildOrderReceiptPdfBuffer(raw);
+      const safeFile = `Order-Receipt-${String(ord.order_number).replace(/[^a-zA-Z0-9._-]/g, '_')}.pdf`;
+      return sendOfficialPdfResponse(res, pdfBuffer, safeFile, req.query.preview);
+    } catch (err) {
+      console.error('downloadCustomerOrderReceipt error:', err);
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
   downloadFinanceOrderReceipt: async (req, res) => {
     try {
       if (!isFinanceOrAdminRole(req)) {
@@ -2206,39 +2333,7 @@ const erpController = {
       if (!raw) return res.status(404).json({ success: false, message: `Order "${orderNo}" not found.` });
 
       const ord = normalizeOrderDualStatuses(raw);
-      const receiptNo = raw.receipt_no || `RCP-${ord.order_number}`;
-      const payDate = String(raw.paid_at || ord.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
-      const itemSummary = (ord.items || []).map(i => `${i.quantity || 1}x ${i.product_name}`).join(', ') || 'Electrical Order Items';
-      const isFullyPaid = Number(ord.balance_due || 0) <= 0 && Number(ord.amount_paid || 0) > 0;
-
-      const pdfBuffer = buildOfficialReceiptPdf({
-        documentTitle: 'OFFICIAL ORDER PAYMENT RECEIPT',
-        metaLeft: [
-          `Receipt No: ${receiptNo}`,
-          `Order No: ${ord.order_number}`,
-          `Payment Date: ${payDate}`
-        ],
-        metaRight: [
-          `Status: ${isFullyPaid ? 'FULLY PAID & VERIFIED' : (ord.amount_paid > 0 ? 'PARTIAL SETTLEMENT' : 'UNPAID / CREDIT')}`,
-          `Payment Ref: ${ord.payment_reference || 'N/A'}`,
-          `Payment Method: ${ord.payment_method || 'M-Pesa / Cash'}`
-        ],
-        statusPositive: isFullyPaid,
-        sectionTitle: 'CUSTOMER & ORDER SETTLEMENT DETAILS',
-        detailRows: [
-          ['Customer Name:', ord.customer_name || 'Walk-in Customer', 'Invoice No:', ord.invoice_no],
-          ['Customer Phone:', ord.customer_phone || '-', 'Total Billed:', `KES ${Number(ord.total_amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 })}`],
-          ['Cashier Desk:', ord.cashier_name || 'Counter', 'Balance Due:', `KES ${Number(ord.balance_due || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 })}`],
-          ['Finance Release:', ord.finance_released_by || (ord.finance_release_status === 'released' ? 'Finance Manager' : 'Pending'), 'Fulfillment:', String(ord.fulfillment_type || 'delivery').replace(/_/g, ' ')]
-        ],
-        amountLabel: 'TOTAL AMOUNT PAID',
-        amountSubtext: `Order Total: KES ${Number(ord.total_amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 })} | Balance Due: KES ${Number(ord.balance_due || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 })}`,
-        amountValue: Number(ord.amount_paid || 0),
-        notesTitle: 'PURCHASED ITEMS & CREDIT NOTES',
-        notesBody: `${itemSummary}${ord.credit_policy_notes ? ` | Policy: ${ord.credit_policy_notes}` : ''}`,
-        footerLine: 'Official Finance Desk payment receipt — Elight Electrical Shop.'
-      });
-
+      const pdfBuffer = buildOrderReceiptPdfBuffer(raw);
       const safeFile = `Order-Receipt-${String(ord.order_number).replace(/[^a-zA-Z0-9._-]/g, '_')}.pdf`;
       return sendOfficialPdfResponse(res, pdfBuffer, safeFile, req.query.preview);
     } catch (err) {

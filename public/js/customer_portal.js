@@ -6,6 +6,7 @@
 
 let loggedCustomerUser = null;
 let myCustomerProfile = null;
+let myCustomerOrders = [];
 let myCustomerServices = [];
 let myCustomerBookings = [];
 let myCustomerPayments = [];
@@ -194,6 +195,7 @@ async function loadMyCustomerPortal() {
     const payments = data.payments || [];
     const bookings = data.bookings || [];
     const services = data.services || [];
+    myCustomerOrders = orders;
     myCustomerServices = services;
     myCustomerBookings = bookings;
     myCustomerPayments = payments;
@@ -219,7 +221,7 @@ async function loadMyCustomerPortal() {
     const ordersBody = document.getElementById('cust-orders-tbody');
     if (ordersBody) {
       if (orders.length === 0) {
-        ordersBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:18px; color:var(--text-muted);">No recorded purchases under your account yet. <a href="/products" style="color:var(--primary); font-weight:700;">Browse catalog →</a></td></tr>';
+        ordersBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:18px; color:var(--text-muted);">No recorded purchases under your account yet. <a href="/products" style="color:var(--primary); font-weight:700;">Browse catalog →</a></td></tr>';
       } else {
         const formatOrderSubStatus = (val, kind) => {
           const st = String(val || '').toLowerCase();
@@ -247,12 +249,18 @@ async function loadMyCustomerPortal() {
           const isPaid = o.payment_status === 'paid';
           const balDue = Number(o.balance_due || 0);
           const isPartial = o.payment_status === 'partial' || (balDue > 0 && Number(o.amount_paid || 0) > 0);
+          const hasSubmittedMpesa = Boolean(String(o.submitted_payment_ref || '').trim());
+          const canAccessReceipt = isPaid || isPartial || Number(o.amount_paid || 0) > 0 || hasSubmittedMpesa;
           const payBadgeStyle = isPaid
             ? 'background:#dcfce7; color:#15803d;'
-            : (isPartial ? 'background:#fef3c7; color:#b45309;' : 'background:#fee2e2; color:#b91c1c;');
+            : (isPartial
+              ? 'background:#fef3c7; color:#b45309;'
+              : (hasSubmittedMpesa ? 'background:#e0f2fe; color:#0369a1;' : 'background:#fee2e2; color:#b91c1c;'));
           const payBadgeText = isPaid
             ? '✓ Paid'
-            : (isPartial ? `⚠️ Partial (Bal: KES ${balDue.toLocaleString('en-KE')})` : '⏳ Pending');
+            : (isPartial
+              ? `⚠️ Partial (Bal: KES ${balDue.toLocaleString('en-KE')})`
+              : (hasSubmittedMpesa ? '📲 M-Pesa Submitted' : '⏳ Pending'));
           const isCollection = o.fulfillment_type === 'product_collection' || o.fulfillment_mode === 'collection';
           const delBadge = (isCollection && o.fulfillment_status === 'collected')
             ? { label: '✔️ Collected at Shop', bg: '#dcfce7', color: '#15803d' }
@@ -260,6 +268,14 @@ async function loadMyCustomerPortal() {
               ? { label: '🏬 Shop Pick-Up', bg: '#e0e7ff', color: '#3730a3' }
               : formatOrderSubStatus(o.delivery_status, 'delivery'));
           const instBadge = formatOrderSubStatus(o.installation_status || 'not_requested', 'installation');
+          const safeOrdArg = escapeHTML(String(o.order_no || '')).replace(/'/g, '&#39;');
+          const receiptCellHtml = canAccessReceipt
+            ? `<div style="display:flex; gap:5px; flex-wrap:wrap;">
+                 <button type="button" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:4px 8px; font-size:0.74rem; font-weight:700;" onclick="openOrderReceiptModal('${safeOrdArg}')">👁️ View</button>
+                 <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:4px 8px; font-size:0.74rem; font-weight:700;" onclick="printOrderReceipt('${safeOrdArg}')">🖨️ Print</button>
+                 <button type="button" class="btn-sm btn-primary" style="padding:4px 8px; font-size:0.74rem;" onclick="downloadOrderPaymentReceipt('${safeOrdArg}')">📥 Download</button>
+               </div>`
+            : `<span style="font-size:0.75rem; color:#64748b;">⏳ Pending Payment</span>`;
           return `
             <tr>
               <td><strong style="font-family:monospace; color:var(--primary);">${escapeHTML(o.order_no)}</strong></td>
@@ -274,6 +290,7 @@ async function loadMyCustomerPortal() {
               <td>${escapeHTML(o.payment_method || 'M-Pesa')}</td>
               <td><span class="badge-tag" style="background:${delBadge.bg}; color:${delBadge.color}; font-weight:700;">${delBadge.label}</span></td>
               <td><span class="badge-tag" style="background:${instBadge.bg}; color:${instBadge.color}; font-weight:700;">${instBadge.label}</span></td>
+              <td>${receiptCellHtml}</td>
             </tr>
           `;
         }).join('');
@@ -286,7 +303,9 @@ async function loadMyCustomerPortal() {
       if (payments.length === 0) {
         paymentsBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:18px; color:var(--text-muted);">No payment receipts on record yet.</td></tr>';
       } else {
-        paymentsBody.innerHTML = payments.map(p => `
+        paymentsBody.innerHTML = payments.map(p => {
+          const safeOrdArg = escapeHTML(String(p.order_no || '')).replace(/'/g, '&#39;');
+          return `
           <tr>
             <td><strong style="font-family:monospace; color:#087443;">${escapeHTML(p.receipt_no)}</strong></td>
             <td><code>${escapeHTML(p.order_no)}</code></td>
@@ -308,10 +327,15 @@ async function loadMyCustomerPortal() {
                        <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:4px 8px; font-size:0.74rem; font-weight:700;" onclick="printBookingReceipt(${p.booking_id})">🖨️ Print</button>
                        <button type="button" class="btn-sm btn-primary" style="padding:4px 8px; font-size:0.74rem;" onclick="downloadBookingFeeReceipt(${p.booking_id})">📥 Download</button>
                      </div>`
-                  : `<span style="font-size:0.76rem; color:#087443; font-weight:700;">✓ Verified</span>`)}
+                  : `<div style="display:flex; gap:5px; flex-wrap:wrap;">
+                       <button type="button" class="btn-sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:4px 8px; font-size:0.74rem; font-weight:700;" onclick="openOrderReceiptModal('${safeOrdArg}')">👁️ View</button>
+                       <button type="button" class="btn-sm" style="background:#0f172a; color:#fff; padding:4px 8px; font-size:0.74rem; font-weight:700;" onclick="printOrderReceipt('${safeOrdArg}')">🖨️ Print</button>
+                       <button type="button" class="btn-sm btn-primary" style="padding:4px 8px; font-size:0.74rem;" onclick="downloadOrderPaymentReceipt('${safeOrdArg}')">📥 Download</button>
+                     </div>`)}
             </td>
           </tr>
-        `).join('');
+        `;
+        }).join('');
       }
     }
 
@@ -596,6 +620,146 @@ function buildBookingReceiptQuery(bookingIdOrRef, preview = false) {
   const params = new URLSearchParams(getCustomerIdentityPayload());
   if (preview) params.set('preview', '1');
   return `/api/customer/bookings/${encodeURIComponent(bookingIdOrRef)}/receipt?${params.toString()}`;
+}
+
+function buildOrderReceiptQuery(orderNo, preview = false) {
+  const params = new URLSearchParams(getCustomerIdentityPayload());
+  if (preview) params.set('preview', '1');
+  return `/api/customer/orders/${encodeURIComponent(orderNo)}/receipt?${params.toString()}`;
+}
+
+function resolveOrderReceiptData(orderNo) {
+  const cleanKey = String(orderNo || '').trim().toUpperCase();
+  const ord = myCustomerOrders.find(o =>
+    String(o.order_no || '').trim().toUpperCase() === cleanKey ||
+    String(o.order_number || '').trim().toUpperCase() === cleanKey ||
+    String(o.receipt_no || '').trim().toUpperCase() === cleanKey
+  );
+  if (ord) return ord;
+  const pay = myCustomerPayments.find(p =>
+    (p.source === 'order' || !p.source) &&
+    (String(p.order_no || '').trim().toUpperCase() === cleanKey || String(p.receipt_no || '').trim().toUpperCase() === cleanKey)
+  );
+  if (pay) {
+    return {
+      order_no: pay.order_no || orderNo,
+      receipt_no: pay.receipt_no || `RCP-${pay.order_no || orderNo}`,
+      payment_status: pay.status === 'confirmed' ? 'paid' : (pay.status === 'partial' ? 'partial' : 'pending'),
+      submitted_payment_ref: pay.status === 'submitted_mpesa' ? pay.payment_ref : '',
+      payment_ref: pay.payment_ref,
+      payment_method: pay.payment_method || 'M-Pesa',
+      amount_paid: Number(pay.amount || 0),
+      total_amount: Number(pay.total_amount || pay.amount || 0),
+      balance_due: Number(pay.balance_due || 0),
+      paid_at: pay.paid_at,
+      cashier_name: pay.cashier_name,
+      items: Array.isArray(pay.items) ? pay.items : [],
+      fulfillment_type: pay.fulfillment_type,
+      customer_name: myCustomerProfile?.full_name || loggedCustomerUser?.full_name || 'Valued Customer',
+      customer_phone: myCustomerProfile?.phone || loggedCustomerUser?.phone || '-'
+    };
+  }
+  return null;
+}
+
+function orderHasPayReceipt(ord) {
+  if (!ord) return false;
+  const st = String(ord.payment_status || '').toLowerCase();
+  return st === 'paid' || st === 'partial' || Number(ord.amount_paid || 0) > 0 || Boolean(String(ord.submitted_payment_ref || '').trim());
+}
+
+function buildPrintableOrderReceiptHtml(o) {
+  const ordNo = o.order_no || o.order_number || 'ORDER';
+  const receiptNo = o.receipt_no || `RCP-${ordNo}`;
+  const submittedRef = String(o.submitted_payment_ref || '').trim();
+  const isPaid = String(o.payment_status || '').toLowerCase() === 'paid';
+  const isPartial = String(o.payment_status || '').toLowerCase() === 'partial' || (Number(o.balance_due || 0) > 0 && Number(o.amount_paid || 0) > 0);
+  const isSubmittedPending = !isPaid && !isPartial && Boolean(submittedRef);
+
+  const dateStr = o.paid_at || o.created_at;
+  const issueDate = dateStr ? new Date(dateStr).toLocaleString('en-KE') : 'N/A';
+  const totalBilled = Number(o.total_amount || 0);
+  const amountPaid = isSubmittedPending ? totalBilled : Number(o.amount_paid || 0);
+  const balDue = isSubmittedPending ? 0 : Number(o.balance_due || 0);
+
+  const badgeBg = isPaid ? '#dcfce7' : (isSubmittedPending ? '#e0f2fe' : '#fef3c7');
+  const badgeColor = isPaid ? '#15803d' : (isSubmittedPending ? '#0369a1' : '#b45309');
+  const badgeLabel = isPaid
+    ? 'PAID & VERIFIED'
+    : (isSubmittedPending ? 'M-PESA SUBMITTED' : (isPartial ? 'PARTIAL SETTLEMENT' : 'PAYMENT RECORD'));
+
+  const itemsList = Array.isArray(o.items) && o.items.length > 0
+    ? o.items.map(i => {
+        const qty = Number(i.quantity || 1);
+        const unit = Number(i.unit_price || i.selling_price || 0);
+        const line = qty * unit;
+        return `
+          <tr>
+            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">${escapeHTML(i.product_name || 'Electrical Item')}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0; text-align:center;">${qty}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0; text-align:right;">KES ${unit.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e2e8f0; text-align:right; font-weight:700;">KES ${line.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</td>
+          </tr>
+        `;
+      }).join('')
+    : `<tr><td colspan="4" style="padding:8px; color:#64748b;">Online Product Purchase (${escapeHTML(ordNo)})</td></tr>`;
+
+  return `
+    <div style="font-family:'Segoe UI',Arial,sans-serif; color:#0f172a; border:1px solid #cbd5e1; border-radius:10px; overflow:hidden; background:#ffffff;">
+      <div style="background:#102b46; color:#ffffff; padding:18px 22px; border-bottom:4px solid #ffc107; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <div style="font-size:1.15rem; font-weight:800; letter-spacing:0.4px;">ELIGHT ELECTRICAL SHOP</div>
+          <div style="font-size:0.78rem; color:#e2e8f0; margin-top:2px;">Meru Town, Meru County, Kenya • Tel: +254 700 123 456 • elightelectrical@ke.com</div>
+        </div>
+        <div style="background:${badgeBg}; color:${badgeColor}; padding:5px 12px; border-radius:999px; font-size:0.78rem; font-weight:800;">
+          ${badgeLabel}
+        </div>
+      </div>
+
+      <div style="padding:18px 22px;">
+        <div style="text-align:center; font-size:0.95rem; font-weight:800; color:#102b46; letter-spacing:0.5px; margin-bottom:14px;">OFFICIAL ORDER PAYMENT RECEIPT</div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; font-size:0.84rem; margin-bottom:14px;">
+          <div>
+            <div><strong>Receipt No:</strong> <code>${escapeHTML(receiptNo)}</code></div>
+            <div><strong>Order No:</strong> <code>${escapeHTML(ordNo)}</code></div>
+            <div><strong>Date:</strong> ${escapeHTML(issueDate)}</div>
+          </div>
+          <div>
+            <div><strong>Payment Method:</strong> ${escapeHTML(o.payment_method || 'M-Pesa')}</div>
+            <div><strong>Payment Ref:</strong> <code>${escapeHTML(submittedRef || o.payment_ref || 'VERIFIED')}</code></div>
+            <div><strong>Served By:</strong> ${escapeHTML(o.cashier_name || (isSubmittedPending ? 'Online Checkout' : 'Elight Cashier Desk'))}</div>
+          </div>
+        </div>
+
+        <div style="font-size:0.84rem; margin-bottom:12px; padding:8px 10px; background:#f8fafc; border-radius:6px;">
+          <strong>Customer:</strong> ${escapeHTML(o.customer_name || myCustomerProfile?.full_name || 'Valued Customer')}
+          ${o.customer_phone ? ` • <strong>Phone:</strong> ${escapeHTML(o.customer_phone)}` : ''}
+          ${o.customer_location ? `<br><strong>Delivery / Fulfillment:</strong> ${escapeHTML(o.customer_location)}` : ''}
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; font-size:0.83rem; margin-bottom:14px;">
+          <thead>
+            <tr style="background:#f1f5f9; color:#334155;">
+              <th style="padding:7px 8px; text-align:left;">Product Item</th>
+              <th style="padding:7px 8px; text-align:center;">Qty</th>
+              <th style="padding:7px 8px; text-align:right;">Unit Price</th>
+              <th style="padding:7px 8px; text-align:right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>${itemsList}</tbody>
+        </table>
+
+        <div style="background:#ecfdf5; border:1px solid #86efac; border-radius:8px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div>
+            <div style="font-size:0.78rem; font-weight:700; color:#166534;">${isSubmittedPending ? 'AMOUNT PAID ONLINE (PENDING VERIFICATION)' : 'TOTAL AMOUNT PAID'}</div>
+            <div style="font-size:0.75rem; color:#475569;">Order Total: KES ${totalBilled.toLocaleString('en-KE', { minimumFractionDigits: 2 })}${balDue > 0 ? ` • Balance Due: KES ${balDue.toLocaleString('en-KE', { minimumFractionDigits: 2 })}` : ''}</div>
+          </div>
+          <div style="font-size:1.3rem; font-weight:800; color:#087443;">KES ${amountPaid.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</div>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function resolveBookingReceiptData(bookingId) {
@@ -938,6 +1102,30 @@ function printBookingReceipt(bookingId) {
   printReceiptDocument(`Receipt ${b.booking_receipt_no || b.booking_ref}`, buildPrintableBookingReceiptHtml(b));
 }
 
+function openOrderReceiptModal(orderNo) {
+  const ord = resolveOrderReceiptData(orderNo);
+  if (!orderHasPayReceipt(ord)) {
+    showToast('Payment receipt will be available once payment is recorded.', 'info');
+    return;
+  }
+  showOfficialReceiptModal({
+    modalTitle: '🧾 Official Order Payment Receipt',
+    receiptHtml: buildPrintableOrderReceiptHtml(ord),
+    onPrint: () => printOrderReceipt(orderNo),
+    previewUrl: buildOrderReceiptQuery(ord.order_no || orderNo, true),
+    onDownload: () => downloadOrderPaymentReceipt(ord.order_no || orderNo)
+  });
+}
+
+function printOrderReceipt(orderNo) {
+  const ord = resolveOrderReceiptData(orderNo);
+  if (!orderHasPayReceipt(ord)) {
+    showToast('Payment receipt will be available to print once payment is recorded.', 'info');
+    return;
+  }
+  printReceiptDocument(`Receipt ${ord.receipt_no || ord.order_no || orderNo}`, buildPrintableOrderReceiptHtml(ord));
+}
+
 function openConfirmServiceModal(requestId) {
   const svc = myCustomerServices.find(s => Number(s.request_id) === Number(requestId));
   if (!svc) return;
@@ -1195,6 +1383,16 @@ function downloadBookingFeeReceipt(bookingIdOrRef) {
     buildBookingReceiptQuery(bookingIdOrRef),
     `Booking-Receipt-${labelRef}.pdf`,
     'official booking fee receipt'
+  );
+}
+
+function downloadOrderPaymentReceipt(orderNo) {
+  const ord = resolveOrderReceiptData(orderNo);
+  const cleanOrderNo = ord?.order_no || orderNo;
+  return downloadOfficialPdfReceipt(
+    buildOrderReceiptQuery(cleanOrderNo),
+    `Order-Receipt-${cleanOrderNo}.pdf`,
+    'official order payment receipt'
   );
 }
 

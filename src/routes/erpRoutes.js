@@ -34,6 +34,7 @@ router.post('/customer/services/:id/pay', erpController.payCustomerServiceFee);
 router.get('/customer/services/:id/receipt', erpController.downloadCustomerServiceReceipt);
 router.post('/customer/bookings/:id/pay', erpController.payCustomerBookingFee);
 router.get('/customer/bookings/:id/receipt', erpController.downloadCustomerBookingReceipt);
+router.get('/customer/orders/:orderNo/receipt', erpController.downloadCustomerOrderReceipt);
 
 // Service Manager & Technician Module
 router.get('/services', erpController.getServiceRequests);

@@ -61,6 +61,13 @@
   },
   "audit_log": [
     {
+      "timestamp": "2026-11-27T10:19:11.285Z",
+      "department": "Cashier & Sales",
+      "actor": "Esther Karimi (Cashier) (Cashier)",
+      "action": "Cashier Served Order — Passed to Finance",
+      "details": "Order EL-TEST-RCP02 (Test Buyer): Paid KES 1,200 of KES 1,200 (Cash Ref: CASH-950833) • Settled in full. Passed to Finance for confirmation."
+    },
+    {
       "timestamp": "2026-11-24T06:38:29.921Z",
       "department": "Admin & Security",
       "actor": "Alice Muthoni (Finance Manager)",
